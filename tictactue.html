@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TIC TAC TOE — shubhiXarpit (Neon)</title>
+<style>
+  /* Basic Reset and Layout */
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+  body{
+    background:#0a0a20; /* Default (Dark/Neon) Background */
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    color:white;
+    overflow:hidden;
+    transition:background 0.5s, color 0.5s; /* Smooth Transition */
+  }
+  
+  /* ⭐ THEME FIX: DARK MODE CSS (Body and Lobby) ⭐ */
+  body.dark {
+    background: #000000; /* Pure Black Background */
+    color: #f0f0f0;
+  }
+  .lobby.dark {
+    background: linear-gradient(145deg, #0a0a0a, #1a1a1a); /* Dark Gradient */
+    color: #f0f0f0;
+  }
+  .lobby.dark h1 {
+    /* Keep the neon effect, adjust color for contrast */
+    text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+    color: #fff;
+  }
+  .lobby.dark .btn {
+    border-color: #00ffff; 
+    color: #00ffff;
+  }
+  .lobby.dark .btn:hover {
+    background: #00ffff;
+    color: #000;
+    box-shadow: 0 0 20px #00ffff;
+  }
+  .lobby.dark #settingBtn {
+      background: #0a0a0a;
+      border: 2px solid #00ffff;
+      color: #00ffff;
+  }
+  
+  /* ⭐ THEME FIX: LIGHT MODE CSS (Body and Lobby) ⭐ */
+  body.light {
+    background: #f0f0f0; /* Very Light Grey/White Background */
+    color: #333;
+  }
+  .lobby.light {
+    background: linear-gradient(145deg, #ffffff, #e0e0e0); /* Light Gradient */
+    color: #333;
+  }
+  .lobby.light h1 {
+    /* Remove heavy neon for light mode */
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    color: #333;
+    animation: none; /* Disable neon pulse */
+  }
+  .lobby.light .btn {
+    border-color: #333; 
+    color: #333;
+  }
+  .lobby.light .btn:hover {
+    background: #333;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  }
+  .lobby.light #settingBtn {
+      background: #ffffff;
+      border: 2px solid #333;
+      color: #333;
+  }
+  .game-board.light .board {
+      border: 2px solid #333;
+      background: #ccc;
+  }
+  .game-board.light .cell {
+      background: #f0f0f0;
+      border: 2px solid #333;
+  }
+  .game-board.light #backLobbyBtn {
+      border: 2px solid #333;
+      color: #333;
+      background: linear-gradient(90deg, #ccc, #eee);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+      text-shadow: none;
+  }
+  .game-board.light #scoreboard {
+      color: #333;
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  }
+  /* --- End THEME FIX --- */
+  
+  /* ⭐ UPDATED: Splash Screen CSS (S x A) ⭐ */
+  #splash-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000000; /* Solid Black Background for Cinematic Feel */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 1000; /* Highest Z-index */
+    transition: opacity 1s ease-out, transform 1s ease-out;
+    transform: scale(1); /* Initial scale */
+    opacity: 1; /* Ensure it starts visible */
+  }
+  
+  .splash-logo {
+    font-size: 120px;
+    font-weight: 900;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: #fff;
+    text-shadow: 
+        0 0 10px #00ffff,  /* Cyan Glow */
+        0 0 25px #00ffff,
+        0 0 40px #ff00ff,  /* Magenta Glow */
+        0 0 60px #ff00ff;
+    animation: 
+        neonScale 3s ease-in-out infinite alternate, /* Subtle Scaling */
+        neonPulse 2s ease-in-out infinite alternate; /* Glow Pulse */
+    transform: scale(0.9); /* Initial slight scale down before start animation */
+  }
+
+  /* ⭐ CINEMATIC EFFECTS ⭐ */
+  @keyframes neonScale {
+    0%, 100% { transform: scale(0.95); }
+    50% { transform: scale(1.05); }
+  }
+  @keyframes neonPulse {
+    0%, 100% { text-shadow: 0 0 15px #00ffff, 0 0 30px #ff00ff; }
+    50% { text-shadow: 0 0 25px #ffffff, 0 0 50px #00ffff, 0 0 75px #ff00ff; }
+  }
+  
+  /* Particle/Star Field Container */
+  .particle-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 999;
+      opacity: 0.7;
+  }
+  .particle {
+      position: absolute;
+      background: #ffffff;
+      border-radius: 50%;
+      animation: particle-drift linear infinite;
+  }
+  @keyframes particle-drift {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(100vw, 100vh) scale(0.5); opacity: 0; }
+  }
+  
+  /* Light Streak/Flare Effect */
+  .light-streak {
+      position: absolute;
+      width: 200%;
+      height: 150px;
+      background: linear-gradient(90deg, 
+          rgba(0,0,0,0) 0%, 
+          rgba(255,255,255,0.1) 10%, 
+          rgba(255,255,255,0.7) 25%, 
+          rgba(255,255,255,0.1) 40%, 
+          rgba(0,0,0,0) 55%
+      );
+      transform: rotate(20deg);
+      top: -20%;
+      left: -100%;
+      opacity: 0;
+      animation: lightPass 4s ease-out forwards; 
+      z-index: 1001;
+  }
+  @keyframes lightPass {
+    0% { transform: translate(-100%, -50%) rotate(20deg); opacity: 0.8; }
+    50% { transform: translate(100%, -50%) rotate(20deg); opacity: 0.8; }
+    100% { transform: translate(200%, -50%) rotate(20deg); opacity: 0; }
+  }
+  /* --- End Splash Screen CSS --- */
+
+
+  /* ⭐ RESTORED: Loading Screen CSS (Text fixed) ⭐ */
+  #loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex; /* Will be set to flex by JS */
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 101;
+    opacity: 0; /* Starts hidden and fades in after splash */
+    transition: opacity 1s ease-out;
+    pointer-events: none; /* Allows interaction beneath until visible */
+  }
+  #loading-overlay h2 {
+    font-size: 50px;
+    letter-spacing: 5px;
+    text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+    animation: neonLoadPulse 1.5s infinite alternate;
+    margin-bottom: 20px;
+  }
+  .neon-text-separator {
+      font-size: 24px;
+      color: #00ffff;
+      text-shadow: 0 0 5px #00ffff;
+      margin-bottom: 30px;
+  }
+  @keyframes neonLoadPulse{
+    0%,100%{ opacity: 1; }
+    50%{ opacity: 0.8; }
+  }
+  .loading-bar-container {
+      width: 70%;
+      max-width: 500px;
+      height: 25px;
+      background: #333;
+      border: 2px solid #00ffff;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 5px rgba(0, 255, 255, 0.2);
+      margin-bottom: 15px;
+  }
+  .loading-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00ffff, #ff00ff);
+      border-radius: 12px;
+      transition: width 0.1s linear;
+  }
+  .loading-percentage {
+      font-size: 20px;
+      color: #00ffff;
+      text-shadow: 0 0 8px #00ffff;
+  }
+  /* ⭐ END: Loading Screen CSS ⭐ */
+
+  .lobby, .game-board{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:0.5s;
+    z-index: 5;
+  }
+  /* Default Lobby Style (for body.default) */
+  .lobby{background:linear-gradient(145deg,#1a002a,#002147);} 
+  
+  h1{
+    font-size:40px;
+    letter-spacing:3px;
+    text-shadow:0 0 10px #00ffff,0 0 20px #00ffff;
+    margin-bottom:30px;
+    transition:0.3s;
+    animation: neonLobbyPulse 2s infinite alternate; /* Animation applied */
+  }
+  @keyframes neonLobbyPulse {
+      0%, 100% {
+          text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+          color: white;
+      }
+      50% {
+          text-shadow: 0 0 15px #ff00ff, 0 0 30px #ff00ff, 0 0 5px #00ffff;
+          color: #ffe0f0;
+      }
+  }
+
+  .btn{
+    background:transparent;
+    border:2px solid #00ffff;
+    color:white;
+    font-size:20px;
+    padding:10px 30px;
+    margin:10px;
+    border-radius:15px;
+    cursor:pointer;
+    transition:0.3s;
+    z-index: 15;
+  }
+  .btn:hover{
+    background:#00ffff;
+    color:#000;
+    box-shadow:0 0 20px #00ffff;
+  }
+  .difficulty{display:none;flex-direction:column;align-items:center;}
+  .difficulty button{width:150px;margin:5px;}
+  /* New button style for Ultra Hard + */
+  .difficulty button[data-level="ultrahard"] {
+    background: linear-gradient(90deg, #ff00ff, #ff0000);
+    border-color: #ff00ff;
+    color: white;
+    font-weight: bold;
+    text-shadow: 0 0 5px #ff00ff;
+  }
+  .difficulty button[data-level="ultrahard"]:hover {
+    box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff0000;
+    background: linear-gradient(90deg, #ff0000, #ff00ff);
+  }
+
+  .board{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(3,100px);
+    grid-template-rows:repeat(3,100px);
+    gap:8px;
+    margin-top:20px;
+    padding:10px;
+    border-radius:15px;
+    background:#111;
+    border:2px solid #00ffff;
+    transition:0.3s;
+    z-index: 15;
+  }
+  .cell{
+    width:100px;height:100px;
+    background:#0a0a20;
+    border:2px solid #00ffff;
+    border-radius:10px;
+    font-size:60px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:0.2s;
+    user-select:none;
+    z-index: 16;
+  }
+  .cell:hover{transform:translateY(-4px);}
+  .winningCell{animation:winFlash 0.8s infinite alternate;}
+  @keyframes neonBlue{0%,100%{text-shadow:0 0 10px #00ffff, 0 0 20px #00ffff;}55%{text-shadow:0 0 20px #00ffff, 0 0 40px #00ffff;}}
+  @keyframes neonRed{0%,100%{text-shadow:0 0 10px #ff0000, 0 0 20px #ff0000;}55%{text-shadow:0 0 20px #ff0000, 0 0 40px #ff0000;}}
+  @keyframes winFlash{0%{box-shadow:0 0 10px #00ffff, 0 0 20px #00ffff;}50%{box-shadow:0 0 20px #00ffff, 0 0 40px #00ffff;}100%{box-shadow:0 0 10px #00ffff, 0 0 20px #00ffff;}}
+  .winning-line{
+    position:absolute;height:8px;background:#00ff4d;
+    box-shadow:0 0 12px #00ff4d, 0 0 24px #00ff4d;
+    border-radius:8px;transform-origin:center center;z-index:20;display:none;
+  }
+  .popup{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;
+    font-size:50px;flex-direction:column;display:none;z-index:30;
+    text-align: center;
+  }
+  /* Updated styling for winner/loser messages */
+  #winnerText .win-msg {
+    font-size: 50px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    animation: neonWinGlow 1.5s infinite alternate;
+  }
+  #winnerText .lose-msg {
+    font-size: 30px;
+    opacity: 0.7;
+    text-shadow: none;
+    font-weight: normal;
+  }
+
+  /* New Animation for Winner Message */
+  @keyframes neonWinGlow {
+    0% {
+        transform: scale(1);
+        text-shadow: 0 0 10px #fff, 0 0 20px #00ffff, 0 0 30px #ff00ff;
+        color: #fff;
+    }
+    100% {
+        transform: scale(1.05);
+        text-shadow: 0 0 20px #00ffff, 0 0 40px #ff00ff, 0 0 60px #fff;
+        color: #e0f7fa;
+    }
+  }
+
+  .popup button{margin-top:20px;padding:10px 20px;background:#00ffff;border:none;border-radius:10px;font-size:18px;cursor:pointer;}
+  .scoreboard{
+    margin-top:10px;font-size:22px;text-shadow:0 0 5px #00ffff;opacity:0.9;transition:0.3s;
+    z-index: 15;
+  }
+  #backLobbyBtn{
+    position:absolute;top:20px;right:20px;
+    border:2px solid #00ffff;color:#00ffff;padding:10px 20px;
+    border-radius:15px;cursor:pointer;transition:0.3s;
+    background:linear-gradient(90deg,#00ffff,#ff00ff);
+    font-weight:bold;text-shadow:0 0 5px #00ffff, 0 0 10px #ff00ff;
+    box-shadow:0 0 10px #00ffff, 0 0 20px #ff00ff;
+    z-index: 15;
+  }
+  #backLobbyBtn:hover{box-shadow:0 0 20px #00ffff,0 0 40px #ff00ff;color:#000;}
+  #settingBtn{
+    position:absolute;top:20px;left:20px;border:2px solid #00ffff;color:#00ffff;
+    padding:8px 15px;border-radius:12px;cursor:pointer;transition:0.3s;
+    background:#0a0a20;font-weight:bold;text-shadow:0 0 5px #00ffff;
+    display:flex;align-items:center;gap:5px;
+    z-index: 15;
+  }
+  #settingBtn:hover{box-shadow:0 0 10px #00ffff;color:#000;}
+  #themeOptions{
+    position:absolute;top:60px;left:20px;display:none;
+    flex-direction:column;background:rgba(26,0,42,0.9);
+    border:2px solid #00ffff;padding:5px;border-radius:10px;z-index:50;
+  }
+  #themeOptions button{
+    margin:5px 0;padding:5px 10px;border-radius:8px;
+    border:1px solid #00ffff;background:transparent;color:white;cursor:pointer;
+  }
+  #themeOptions button:hover{background:#00ffff;color:#000;}
+
+  /* ---------------------------------------------------- */
+  /* UPDATED: LEVEL PROGRESS BAR CSS (FOR LOBBY) */
+  /* ---------------------------------------------------- */
+  #level-system-container {
+      display: none; /* Hidden by default, shown only when in lobby */
+      width: 80%;
+      max-width: 400px;
+      margin-top: 30px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 2px solid #00ffff;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+      text-align: left;
+      z-index: 15;
+  }
+  
+  #level-info-text {
+      color: #fff;
+      font-size: 18px;
+      margin-bottom: 8px;
+      text-shadow: 0 0 5px #00ffff;
+  }
+  
+  .progress-bar-wrapper {
+      width: 100%;
+      height: 25px;
+      background: #333;
+      border: 2px solid #ff00ff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(255, 0, 255, 0.5), inset 0 0 5px rgba(255, 0, 255, 0.2);
+  }
+  
+  #level-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00ffff, #ff00ff);
+      border-radius: 10px;
+      transition: width 0.3s ease-out;
+  }
+  
+  /* Theme specific colors for Level Bar */
+  .lobby.light #level-system-container {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: #333;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      color: #333;
+  }
+  .lobby.light #level-info-text {
+      color: #333;
+      text-shadow: none;
+  }
+  .lobby.light .progress-bar-wrapper {
+      border: 2px solid #999;
+      box-shadow: none;
+  }
+  .lobby.light #level-progress-fill {
+      background: linear-gradient(90deg, #333, #666);
+  }
+  .lobby.dark #level-system-container {
+      background: rgba(0, 0, 0, 0.6);
+      border-color: #00ffff;
+  }
+  /* ---------------------------------------------------- */
+  /* END LEVEL PROGRESS BAR CSS */
+  /* ---------------------------------------------------- */
+
+  /* --- MODIFIED THEMES (No change here, kept for completeness) --- */
+
+  /* Pink/Love Theme: Light Pink Background */
+  body.pink {background:#ffe6f0;} /* Light Pink */
+  .lobby.pink {background:#ffe6f0; color:#333;}
+  .lobby.pink h1, .lobby.pink p {color:#d81b60;} /* Deep Pink for text */
+  .lobby.pink .btn{border-color:#d81b60; color:#d81b60;}
+  .lobby.pink .btn:hover{background:#d81b60; color:white; box-shadow:0 0 20px #d81b60;}
+  .lobby.pink #settingBtn, .lobby.pink #settingBtn:hover {
+    border-color:#d81b60; color:#d81b60; background:transparent; box-shadow:none;
+  }
+  .lobby.pink #settingBtn:hover {box-shadow:0 0 10px #d81b60; color:#000; background:#d81b60;}
+  .lobby.pink #themeOptions {border-color:#d81b60; background:rgba(255, 230, 240, 0.9);}
+  .lobby.pink #themeOptions button {border-color:#d81b60; color:#d81b60;}
+  .lobby.pink #themeOptions button:hover {background:#d81b60; color:white;}
+  .game-board.pink #backLobbyBtn {
+    border:2px solid #d81b60; color:#d81b60; background:linear-gradient(90deg,#ff80b3,#ff0066);
+    text-shadow:0 0 5px #ff80b3, 0 0 10px #ff0066; box-shadow:0 0 10px #ff80b3, 0 0 20px #ff0066;
+  }
+  .game-board.pink #backLobbyBtn:hover {color:#000;}
+
+  /* Red Theme: Light Red Background */
+  body.red {background:#ffcccc;} /* Light Red */
+  .lobby.red {background:#ffcccc; color:#333;}
+  .lobby.red h1, .lobby.red p {color:#d32f2f;} /* Deep Red for text */
+  .lobby.red .btn{border-color:#d32f2f; color:#d32f2f;}
+  .lobby.red .btn:hover{background:#d32f2f; color:white; box-shadow:0 0 20px #d32f2f;}
+  .lobby.red #settingBtn, .lobby.red #settingBtn:hover {
+    border-color:#d32f2f; color:#d32f2f; background:transparent; box-shadow:none;
+  }
+  .lobby.red #settingBtn:hover {box-shadow:0 0 10px #d32f2f; color:#000; background:#d32f2f;}
+  .lobby.red #themeOptions {border-color:#d32f2f; background:rgba(255, 204, 204, 0.9);}
+  .lobby.red #themeOptions button {border-color:#d32f2f; color:#d32f2f;}
+  .lobby.red #themeOptions button:hover {background:#d32f2f; color:white;}
+  .game-board.red #backLobbyBtn {
+    border:2px solid #d32f2f; color:#d32f2f; background:linear-gradient(90deg,#ff6666,#cc0000);
+    text-shadow:0 0 5px #ff6666, 0 0 10px #cc0000; box-shadow:0 0 10px #ff6666, 0 0 20px #cc0000;
+  }
+  .game-board.red #backLobbyBtn:hover {color:#000;}
+
+  /* Yellow Theme: Light Yellow Background */
+  body.yellow {background:#ffffe0;} /* Light Yellow */
+  .lobby.yellow {background:#ffffe0; color:#333;}
+  .lobby.yellow h1, .lobby.yellow p {color:#fbc02d;} /* Deep Yellow for text */
+  .lobby.yellow .btn{border-color:#fbc02d; color:#fbc02d;}
+  .lobby.yellow .btn:hover{background:#fbc02d; color:white; box-shadow:0 0 20px #fbc02d;}
+  .lobby.yellow #settingBtn, .lobby.yellow #settingBtn:hover {
+    border-color:#fbc02d; color:#fbc02d; background:transparent; box-shadow:none;
+  }
+  .lobby.yellow #settingBtn:hover {box-shadow:0 0 10px #fbc02d; color:#000; background:#fbc02d;}
+  .lobby.yellow #themeOptions {border-color:#fbc02d; background:rgba(255, 255, 224, 0.9);}
+  .lobby.yellow #themeOptions button {border-color:#fbc02d; color:#fbc02d;}
+  .lobby.yellow #themeOptions button:hover {background:#fbc02d; color:white;}
+  .game-board.yellow #backLobbyBtn {
+    border:2px solid #fbc02d; color:#fbc02d; background:linear-gradient(90deg,#ffeb3b,#ff9800);
+    text-shadow:0 0 5px #ffeb3b, 0 0 10px #ff9800; box-shadow:0 0 10px #ffeb3b, 0 0 20px #ff9800;
+  }
+  .game-board.yellow #backLobbyBtn:hover {color:#000;}
+
+  /* ---------------------------------------------------- */
+  /* Rain Effects for Themes (Pink, Red, Yellow) */
+  /* ---------------------------------------------------- */
+  .rain-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    overflow: hidden;
+  }
+  .drop {
+    position: absolute;
+    bottom: 100%;
+    animation: rain-fall linear infinite;
+    font-size: 20px;
+    opacity: 0.8;
+  }
+
+  /* Pink Heart Rain */
+  .pink .drop {color: #ff3399; text-shadow: 0 0 5px #ff99cc;}
+  .pink .drop::before {content: '❤️';}
+
+  /* Red Flower Rain */
+  .red .drop {color: #cc0000; text-shadow: 0 0 5px #ff6666;}
+  .red .drop::before {content: '🌹';}
+
+  /* Yellow Flower Rain */
+  .yellow .drop {color: #ffcc00; text-shadow: 0 0 5px #ffff66;}
+  .yellow .drop::before {content: '🌼';}
+
+  @keyframes rain-fall {
+    0% {transform: translateY(0) scale(1);}
+    100% {transform: translateY(100vh) scale(1.5);}
+  }
+  
+  /* ---------------------------------------------------- */
+  /* Moon and Stars for Dark Theme (Kept as is for theme context) */
+  /* ---------------------------------------------------- */
+  
+  .moon {
+      position: fixed; 
+      top: 5%; 
+      right: 10%; 
+      width: 80px;
+      height: 80px;
+      background: #fdfd96; 
+      border-radius: 50%;
+      box-shadow: 0 0 25px rgba(253, 253, 150, 0.7), inset -10px -10px 20px #ccc; 
+      transition: opacity 0.5s;
+      z-index: 10;
+      display: none;
+  }
+  
+  /* Sun for Light Mode (Kept as is for theme context) */
+  .sun {
+      position: fixed; 
+      top: 5%; 
+      right: 10%; 
+      width: 80px;
+      height: 80px;
+      background: #ffeb3b;
+      border-radius: 50%;
+      box-shadow: 0 0 30px rgba(255, 235, 59, 0.8), 0 0 60px rgba(255, 235, 59, 0.5); 
+      transition: opacity 0.5s;
+      z-index: 10; 
+      display: none;
+      animation: sunPulse 3s infinite alternate;
+  }
+
+  @keyframes sunPulse {
+      0% { transform: scale(1); opacity: 0.9; }
+      100% { transform: scale(1.05); opacity: 1; }
+  }
+  
+  /* Stars Container for Dark Mode (Kept as is for theme context) */
+  .star-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9;
+      overflow: hidden;
+      display: none; 
+  }
+
+  /* Individual Star ⭐ RANDOMLY SIZED AND FADED ⭐ (Kept as is for theme context) */
+  .star {
+      position: absolute;
+      background: #ffffff;
+      border-radius: 50%;
+      animation: star-fall linear infinite; 
+  }
+
+  /* Star Movement (Very Slow) (Kept as is for theme context) */
+  @keyframes star-fall {
+      0% {transform: translateY(0) translateX(0);}
+      100% {transform: translateY(100vh) translateX(50vw);} 
+  }
+  
+  /* NEW CSS FOR MODE-SPECIFIC RESET BUTTON (Kept as is) */
+  #resetModeScoreBtn {
+      position: absolute; 
+      top: 80px; 
+      right: 20px; 
+      padding: 5px 10px; 
+      font-size: 14px; 
+      background: none; 
+      color: #ff0000; 
+      border: 1px solid #ff0000; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      display: none; 
+      transition: 0.2s;
+      z-index: 15;
+  }
+  #resetModeScoreBtn:hover {
+      background: #ff0000; 
+      color: white;
+      box-shadow: 0 0 10px #ff0000;
+  }
+</style>
+</head>
+<body class="default">
+
+<div id="splash-overlay">
+    <div class="particle-container" id="particle-container"></div>
+    <div class="light-streak"></div>
+    <div class="splash-logo">S x A</div>
+</div>
+<div id="loading-overlay" style="display:none;">
+    <h2>L O A D I N G</h2>
+    <div class="neon-text-separator">---------------------&nbsp;&nbsp;&nbsp;L O A D I N G</div>
+    <div class="loading-bar-container">
+        <div class="loading-bar-fill" id="loading-bar-fill"></div>
+    </div>
+    <div class="loading-percentage" id="loading-percentage">0%</div>
+</div>
+<div class="rain-container" id="rain-container"></div>
+<div class="moon" id="moon"></div>
+<div class="sun" id="sun"></div> <div class="star-container" id="star-container"></div>
+
+<div class="lobby default" id="lobby" style="display:none;">
+  <button id="settingBtn">⚙️ Setting</button>
+  <div id="themeOptions">
+    <button onclick="setTheme('default')">Default</button>
+    <button onclick="setTheme('dark')">Dark</button>
+    <button onclick="setTheme('light')">Light</button>
+    <button onclick="setTheme('red')">Red</button>
+    <button onclick="setTheme('yellow')">Yellow</button>
+    <button onclick="setTheme('pink')">Love Mode 🩷</button>
+  </div>
+  
+  <div id="level-system-container" style="display:none;">
+      <div id="level-info-text">Level: 1</div> <div class="progress-bar-wrapper">
+          <div id="level-progress-fill"></div>
+      </div>
+  </div>
+  
+  <h1>TIC TAC TOE</h1>
+  <button class="btn" id="single">SINGLE PLAYER</button>
+  <div class="difficulty" id="difficulty">
+    <button class="btn diff" data-level="easy">EASY</button>
+    <button class="btn diff" data-level="medium">MEDIUM</button>
+    <button class="btn diff" data-level="hard">HARD</button>
+    <button class="btn diff" data-level="ultrahard">ULTRA HARD +</button>
+    </div>
+    
+    <button class="btn" id="levelUpMode">LEVEL UP MODE</button> 
+    <button class="btn" id="multi">MULTI PLAYER</button>
+  
+  </div>
+
+<div class="game-board" id="game" style="display:none;">
+  <button id="backLobbyBtn">BACK TO LOBBY</button>
+  <h1 id="modeTitle"></h1>
+  
+  <button id="resetModeScoreBtn" style="position: absolute; top: 80px; right: 20px; padding: 5px 10px; font-size: 14px; background: none; color: #ff0000; border: 1px solid #ff0000; border-radius: 8px; cursor: pointer; display: none;">
+      RESET ALL PROGRESS
+  </button>
+
+  <div class="scoreboard" id="scoreboard"></div>
+  <div class="board" id="board">
+    <div class="winning-line" id="winning-line"></div>
+  </div>
+</div>
+
+<div class="popup" id="popup">
+  <div id="winnerText"></div>
+  <button onclick="resetGame()">Play Again</button>
+</div>
+
+<script>
+// ====================================================================
+// 🔊 START: AUDIO CODE (UNCHANGED)
+// ====================================================================
+
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtx();
+
+function beep(freq, time=0.16){
+  try{
+    const o = audioCtx.createOscillator(); 
+    const g = audioCtx.createGain();
+    o.type='sine'; 
+    o.frequency.value = freq; 
+    o.connect(g); 
+    g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + time);
+    o.start(audioCtx.currentTime); 
+    o.stop(audioCtx.currentTime + time);
+  }catch(e){}
+}
+function tapSound() { beep(420,0.14); }
+function aiMoveSound() { beep(300,0.24); }
+function winOSound(){ beep(800,0.1); setTimeout(()=>beep(950,0.1),100); setTimeout(()=>beep(1100,0.1),200); }
+function winXSound(){ beep(400,0.1); setTimeout(()=>beep(350,0.1),100); setTimeout(()=>beep(300,0.1),200); }
+function drawSound(){ beep(500,0.12); setTimeout(()=>beep(250,0.2),120); }
+function menuClickSound() { beep(620, 0.08); }
+function settingClickSound() { beep(580, 0.06); }
+function resumeAudio(){ 
+  try{ 
+    audioCtx.resume && audioCtx.resume(); 
+  }catch(e){} 
+  document.removeEventListener('touchstart', resumeAudio); 
+  document.removeEventListener('click', resumeAudio); 
+}
+// ====================================================================
+// 🔊 END: AUDIO CODE (UNCHANGED)
+// ====================================================================
+
+
+// --- UI ELEMENTS ---
+const lobby = document.getElementById('lobby');
+const difficultyDiv = document.getElementById('difficulty');
+const boardDiv = document.getElementById('board');
+const gameDiv = document.getElementById('game');
+const popup = document.getElementById('popup');
+const winnerText = document.getElementById('winnerText');
+const modeTitle = document.getElementById('modeTitle');
+const winningLine = document.getElementById('winning-line');
+const scoreboard = document.getElementById('scoreboard');
+const backLobbyBtn = document.getElementById('backLobbyBtn');
+const rainContainer = document.getElementById('rain-container'); 
+const moon = document.getElementById('moon');
+const sun = document.getElementById('sun');
+const starContainer = document.getElementById('star-container');
+const loadingOverlay = document.getElementById('loading-overlay'); 
+const loadingBarFill = document.getElementById('loading-bar-fill');
+const loadingPercentage = document.getElementById('loading-percentage');
+
+// --- LEVEL SYSTEM ELEMENTS ---
+const levelContainer = document.getElementById('level-system-container');
+const levelInfoText = document.getElementById('level-info-text');
+const levelProgressFill = document.getElementById('level-progress-fill');
+
+// --- SPLASH/LOADING ---
+const splashOverlay = document.getElementById('splash-overlay');
+const splashLogo = document.querySelector('.splash-logo');
+const particleContainer = document.getElementById('particle-container');
+const lightStreak = document.querySelector('.light-streak');
+const PARTICLE_COUNT = 80;
+const SPLASH_DURATION = 3500; 
+const LOADING_DURATION = 5000; 
+const UPDATE_INTERVAL = 50; 
+
+// --- GAME STATE VARIABLES ---
+let board = ["","","","","","","","",""];
+let currentPlayer = "O"; 
+let vsAI = false;
+let aiLevel = "easy";
+let winningCombo = [];
+let scoreO = 0; 
+let scoreX = 0; 
+let currentTheme = 'default';
+
+// ⭐ NEW: Level Up Mode Variables ⭐
+let isLevelUpMode = false;
+let levelUpMatchCount = 0; 
+// ⭐ NEW: Level Up Mode Variables END ⭐
+
+// --- LEVEL/EXP VARIABLES (SAVED IN LOCAL STORAGE) ---
+let playerLevel = 1;
+let currentExp = 0;
+let expToNextLevel = 10; 
+let totalMatchesWon = 0; 
+
+const BASE_EXP_REQ = 10; 
+
+// ====================================================================
+// ⭐ LEVEL SYSTEM & LOCAL STORAGE LOGIC (UPDATED FOR FIX) ⭐
+// ====================================================================
+
+function loadGameData() {
+    const data = localStorage.getItem('tictactoe_player_data');
+    if (data) {
+        const loadedData = JSON.parse(data);
+        playerLevel = loadedData.level || 1;
+        currentExp = loadedData.exp || 0;
+        totalMatchesWon = loadedData.matchesWon || 0;
+        
+        calculateNextLevelRequirement();
+    } else {
+        saveGameData(); 
+    }
+    updateLevelDisplay();
+}
+
+function saveGameData() {
+    calculateNextLevelRequirement(); 
+    
+    const dataToSave = {
+        level: playerLevel,
+        exp: currentExp,
+        matchesWon: totalMatchesWon,
+    };
+    localStorage.setItem('tictactoe_player_data', JSON.stringify(dataToSave));
+}
+
+function calculateNextLevelRequirement() {
+    // EXP needed for Level (N+1) is BASE_EXP_REQ * N
+    expToNextLevel = BASE_EXP_REQ * playerLevel;
+}
+
+function gainExperience(amount) {
+    currentExp += amount;
+    
+    while (currentExp >= expToNextLevel) {
+        currentExp -= expToNextLevel; 
+        playerLevel++; 
+        
+        calculateNextLevelRequirement(); 
+    }
+    saveGameData();
+    updateLevelDisplay();
+}
+
+function updateLevelDisplay() {
+    // This updates the lobby UI - **Only showing Level as requested**
+    if (levelInfoText) {
+        // EXP/Requirement text is removed from here:
+        levelInfoText.textContent = `Level: ${playerLevel}`; 
+        levelProgressFill.style.width = `${(currentExp / expToNextLevel) * 100}%`;
+        
+        // Dynamic color update based on progress
+        if (currentExp / expToNextLevel > 0.8) {
+             levelProgressFill.style.background = 'linear-gradient(90deg, #00ffff, #ffffff)';
+        } else {
+             levelProgressFill.style.background = 'linear-gradient(90deg, #00ffff, #ff00ff)';
+        }
+    }
+}
+
+function updateLevelSystemInLobby() {
+    // Only show level bar in lobby, hide when game is active
+    if (lobby.style.display === 'flex') {
+        levelContainer.style.display = 'block';
+        updateLevelDisplay();
+    } else {
+        levelContainer.style.display = 'none';
+    }
+}
+
+// --- RESET FUNCTION (For Player Progress) ---
+document.getElementById('resetModeScoreBtn').onclick = () => {
+    if(confirm("Are you sure you want to reset ALL Player Progress (Level, EXP, Total Wins)? This cannot be undone.")) {
+        localStorage.removeItem('tictactoe_player_data');
+        playerLevel = 1;
+        currentExp = 0;
+        totalMatchesWon = 0;
+        loadGameData(); 
+        alert("Player Progress has been completely reset!");
+        menuClickSound();
+    }
+};
+
+
+// ====================================================================
+// ⭐ GAMEPLAY INTEGRATION (Updated based on request) ⭐
+// ====================================================================
+
+function makeMove(i){
+  if(board[i]!=="" || checkWinner()) return;
+  
+  if(currentPlayer === 'O') {
+    tapSound(); 
+  } else {
+    aiMoveSound(); 
+  }
+  
+  board[i] = currentPlayer;
+  drawBoard();
+  const winner = checkWinner();
+  
+  if(winner){ 
+    if(winner==='O') scoreO++; else scoreX++; 
+    
+    // ⭐ LEVEL UP CONDITION: GAIN EXP ONLY ON WIN ⭐
+    totalMatchesWon++; 
+    if (winner === 'O' && isLevelUpMode) { // *** LEVEL UP MODE CONDITION ADDED ***
+        gainExperience(1); 
+    }
+    // ⭐ LEVEL UP CONDITION END ⭐
+    
+    drawWinningLine(winningCombo); 
+    
+    if(winner === 'O') {
+      winOSound();
+    } else {
+      winXSound();
+    }
+    
+    let winMessage = '';
+    let loseMessage = '';
+    
+    if (vsAI) {
+        if (winner === 'O') {
+            winMessage = 'YOU WINNER 🎉 CONGRATULATIONS!';
+            loseMessage = 'AI LOSER';
+        } else {
+            winMessage = 'AI WINNER 🎉 CONGRATULATIONS!';
+            loseMessage = 'YOU LOSER';
+        }
+    } else {
+        if (winner === 'O') {
+            winMessage = 'Player O WINNER 🎉';
+            loseMessage = 'Player X LOSER';
+        } else {
+            winMessage = 'Player X WINNER 🎉';
+            loseMessage = 'Player O LOSER';
+        }
+    }
+    
+    showPopup(winMessage, loseMessage); 
+    return; 
+  }
+  
+  if(board.every(x=>x!=="")){ 
+    drawSound(); 
+    setTimeout(()=> showPopup("DRAW!", ""),400); 
+    
+    // ⭐ EXP ON DRAW: Removed - No EXP gained on Draw as per request ⭐
+    
+    return; 
+  }
+  
+  currentPlayer = (currentPlayer==='O')?'X':'O';
+  if(vsAI && currentPlayer==='X') {
+    aiMoveSound(); 
+    setTimeout(aiMove,350);
+  }
+}
+
+
+// ⭐ NEW: resetGame function updated for Level Up Mode Start Alternation ⭐
+function resetGame(){
+  tapSound();
+  
+  popup.style.display='none';
+  winningLine.style.display='none';
+  board=["","","","","","","","",""];
+  winningCombo=[];
+  
+  // ⭐ Level Up Mode Logic: Alternate Start Player and Set Difficulty ⭐
+  if (isLevelUpMode) {
+      levelUpMatchCount++; // Track the match number (1st, 2nd, 3rd...)
+      
+      // Match 1, 3, 5... (Odd count): Player O starts (AI difficulty set to hard)
+      if (levelUpMatchCount % 2 !== 0) { 
+          currentPlayer = "O"; // Player O starts (User always wants to start first in their turn)
+          aiLevel = "hard";    // AI difficulty for this match
+      } 
+      // Match 2, 4, 6... (Even count): AI (X) starts (AI difficulty set to ultra hard)
+      else { 
+          currentPlayer = "X"; // AI starts
+          aiLevel = "ultrahard"; // AI difficulty for this match
+      }
+  } 
+  // ⭐ Existing Logic for other modes (Single Player) ⭐
+  else if (vsAI && aiLevel === 'ultrahard') {
+      currentPlayer = "X"; // Ultra Hard AI always starts
+  } 
+  // Other modes (Easy/Medium/Hard/Multiplayer) start with O
+  else {
+      currentPlayer = "O";
+  }
+  // ⭐ New Logic End ⭐
+  
+  drawBoard();
+  updateScoreboard();
+  
+  if (vsAI && currentPlayer==='X') {
+      aiMoveSound();
+      setTimeout(aiMove, 350);
+  }
+}
+
+// --- START/MODE CHANGE FUNCTIONS (Updated to handle Level Up Mode flags) ---
+function startGame(selectedMode){
+  scoreO = 0;
+  scoreX = 0;
+  
+  lobby.style.display='none';
+  gameDiv.style.display='flex';
+  gameDiv.className = 'game-board ' + currentTheme; 
+  
+  // ⭐ UPDATED: Set modeTitle based on mode name ⭐
+  if (isLevelUpMode) {
+      modeTitle.textContent = 'LEVEL UP MODE'; // The requested title change
+  } else {
+      modeTitle.textContent = selectedMode;
+  }
+  // ⭐ Title Update End ⭐
+  
+  document.getElementById('resetModeScoreBtn').style.display = 'none'; // Hide reset button during game
+  updateLevelSystemInLobby(); // Hide Level Bar when game starts
+  
+  // ⭐ Level Up Mode Initialization ⭐
+  isLevelUpMode = (selectedMode.includes("LEVEL UP MODE"));
+  if (isLevelUpMode) {
+      levelUpMatchCount = 0; // Reset match counter when game starts (will increment in resetGame)
+  }
+  // ⭐ Initialization End ⭐
+  
+  drawBoard();
+  updateScoreboard();
+  
+  // Hide sky effects during gameplay
+  moon.style.display = 'none';
+  sun.style.display = 'none';
+  
+  // Start the first turn using the resetGame logic for correct starting player
+  resetGame(); 
+}
+
+// --- LOBBY BUTTONS (Updated to handle Level Up Mode) ---
+document.getElementById("single").onclick = ()=>{ 
+  menuClickSound(); 
+  if (difficultyDiv.style.display === 'flex') {
+      difficultyDiv.style.display = 'none';
+  } else {
+      difficultyDiv.style.display = 'flex';
+  }
+};
+
+document.querySelectorAll('.diff').forEach(btn=>{
+  btn.onclick = ()=>{
+    menuClickSound(); 
+    aiLevel = btn.dataset.level;
+    vsAI = true;
+    let modeText = (aiLevel === 'ultrahard') ? `AI (ULTRA HARD +)` : 'AI ('+aiLevel.toUpperCase()+')';
+    startGame(modeText);
+  };
+});
+
+// ⭐ NEW: Level Up Mode Button Handler ⭐
+document.getElementById("levelUpMode").onclick = ()=>{
+    menuClickSound(); 
+    vsAI = true;         // It is an AI mode
+    isLevelUpMode = true; // Set the new mode flag
+    // AI Level will be dynamically set in resetGame() based on match count (hard/ultrahard)
+    startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); 
+};
+// ⭐ NEW: Level Up Mode Button Handler END ⭐
+
+document.getElementById("multi").onclick = ()=>{
+  menuClickSound();
+  vsAI = false;
+  isLevelUpMode = false; // Ensure this flag is false for multiplayer
+  startGame('Player O vs Player X');
+};
+
+backLobbyBtn.onclick = ()=>{
+  menuClickSound(); 
+  
+  scoreO = 0;
+  scoreX = 0;
+
+  // ⭐ Reset Level Up Mode Flags ⭐
+  isLevelUpMode = false;
+  levelUpMatchCount = 0;
+  // ⭐ Reset End ⭐
+  
+  lobby.style.display='flex';
+  gameDiv.style.display='none';
+  board = ["","","","","","","","",""];
+  winningCombo = [];
+  currentPlayer = "O";
+  difficultyDiv.style.display='none';
+  gameDiv.className = 'game-board';
+  document.getElementById('resetModeScoreBtn').style.display = 'block'; // Show reset button in lobby
+
+  updateScoreboard();
+  updateLevelSystemInLobby(); // Show Level Bar in lobby
+
+  if (currentTheme === 'dark') {
+      moon.style.display = 'block';
+      starContainer.style.display = 'block'; // Ensure stars are visible
+  }
+  if (currentTheme === 'light') {
+      sun.style.display = 'block';
+  }
+};
+
+
+// --- THEME & UTILITIES (FIXED setTheme function) ---
+const settingBtn = document.getElementById('settingBtn');
+const themeOptions = document.getElementById('themeOptions');
+settingBtn.onclick = ()=> { 
+  settingClickSound(); 
+  themeOptions.style.display = themeOptions.style.display==='flex'?'none':'flex'; 
+}
+document.querySelectorAll('#themeOptions button').forEach(btn => {
+    btn.onclick = () => {
+        settingClickSound();
+        const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0];
+        setTheme(themeName); 
+        // Close options after selection
+        themeOptions.style.display = 'none';
+    };
+});
+
+
+function setTheme(t){
+  currentTheme = t;
+  document.body.className = t; // Apply theme to body
+  lobby.className = 'lobby ' + t; // Apply theme to lobby
+
+  // Reset default styles for buttons to allow theme-specific CSS to take over
+  document.querySelectorAll('.btn').forEach(b=>{
+    b.style.color="";b.style.textShadow="";b.style.borderColor="";b.style.boxShadow="";
+    b.style.background="";
+  });
+
+  // Re-apply default theme styles in JS if needed (or rely purely on CSS for default)
+  if(t==='default'){
+    // Ensures default button styles are reapplied if CSS class rules are not enough
+    document.querySelectorAll('.btn').forEach(b=>{
+      b.style.color="white";b.style.textShadow="0 0 5px #00ffff,0 0 10px #00ffff";
+      b.style.borderColor="#00ffff";
+      b.style.background="transparent";
+    });
+    backLobbyBtn.style.cssText = `
+        position:absolute;top:20px;right:20px;
+        border:2px solid #00ffff;color:#00ffff;padding:10px 20px;
+        border-radius:15px;cursor:pointer;transition:0.3s;
+        background:linear-gradient(90deg,#00ffff,#ff00ff);
+        font-weight:bold;text-shadow:0 0 5px #00ffff, 0 0 10px #ff00ff;
+        box-shadow:0 0 10px #00ffff, 0 0 20px #ff00ff;
+        z-index: 15;
+    `;
+    document.getElementById('settingBtn').style.cssText = `
+        position:absolute;top:20px;left:20px;border:2px solid #00ffff;color:#00ffff;
+        padding:8px 15px;border-radius:12px;cursor:pointer;transition:0.3s;
+        background:#0a0a20;font-weight:bold;text-shadow:0 0 5px #00ffff;
+        display:flex;align-items:center;gap:5px;z-index: 15;
+    `;
+  } 
+  
+  stopRain();
+  stopNightSky();
+  stopDaySky();
+  
+  if (t === 'pink' || t === 'red' || t === 'yellow') {
+    startRain();
+  } else if (t === 'dark') {
+    startNightSky();
+  } else if (t === 'light') {
+    startDaySky();
+  }
+  
+  updateLevelDisplay();
+}
+
+function startDaySky() { sun.style.display = 'block'; }
+function stopDaySky() { sun.style.display = 'none'; }
+const numberOfStars = 100; 
+function startNightSky() {
+    stopNightSky(); 
+    moon.style.display = 'block'; 
+    starContainer.style.display = 'block'; 
+    for (let i = 0; i < numberOfStars; i++) {
+        createStar(true); 
+    }
+}
+function createStar(isInitial = false) {
+    const star = document.createElement('div');
+    star.classList.add('star');
+    const size = Math.random() * 2 + 1; 
+    const duration = Math.random() * 100 + 150; 
+    let delay = Math.random() * -duration; 
+    const left = Math.random() * 100; 
+    const top = Math.random() * 100; 
+    star.style.width = `${size}px`;
+    star.style.height = `${size}px`;
+    star.style.left = `${left}vw`;
+    star.style.top = `${top}vh`;
+    star.style.animationDuration = `${duration}s`;
+    star.style.animationDelay = `${delay}s`;
+    star.style.opacity = Math.random() * 0.7 + 0.3; 
+    star.addEventListener('animationend', () => {
+        star.remove(); 
+        if (document.body.classList.contains('dark')) {
+            createStar(false); 
+        }
+    });
+    starContainer.appendChild(star);
+}
+function stopNightSky() {
+    moon.style.display = 'none'; 
+    starContainer.style.display = 'none'; 
+    starContainer.innerHTML = ''; 
+}
+const numberOfDrops = 50; 
+function startRain() {
+    stopRain(); 
+    for (let i = 0; i < numberOfDrops; i++) {
+        createDrop(true); 
+    }
+}
+function createDrop(isInitial = false) {
+    const drop = document.createElement('div');
+    drop.classList.add('drop');
+    const left = Math.random() * 100; 
+    const duration = Math.random() * 5 + 5; 
+    let delay = Math.random() * -10; 
+    if (isInitial) {
+        delay = Math.random() * -duration; 
+    } else {
+        delay = 0; 
+        drop.style.bottom = '100%'; 
+    }
+    drop.style.left = `${left}vw`;
+    drop.style.animationDuration = `${duration}s`;
+    drop.style.animationDelay = `${delay}s`;
+    const size = Math.random() * 0.5 + 1; 
+    drop.style.transform = `scale(${size})`;
+    drop.addEventListener('animationend', () => {
+        drop.remove(); 
+        if (document.body.classList.contains('pink') || document.body.classList.contains('red') || document.body.classList.contains('yellow')) {
+            createDrop(false); 
+        }
+    });
+    rainContainer.appendChild(drop);
+}
+function stopRain() {
+    rainContainer.innerHTML = '';
+}
+
+// --- Minimax & AI (UNCHANGED) ---
+function minimax(newBoard, player) {
+    const human = 'O';
+    const ai = 'X';
+    const emptySpots = newBoard.map((v,i) => v === "" ? i : null).filter(x => x !== null);
+    
+    const winner = checkWinnerForMinimax(newBoard);
+    if (winner === ai) return { score: 10 };
+    if (winner === human) return { score: -10 };
+    if (emptySpots.length === 0) return { score: 0 };
+
+    const moves = [];
+
+    for (let i of emptySpots) {
+        const move = {};
+        move.index = i;
+        newBoard[i] = player;
+        
+        const result = minimax(newBoard, player === ai ? human : ai);
+        move.score = result.score;
+        
+        newBoard[i] = "";
+        moves.push(move);
+    }
+
+    let bestScore;
+    let bestMoves = [];
+    
+    if (player === ai) {
+        bestScore = -Infinity;
+        for (let i = 0; i < moves.length; i++) {
+            if (moves[i].score > bestScore) {
+                bestScore = moves[i].score;
+                bestMoves = [moves[i]];
+            } else if (moves[i].score === bestScore) {
+                bestMoves.push(moves[i]);
+            }
+        }
+    } else {
+        bestScore = Infinity;
+        for (let i = 0; i < moves.length; i++) {
+            if (moves[i].score < bestScore) {
+                bestScore = moves[i].score;
+                bestMoves = [moves[i]];
+            } else if (moves[i].score === bestScore) {
+                bestMoves.push(moves[i]);
+            }
+        }
+    }
+    
+    if (bestMoves.length > 1) {
+        const randomIndex = Math.floor(Math.random() * bestMoves.length);
+        return bestMoves[randomIndex];
+    }
+
+    return bestMoves[0]; 
+}
+
+function checkWinnerForMinimax(currentBoard){
+  const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const [a,b,c] of winCombos){
+    if(currentBoard[a] && currentBoard[a]===currentBoard[b] && currentBoard[a]===currentBoard[c]){
+      return currentBoard[a];
+    }
+  }
+  return null;
+}
+
+function aiMove(){
+  let empty = board.map((v,i)=> v===""?i:null).filter(x=>x!==null);
+  let move;
+  
+  if(aiLevel === 'ultrahard'){ 
+      const bestMove = minimax(board, 'X');
+      move = bestMove.index;
+  }
+  else if(aiLevel==='easy'){ 
+      move = empty[Math.floor(Math.random()*empty.length)]; 
+  }
+  else{ // hard/medium logic - simplified for 'hard' to be beatable
+    for(let i of empty){ board[i]='X'; if(checkWinner()==='X'){ board[i]=''; move=i; break;} board[i]=''; }
+    for(let i of empty){ board[i]='O'; if(checkWinner()==='O'){ board[i]=''; move=i; break;} board[i]=''; }
+    if(move===undefined) move = empty[Math.floor(Math.random()*empty.length)];
+  }
+  
+  if (move !== undefined && board[move] === "") {
+    makeMove(move);
+  } else if (empty.length > 0 && move === undefined) {
+    makeMove(empty[0]);
+  }
+}
+
+function drawBoard(){
+  Array.from(boardDiv.querySelectorAll('.cell')).forEach(n=>n.remove());
+  board.forEach((val,i)=>{
+    const cell = document.createElement('div');
+    cell.className='cell';
+    cell.textContent = val;
+    if(val==='O'){ cell.style.color='#00ffff'; cell.style.animation='neonBlue 1s infinite alternate'; }
+    else if(val==='X'){ cell.style.color='#ff0000'; cell.style.animation='neonRed 1s infinite alternate'; }
+    else cell.style.animation='none';
+    if(winningCombo.includes(i)) cell.classList.add('winningCell');
+    cell.onclick = ()=> makeMove(i);
+    boardDiv.appendChild(cell);
+  });
+  boardDiv.appendChild(winningLine);
+}
+function updateScoreboard(){
+  scoreboard.textContent = vsAI ? `Player (O): ${scoreO}  |  AI (X): ${scoreX}` : `Player O: ${scoreO}  |  Player X: ${scoreX}`;
+}
+
+function checkWinner(){
+  const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const [a,b,c] of winCombos){
+    if(board[a] && board[a]===board[b] && board[a]===board[c]){
+      winningCombo=[a,b,c]; return board[a];
+    }
+  }
+  winningCombo=[];
+  return null;
+}
+
+function drawWinningLine(combo){
+  if(!combo||combo.length!==3) return;
+  const cells=Array.from(boardDiv.querySelectorAll('.cell'));
+  const first=cells[combo[0]], last=cells[combo[2]];
+  const boardRect=boardDiv.getBoundingClientRect();
+  const r1=first.getBoundingClientRect(), r2=last.getBoundingClientRect();
+  const x1=r1.left+r1.width/2-boardRect.left, y1=r1.top+r1.height/2-boardRect.top;
+  const x2=r2.left+r2.width/2-boardRect.left, y2=r2.top+r2.height/2-boardRect.top;
+  const dx=x2-x1, dy=y2-y1;
+  const length=Math.sqrt(dx*dx+dy*dy);
+  const angle=Math.atan2(dy,dx)*(180/Math.PI);
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  winningLine.style.width=(length+20)+'px';
+  winningLine.style.height='10px';
+  winningLine.style.left=(mx-(length+20)/2)+'px';
+  winningLine.style.top=(my-5)+'px';
+  winningLine.style.transform=`rotate(${angle}deg)`;
+  winningLine.style.display='block';
+}
+
+function showPopup(winMsg, loseMsg){
+  popup.style.display='flex';
+  
+  let contentHTML = `<div class="win-msg">${winMsg}</div>`;
+  if (loseMsg && loseMsg !== "") {
+    contentHTML += `<div class="lose-msg">${loseMsg}</div>`;
+  }
+  
+  winnerText.innerHTML = contentHTML;
+}
+
+
+// --- SPLASH/LOADING LOGIC (UNCHANGED) ---
+
+function createParticle() {
+    const particle = document.createElement('div');
+    particle.classList.add('particle');
+    
+    const size = Math.random() * 4 + 1; 
+    const duration = Math.random() * 4 + 3; 
+    const left = Math.random() * 100; 
+    const top = Math.random() * 100; 
+    const delay = Math.random() * -duration; 
+    
+    particle.style.width = `${size}px`;
+    particle.style.height = `${size}px`;
+    particle.style.left = `${left}vw`;
+    particle.style.top = `${top}vh`;
+    particle.style.animationDuration = `${duration}s`;
+    particle.style.animationDelay = `${delay}s`;
+    
+    particle.style.opacity = Math.random() * 0.5 + 0.3; 
+    
+    particle.addEventListener('animationend', () => {
+        particle.remove(); 
+        createParticle(); 
+    });
+    particleContainer.appendChild(particle);
+}
+
+
+function startLoadingScreen() {
+    loadingOverlay.style.display = 'flex';
+    loadingOverlay.style.pointerEvents = 'auto'; 
+    requestAnimationFrame(() => {
+        loadingOverlay.style.opacity = '1';
+    });
+    
+    let currentProgress = 0;
+    loadingBarFill.style.width = '0%';
+    loadingPercentage.textContent = '0%';
+
+    const interval = setInterval(() => {
+        currentProgress += (UPDATE_INTERVAL / LOADING_DURATION) * 100;
+        if (currentProgress >= 100) {
+            currentProgress = 100;
+            clearInterval(interval);
+        }
+        loadingBarFill.style.width = `${currentProgress}%`;
+        loadingPercentage.textContent = `${Math.floor(currentProgress)}%`;
+
+        if (currentProgress === 100) {
+            setTimeout(() => {
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                    // ⭐ FIX: Show lobby and initialize level bar after loading ⭐
+                    lobby.style.display='flex';
+                    updateLevelSystemInLobby(); 
+                    setTheme('default'); 
+                }, 1000); 
+            }, 500);
+        }
+    }, UPDATE_INTERVAL);
+}
+
+
+function showSplash() {
+    splashOverlay.style.display = 'flex';
+    splashLogo.style.transform = 'scale(0.9)'; 
+    
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        createParticle(); 
+    }
+    
+    requestAnimationFrame(() => {
+        splashLogo.style.transform = 'scale(1)';
+    });
+
+    setTimeout(() => {
+        splashOverlay.style.opacity = '0';
+        splashLogo.style.transform = 'scale(1.2)'; 
+        
+        setTimeout(() => {
+            splashOverlay.style.display = 'none';
+            particleContainer.innerHTML = ''; 
+            lightStreak.style.opacity = 0;
+            
+            startLoadingScreen(); 
+            
+        }, 1000);
+    }, SPLASH_DURATION);
+}
+
+// --- INITIALIZATION ---
+window.addEventListener('load', () => {
+    // 1. Load game data first (Level, EXP, Wins)
+    loadGameData(); 
+    // 2. Start the splash screen sequence
+    showSplash();
+});
+
+document.addEventListener('touchstart', resumeAudio, {passive:true}); 
+document.addEventListener('click', resumeAudio, {passive:true});
+
+</script>
+</body>
+</html>
