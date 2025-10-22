@@ -1,0 +1,17 @@
+{
+  "name": "Tic Tac Tue",
+  "short_name": "TicTacTue",
+  "description": "Simple and fun Tic Tac Toe game made by Shubham Singh.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a20",
+  "theme_color": "#0a0a20",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
