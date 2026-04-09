@@ -4,6 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>TIC TAC TOE — shubhiXarpit (Neon Online)</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a20">
+<link rel="apple-touch-icon" href="icon-512.png">
+
 <style>
   /* Basic Reset and Layout */
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
@@ -138,7 +143,7 @@
   </div>
 
   <div style="margin-top: 25px;">
-      <button class="btn" id="downloadAppBtn" style="background: linear-gradient(90deg, #ff8c00, #ff0080) !important; font-size: 18px; border: 2px solid #fff !important; box-shadow: 0 0 15px #ff8c00;">📲 INSTALL VIP APP</button>
+      <button class="btn" id="downloadAppBtn" style="background: linear-gradient(90deg, #ff8c00, #ff0080) !important; font-size: 18px; border: 2px solid #fff !important; box-shadow: 0 0 15px #ff8c00; display: none;">📲 INSTALL VIP APP</button>
   </div>
 
 </div>
@@ -175,19 +180,6 @@
         <h2 style="color: #ff0055; text-shadow: 0 0 15px #ff0055;">DISCONNECTED</h2>
         <p style="color: #fff; margin: 15px 0 25px; font-size: 18px;">Opponent has left the game.</p>
         <button class="btn" onclick="document.getElementById('disconnectModal').style.display='none'; document.getElementById('backLobbyBtn').click();" style="border-color:#ff0055; color:#ff0055;">BACK TO LOBBY</button>
-    </div>
-</div>
-
-<div id="installModal" class="room-modal" style="z-index: 3000;">
-    <div class="room-box" style="border-color: #ff8c00; box-shadow: 0 0 20px #ff8c00;">
-        <h2 style="color: #ffcc00; text-shadow: 0 0 10px #ffcc00;">INSTALL APP</h2>
-        <p style="color: #fff; margin: 15px 0 25px; font-size: 16px; text-align: left; line-height: 1.6;">
-            To install this game 100% Ad-Free:<br><br>
-            1. Click the <b>3-dots menu (⋮)</b> in your Chrome browser (top-right).<br>
-            2. Select <b>"Add to Home screen"</b> or <b>"Install app"</b>.<br>
-            3. Enjoy the VIP Ad-Free experience! 😎
-        </p>
-        <button class="btn" onclick="document.getElementById('installModal').style.display='none';" style="border-color:#ffcc00; color:#ffcc00;">GOT IT!</button>
     </div>
 </div>
 
@@ -462,14 +454,22 @@ function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.t
 window.addEventListener('load', () => { loadGameData(); showSplash(); });
 document.addEventListener('touchstart', resumeAudio, {passive:true}); document.addEventListener('click', resumeAudio, {passive:true});
 
-// ⭐ NEW PWA DOWNLOAD LOGIC ⭐
+// ⭐ NEW PWA DOWNLOAD LOGIC WITH SW REGISTRATION ⭐
 let deferredPrompt;
 const downloadAppBtn = document.getElementById('downloadAppBtn');
-const installModal = document.getElementById('installModal');
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('Service Worker Registered!', reg);
+    }).catch(err => console.log('SW Fail', err));
+  });
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
+    downloadAppBtn.style.display = 'inline-block'; // Button sirf tab dikhega jab install ho sakta hai
 });
 
 downloadAppBtn.addEventListener('click', async () => {
@@ -478,12 +478,10 @@ downloadAppBtn.addEventListener('click', async () => {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
-            console.log('User installed the VIP PWA app!');
+            console.log('VIP PWA Installed!');
+            downloadAppBtn.style.display = 'none';
         }
         deferredPrompt = null;
-    } else {
-        // Fallback popup agar direct prompt block ho
-        installModal.style.display = 'flex';
     }
 });
 
