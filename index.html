@@ -136,6 +136,11 @@
       <button class="btn" id="createRoomBtn" style="background: linear-gradient(90deg, #ff00cc, #3333ff) !important; border-color: #fff !important; margin: 5px;">CREATE ROOM</button>
       <button class="btn" id="joinRoomBtn" style="background: linear-gradient(90deg, #3333ff, #ff00cc) !important; border-color: #fff !important; margin: 5px;">JOIN ROOM</button>
   </div>
+
+  <div style="margin-top: 25px;">
+      <button class="btn" id="downloadAppBtn" style="background: linear-gradient(90deg, #ff8c00, #ff0080) !important; font-size: 18px; border: 2px solid #fff !important; box-shadow: 0 0 15px #ff8c00;">📲 INSTALL VIP APP</button>
+  </div>
+
 </div>
 
 <div class="game-board" id="game" style="display:none;">
@@ -170,6 +175,19 @@
         <h2 style="color: #ff0055; text-shadow: 0 0 15px #ff0055;">DISCONNECTED</h2>
         <p style="color: #fff; margin: 15px 0 25px; font-size: 18px;">Opponent has left the game.</p>
         <button class="btn" onclick="document.getElementById('disconnectModal').style.display='none'; document.getElementById('backLobbyBtn').click();" style="border-color:#ff0055; color:#ff0055;">BACK TO LOBBY</button>
+    </div>
+</div>
+
+<div id="installModal" class="room-modal" style="z-index: 3000;">
+    <div class="room-box" style="border-color: #ff8c00; box-shadow: 0 0 20px #ff8c00;">
+        <h2 style="color: #ffcc00; text-shadow: 0 0 10px #ffcc00;">INSTALL APP</h2>
+        <p style="color: #fff; margin: 15px 0 25px; font-size: 16px; text-align: left; line-height: 1.6;">
+            To install this game 100% Ad-Free:<br><br>
+            1. Click the <b>3-dots menu (⋮)</b> in your Chrome browser (top-right).<br>
+            2. Select <b>"Add to Home screen"</b> or <b>"Install app"</b>.<br>
+            3. Enjoy the VIP Ad-Free experience! 😎
+        </p>
+        <button class="btn" onclick="document.getElementById('installModal').style.display='none';" style="border-color:#ffcc00; color:#ffcc00;">GOT IT!</button>
     </div>
 </div>
 
@@ -443,6 +461,31 @@ function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.t
 
 window.addEventListener('load', () => { loadGameData(); showSplash(); });
 document.addEventListener('touchstart', resumeAudio, {passive:true}); document.addEventListener('click', resumeAudio, {passive:true});
+
+// ⭐ NEW PWA DOWNLOAD LOGIC ⭐
+let deferredPrompt;
+const downloadAppBtn = document.getElementById('downloadAppBtn');
+const installModal = document.getElementById('installModal');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+});
+
+downloadAppBtn.addEventListener('click', async () => {
+    menuClickSound();
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('User installed the VIP PWA app!');
+        }
+        deferredPrompt = null;
+    } else {
+        // Fallback popup agar direct prompt block ho
+        installModal.style.display = 'flex';
+    }
+});
 
 </script>
 </body>
