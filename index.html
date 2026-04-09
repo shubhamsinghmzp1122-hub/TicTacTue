@@ -222,6 +222,7 @@ function makeMove(i){
 function handleWin(winner) {
     if(winner==='O') scoreO++; else scoreX++; totalMatchesWon++; 
     if (winner === 'O' && isLevelUpMode) gainExperience(1); 
+    if (isOnline && winner === playerRole) gainExperience(1); // ⭐ Online EXP Gain!
     drawWinningLine(winningCombo); 
     if(winner === 'O') winOSound(); else winXSound();
     let winMessage = ''; let loseMessage = '';
@@ -244,7 +245,8 @@ window.resetGame = async function(){
   tapSound();
   if (isOnline) {
       popup.style.display='none';
-      await updateDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: "O" }); return; 
+      let nextStarter = window.startingTurn === 'O' ? 'X' : 'O'; // ⭐ Fair Turn Toggle!
+      await updateDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: nextStarter, startingTurn: nextStarter }); return; 
   }
   popup.style.display='none'; winningLine.style.display='none'; board=["","","","","","","","",""]; winningCombo=[];
   if (isLevelUpMode) { levelUpMatchCount++; if (levelUpMatchCount % 2 !== 0) { currentPlayer = "O"; aiLevel = "hard"; } else { currentPlayer = "X"; aiLevel = "ultrahard"; } } else if (vsAI && aiLevel === 'ultrahard') { currentPlayer = "X"; } else { currentPlayer = "O"; }
@@ -257,7 +259,7 @@ function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toS
 document.getElementById('createRoomBtn').onclick = async () => {
     menuClickSound(); roomCode = generateRoomCode(); playerRole = "O"; 
     roomModalTitle.innerText = "CREATE ROOM"; roomCodeInput.style.display = "none"; roomCodeDisplay.style.display = "block"; roomCodeDisplay.innerText = roomCode; roomStatusText.innerHTML = "Share code. Waiting for friend..."; roomActionBtn.style.display = "none"; roomModal.style.display = "flex";
-    await setDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: "O", status: "waiting" }); listenToRoom();
+    await setDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: "O", startingTurn: "O", status: "waiting" }); listenToRoom();
 };
 
 document.getElementById('joinRoomBtn').onclick = () => {
@@ -286,6 +288,7 @@ function listenToRoom() {
             if (isOnline) { document.getElementById('disconnectModal').style.display = 'flex'; isOnline = false; } return;
         }
         const data = docSnap.data();
+        window.startingTurn = data.startingTurn || "O"; // Store who started
         if (data.status === "playing" && !isOnline) {
             isOnline = true; roomModal.style.display = "none";
             startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + roomCode + '</span>');
