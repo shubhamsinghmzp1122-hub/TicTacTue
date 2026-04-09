@@ -1,6 +1,6 @@
 {
-  "name": "SAAK Tic Tac Tue",
-  "short_name": "TicTacTue",
+  "name": "Tic Tac Tue",
+  "short_name": "Tic Tac Tue",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0a0a20",
