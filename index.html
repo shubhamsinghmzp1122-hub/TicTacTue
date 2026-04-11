@@ -10,9 +10,9 @@
 <link rel="apple-touch-icon" href="icon-512.png">
 
 <style>
-  /* Basic Reset and Layout */
-  *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
-  body{ background:#0a0a20; display:flex; align-items:center; justify-content:center; height:100vh; color:white; overflow:hidden; transition:background 0.5s, color 0.5s; }
+  /* Basic Reset and Layout (Added touch-action to prevent zooming) */
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif; touch-action: manipulation;}
+  body{ background:#0a0a20; display:flex; align-items:center; justify-content:center; height:100vh; color:white; overflow:hidden; transition:background 0.5s, color 0.5s; width: 100vw; max-width: 100%; }
   
   /* ⭐ THEME FIX: DARK/LIGHT MODE CSS ⭐ */
   body.dark { background: #000000; color: #f0f0f0; } .lobby.dark { background: linear-gradient(145deg, #0a0a0a, #1a1a1a); color: #f0f0f0; } .lobby.dark h1 { text-shadow: 2px 2px 5px rgba(0,0,0,0.9), 0 0 10px #00ffff, 0 0 20px #00ffff !important; color: #fff; } .lobby.dark .btn { border-color: #00ffff; color: #00ffff; } .lobby.dark .btn:hover { background: #00ffff !important; color: #000 !important; box-shadow: 0 0 20px #00ffff; }
@@ -46,7 +46,7 @@
   .difficulty{display:none;flex-direction:column;align-items:center;} .difficulty button{width:150px;margin:5px;} .difficulty button[data-level="ultrahard"] { background: linear-gradient(90deg, #8b008b, #8b0000) !important; border-color: #ff00ff; color: white; font-weight: bold; text-shadow: 0 0 5px #ff00ff; } .difficulty button[data-level="ultrahard"]:hover { box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff0000; background: linear-gradient(90deg, #ff0000, #ff00ff) !important; }
 
   /* Game Board */
-  .board{ position:relative; display:grid; grid-template-columns:repeat(3,100px); grid-template-rows:repeat(3,100px); gap:8px; margin-top:20px; padding:10px; border-radius:15px; background: rgba(10, 10, 10, 0.8) !important; border: 2px solid #00ffff; transition: 0.3s; z-index: 15; }
+  .board{ position:relative; display:grid; grid-template-columns:repeat(3,100px); grid-template-rows:repeat(3,100px); gap:8px; margin-top:20px; padding:10px; border-radius:15px; background: rgba(10, 10, 10, 0.8) !important; border: 2px solid #00ffff; transition: 0.3s; z-index: 15; max-width: 95vw; }
   .cell{ width:100px; height:100px; background: rgba(0, 0, 0, 0.6) !important; border:2px solid #00ffff; border-radius:10px; font-size:60px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:0.2s; user-select:none; z-index: 16; } .cell:hover{transform:translateY(-4px);} .winningCell{animation:winFlash 0.8s infinite alternate;}
   
   @keyframes neonBlue{ 0%,100%{text-shadow: 2px 2px 5px rgba(0,0,0,0.9), 0 0 10px #00ffff, 0 0 20px #00ffff;} 55%{text-shadow: 2px 2px 5px rgba(0,0,0,0.9), 0 0 20px #00ffff, 0 0 40px #00ffff;} }
@@ -89,7 +89,8 @@
   .room-box { background: #111; padding: 30px; border: 2px solid #00ffff; border-radius: 15px; text-align: center; box-shadow: 0 0 20px #00ffff; max-width: 90%; }
   .room-box h2 { color: #00ffff; text-shadow: 0 0 10px #00ffff; margin-bottom: 20px; font-size: 28px; }
   #roomCodeDisplay { font-size: 60px; color: #ff00ff; letter-spacing: 10px; text-shadow: 0 0 20px #ff00ff; margin: 20px 0; display: none; }
-  #roomCodeInput { font-size: 40px; text-align: center; width: 200px; padding: 10px; border-radius: 10px; border: 2px solid #ff00ff; background: #222; color: white; margin-bottom: 20px; display: none; outline: none; }
+  /* ⭐ FIX: Center alignment and prevent overflow on Tablets/Phones ⭐ */
+  #roomCodeInput { font-size: 40px; text-align: center; width: 200px; max-width: 80vw; padding: 10px; border-radius: 10px; border: 2px solid #ff00ff; background: #222; color: white; margin: 0 auto 20px auto; display: none; outline: none; }
   #roomCodeInput:focus { box-shadow: 0 0 15px #ff00ff; }
 
   /* ⭐ MIC BUTTON CSS ⭐ */
@@ -99,7 +100,7 @@
       .splash-logo { font-size: 20vw; letter-spacing: 5px; } #loading-overlay h2 { font-size: 8vw; letter-spacing: 3px; } .neon-text-separator { font-size: 4vw; } h1 { font-size: 30px !important; margin-bottom: 15px; } .btn { font-size: 16px; padding: 8px 20px; margin: 6px; } .difficulty button { width: 130px; font-size: 14px; padding: 8px; } .board { gap: 6px; padding: 8px; grid-template-columns: repeat(3, 85px); grid-template-rows: repeat(3, 85px); margin-top: 15px; } .cell { width: 85px; height: 85px; font-size: 50px; } #settingBtn { top: 15px; left: 15px; font-size: 14px; padding: 6px 12px; } #backLobbyBtn { top: 15px; right: 15px; font-size: 12px; padding: 8px 12px; } #resetModeScoreBtn { top: 60px; right: 15px; font-size: 11px; padding: 5px 8px; } .scoreboard { font-size: 16px; margin-top: 5px; } #modeTitle { font-size: 24px; margin-top: 50px; margin-bottom: 10px;} #themeOptions { top: 55px; left: 10px; padding: 10px; min-width: 200px; max-width: calc(100vw - 20px); max-height: calc(100vh - 70px); overflow-y: auto; } #themeOptions button.theme-btn { margin: 3px 0; padding: 6px; font-size: 13px; } .custom-label { font-size: 12px; } #customToggleBtn { font-size: 12px; padding: 8px; margin-top: 8px !important; } #winnerText .win-msg { font-size: 30px; } #winnerText .lose-msg { font-size: 20px; } .popup button { font-size: 16px; padding: 8px 20px; }
       #micBtn { top: 15px; left: 15px; font-size: 14px; padding: 6px 12px; }
   }
-  @media (max-width: 360px) { .board { grid-template-columns: repeat(3, 70px); grid-template-rows: repeat(3, 70px); } .cell { width: 70px; height: 70px; font-size: 40px; } h1 { font-size: 24px !important; } #modeTitle { font-size: 20px !important; margin-top: 50px; } .btn { font-size: 14px; padding: 8px 15px; } }
+  @media (max-width: 360px) { .board { grid-template-columns: repeat(3, 75px); grid-template-rows: repeat(3, 75px); } .cell { width: 75px; height: 75px; font-size: 40px; } h1 { font-size: 24px !important; } #modeTitle { font-size: 20px !important; margin-top: 50px; } .btn { font-size: 14px; padding: 8px 15px; } }
 </style>
 </head>
 <body class="default">
@@ -383,7 +384,6 @@ function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toS
 document.getElementById('createRoomBtn').onclick = async () => {
     menuClickSound(); roomCode = generateRoomCode(); playerRole = "O"; 
     
-    // 🎙️ FIX 1: iOS Safari Mic Issue (Ask for Mic HERE on direct click)
     try {
         if(!window.localStream) {
             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -404,7 +404,6 @@ roomActionBtn.onclick = async () => {
     menuClickSound(); const code = roomCodeInput.value.trim(); if(code.length !== 4) { roomStatusText.innerHTML = "<span style='color:#ff0055;'>❌ Enter a 4-digit code!</span>"; return; }
     roomActionBtn.innerText = "Joining..."; 
     
-    // 🎙️ FIX 1: iOS Safari Mic Issue (Ask for Mic HERE on direct click)
     try {
         if(!window.localStream) {
             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -421,9 +420,11 @@ roomActionBtn.onclick = async () => {
     }
 };
 
+// ⭐ FIX: Cancel karne par Mic Button chhup jayega ⭐
 document.getElementById('roomCancelBtn').onclick = async () => {
     menuClickSound(); roomModal.style.display = "none"; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
     if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)); } roomCode = ""; playerRole = "";
+    document.getElementById('micBtn').style.display = 'none'; 
 };
 
 function listenToRoom() {
@@ -453,7 +454,12 @@ function startGame(selectedMode){
   document.getElementById('resetModeScoreBtn').style.display = 'none'; updateLevelSystemInLobby(); 
   isLevelUpMode = (selectedMode.includes("LEVEL UP MODE")); if (isLevelUpMode) levelUpMatchCount = 0; 
   drawBoard(); updateScoreboard(); moon.style.display = 'none'; sun.style.display = 'none';
-  if (!isOnline) resetGame(); 
+  
+  // ⭐ FIX: Offline mode me Mic Button chhup jayega ⭐
+  if (!isOnline) {
+      document.getElementById('micBtn').style.display = 'none';
+      resetGame(); 
+  } 
 }
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
