@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon-512.png">
 
 <style>
-  /* Basic Reset and Layout (Added touch-action to prevent zooming) */
+  /* Basic Reset and Layout */
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif; touch-action: manipulation;}
   body{ background:#0a0a20; display:flex; align-items:center; justify-content:center; height:100vh; color:white; overflow:hidden; transition:background 0.5s, color 0.5s; width: 100vw; max-width: 100%; }
   
@@ -89,23 +89,26 @@
   .room-box { background: #111; padding: 30px; border: 2px solid #00ffff; border-radius: 15px; text-align: center; box-shadow: 0 0 20px #00ffff; max-width: 90%; }
   .room-box h2 { color: #00ffff; text-shadow: 0 0 10px #00ffff; margin-bottom: 20px; font-size: 28px; }
   #roomCodeDisplay { font-size: 60px; color: #ff00ff; letter-spacing: 10px; text-shadow: 0 0 20px #ff00ff; margin: 20px 0; display: none; }
-  /* ⭐ FIX: Center alignment and prevent overflow on Tablets/Phones ⭐ */
   #roomCodeInput { font-size: 40px; text-align: center; width: 200px; max-width: 80vw; padding: 10px; border-radius: 10px; border: 2px solid #ff00ff; background: #222; color: white; margin: 0 auto 20px auto; display: none; outline: none; }
   #roomCodeInput:focus { box-shadow: 0 0 15px #ff00ff; }
 
-  /* ⭐ MIC BUTTON CSS ⭐ */
+  /* ⭐ MEDIA BUTTONS (MIC & CAM) CSS ⭐ */
   #micBtn { position: absolute; top: 20px; left: 20px; padding: 8px 15px; border-radius: 12px; cursor: pointer; transition: 0.3s; background: rgba(0,0,0,0.8); color: #ff0000; border: 2px solid #ff0000; font-weight: 900; box-shadow: 0 0 10px #ff0000; z-index: 100; display: none; font-size: 16px; }
+  #camBtn { position: absolute; top: 20px; left: 140px; padding: 8px 15px; border-radius: 12px; cursor: pointer; transition: 0.3s; background: rgba(0,0,0,0.8); color: #ff0000; border: 2px solid #ff0000; font-weight: 900; box-shadow: 0 0 10px #ff0000; z-index: 100; display: none; font-size: 16px; }
 
   @media (max-width: 600px) {
       .splash-logo { font-size: 20vw; letter-spacing: 5px; } #loading-overlay h2 { font-size: 8vw; letter-spacing: 3px; } .neon-text-separator { font-size: 4vw; } h1 { font-size: 30px !important; margin-bottom: 15px; } .btn { font-size: 16px; padding: 8px 20px; margin: 6px; } .difficulty button { width: 130px; font-size: 14px; padding: 8px; } .board { gap: 6px; padding: 8px; grid-template-columns: repeat(3, 85px); grid-template-rows: repeat(3, 85px); margin-top: 15px; } .cell { width: 85px; height: 85px; font-size: 50px; } #settingBtn { top: 15px; left: 15px; font-size: 14px; padding: 6px 12px; } #backLobbyBtn { top: 15px; right: 15px; font-size: 12px; padding: 8px 12px; } #resetModeScoreBtn { top: 60px; right: 15px; font-size: 11px; padding: 5px 8px; } .scoreboard { font-size: 16px; margin-top: 5px; } #modeTitle { font-size: 24px; margin-top: 50px; margin-bottom: 10px;} #themeOptions { top: 55px; left: 10px; padding: 10px; min-width: 200px; max-width: calc(100vw - 20px); max-height: calc(100vh - 70px); overflow-y: auto; } #themeOptions button.theme-btn { margin: 3px 0; padding: 6px; font-size: 13px; } .custom-label { font-size: 12px; } #customToggleBtn { font-size: 12px; padding: 8px; margin-top: 8px !important; } #winnerText .win-msg { font-size: 30px; } #winnerText .lose-msg { font-size: 20px; } .popup button { font-size: 16px; padding: 8px 20px; }
-      #micBtn { top: 15px; left: 15px; font-size: 14px; padding: 6px 12px; }
+      
+      /* Mobile Fixes for Buttons & Video */
+      #micBtn { top: 15px; left: 15px; font-size: 12px; padding: 6px 10px; }
+      #camBtn { top: 15px; left: 110px; font-size: 12px; padding: 6px 10px; }
+      #videoContainer { top: 60px !important; left: 15px !important; gap: 15px !important; }
+      #localVideo, #remoteVideo { width: 60px !important; height: 60px !important; }
   }
   @media (max-width: 360px) { .board { grid-template-columns: repeat(3, 75px); grid-template-rows: repeat(3, 75px); } .cell { width: 75px; height: 75px; font-size: 40px; } h1 { font-size: 24px !important; } #modeTitle { font-size: 20px !important; margin-top: 50px; } .btn { font-size: 14px; padding: 8px 15px; } }
 </style>
 </head>
 <body class="default">
-
-<audio id="remoteAudio" autoplay></audio>
 
 <div id="splash-overlay"><div class="particle-container" id="particle-container"></div><div class="light-streak"></div><div class="splash-logo">S x A</div></div>
 <div id="loading-overlay" style="display:none;"><h2>L O A D I N G</h2><div class="neon-text-separator">---------------------&nbsp;&nbsp;&nbsp;L O A D I N G</div><div class="loading-bar-container"><div class="loading-bar-fill" id="loading-bar-fill"></div></div><div class="loading-percentage" id="loading-percentage">0%</div></div>
@@ -153,6 +156,19 @@
 
 <div class="game-board" id="game" style="display:none;">
   <button id="micBtn">🔇 Mic: OFF</button>
+  <button id="camBtn">📷 Cam: OFF</button>
+  
+  <div id="videoContainer" style="display:none; position:absolute; top: 70px; left: 20px; flex-direction: column; gap: 20px; z-index: 50;">
+      <div style="position:relative;">
+          <div style="position:absolute; bottom:-18px; width:100%; text-align:center; font-size:12px; font-weight:bold; color:#00ffff; text-shadow:0 0 5px #00ffff;">YOU</div>
+          <video id="localVideo" autoplay muted playsinline style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; border: 2px solid #00ffff; box-shadow: 0 0 15px #00ffff; transform: scaleX(-1); background:#000;"></video>
+      </div>
+      <div style="position:relative;">
+          <div style="position:absolute; bottom:-18px; width:100%; text-align:center; font-size:12px; font-weight:bold; color:#ff00ff; text-shadow:0 0 5px #ff00ff;">FRIEND</div>
+          <video id="remoteVideo" autoplay playsinline style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; border: 2px solid #ff00ff; box-shadow: 0 0 15px #ff00ff; transform: scaleX(-1); background:#000;"></video>
+      </div>
+  </div>
+
   <button id="backLobbyBtn">BACK TO LOBBY</button>
   <h1 id="modeTitle"></h1>
   <button id="resetModeScoreBtn">RESET ALL PROGRESS</button>
@@ -215,29 +231,29 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig); const db = getFirestore(app);
 let isOnline = false; let roomCode = ""; let playerRole = ""; let unsubscribeRoom = null;
 
-// ⭐ REWRITTEN WEBRTC FOR 100% RELIABILITY ⭐
 let pc = null, localStream = null;
 const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 window.pc = pc; window.localStream = localStream;
 
+// ⭐ REWRITTEN FOR VIDEO + AUDIO ⭐
 async function startVoiceChat(isCreator) {
     window.pc = new RTCPeerConnection(servers);
     let remoteStream = new MediaStream();
-    const audioEl = document.getElementById('remoteAudio');
-    audioEl.srcObject = remoteStream;
+    
+    const remoteVideoEl = document.getElementById('remoteVideo');
+    remoteVideoEl.srcObject = remoteStream;
 
     window.pc.ontrack = e => { 
         e.streams[0].getTracks().forEach(t => remoteStream.addTrack(t)); 
-        audioEl.play().catch(e => console.log("Autoplay blocked, user interaction needed."));
+        remoteVideoEl.play().catch(e => console.log("Autoplay blocked"));
     };
 
-    // Add local stream if available from button click
     if(window.localStream) {
         window.localStream.getTracks().forEach(t => window.pc.addTrack(t, window.localStream));
     }
 
     const roomRef = doc(db, "rooms", roomCode);
-    let pendingCandidates = []; // Queue for race condition fix
+    let pendingCandidates = [];
 
     if (isCreator) {
         window.pc.onicecandidate = e => { if(e.candidate) addDoc(collection(roomRef, "callerCandidates"), e.candidate.toJSON()); }
@@ -249,7 +265,6 @@ async function startVoiceChat(isCreator) {
             const d = snap.data(); 
             if(d && d.answer && !window.pc.currentRemoteDescription) {
                 await window.pc.setRemoteDescription(new RTCSessionDescription(d.answer)); 
-                // Process pending ICE candidates safely
                 pendingCandidates.forEach(c => window.pc.addIceCandidate(new RTCIceCandidate(c)));
                 pendingCandidates = [];
             }
@@ -257,11 +272,7 @@ async function startVoiceChat(isCreator) {
         onSnapshot(collection(roomRef, "calleeCandidates"), snap => { 
             snap.docChanges().forEach(c => { 
                 if(c.type==='added') {
-                    if(window.pc.currentRemoteDescription) {
-                        window.pc.addIceCandidate(new RTCIceCandidate(c.doc.data()));
-                    } else {
-                        pendingCandidates.push(c.doc.data());
-                    }
+                    if(window.pc.currentRemoteDescription) { window.pc.addIceCandidate(new RTCIceCandidate(c.doc.data())); } else { pendingCandidates.push(c.doc.data()); }
                 }
             }); 
         });
@@ -275,7 +286,6 @@ async function startVoiceChat(isCreator) {
                 const answer = await window.pc.createAnswer(); 
                 await window.pc.setLocalDescription(answer);
                 await updateDoc(roomRef, { answer: { type: answer.type, sdp: answer.sdp } });
-                // Process pending ICE candidates safely
                 pendingCandidates.forEach(c => window.pc.addIceCandidate(new RTCIceCandidate(c)));
                 pendingCandidates = [];
             }
@@ -284,26 +294,34 @@ async function startVoiceChat(isCreator) {
         onSnapshot(collection(roomRef, "callerCandidates"), snap => { 
             snap.docChanges().forEach(c => { 
                 if(c.type==='added') {
-                    if(window.pc.currentRemoteDescription) {
-                        window.pc.addIceCandidate(new RTCIceCandidate(c.doc.data()));
-                    } else {
-                        pendingCandidates.push(c.doc.data());
-                    }
+                    if(window.pc.currentRemoteDescription) { window.pc.addIceCandidate(new RTCIceCandidate(c.doc.data())); } else { pendingCandidates.push(c.doc.data()); }
                 }
             }); 
         });
     }
 }
 
+// ⭐ MIC TOGGLE ⭐
 document.getElementById('micBtn').onclick = () => {
-    if(window.localStream) {
+    if(window.localStream && window.localStream.getAudioTracks().length > 0) {
         const t = window.localStream.getAudioTracks()[0]; t.enabled = !t.enabled;
         const btn = document.getElementById('micBtn');
         btn.innerText = t.enabled ? '🎙️ Mic: ON' : '🔇 Mic: OFF';
         btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
         btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
         btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
-        document.getElementById('remoteAudio').play().catch(e => console.log("Audio play allowed"));
+    }
+};
+
+// ⭐ CAM TOGGLE ⭐
+document.getElementById('camBtn').onclick = () => {
+    if(window.localStream && window.localStream.getVideoTracks().length > 0) {
+        const t = window.localStream.getVideoTracks()[0]; t.enabled = !t.enabled;
+        const btn = document.getElementById('camBtn');
+        btn.innerText = t.enabled ? '📷 Cam: ON' : '📷 Cam: OFF';
+        btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
+        btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
+        btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
     }
 };
 
@@ -381,16 +399,20 @@ window.resetGame = async function(){
 const roomModal = document.getElementById('roomModal'); const roomCodeInput = document.getElementById('roomCodeInput'); const roomCodeDisplay = document.getElementById('roomCodeDisplay'); const roomStatusText = document.getElementById('roomStatusText'); const roomActionBtn = document.getElementById('roomActionBtn'); const roomModalTitle = document.getElementById('roomModalTitle');
 function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
+// ⭐ REQUEST BOTH AUDIO & VIDEO WHEN CREATING ROOM ⭐
 document.getElementById('createRoomBtn').onclick = async () => {
     menuClickSound(); roomCode = generateRoomCode(); playerRole = "O"; 
     
     try {
         if(!window.localStream) {
-            window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             window.localStream.getAudioTracks()[0].enabled = false;
+            window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
             document.getElementById('micBtn').style.display = 'block';
+            document.getElementById('camBtn').style.display = 'block';
+            document.getElementById('localVideo').srcObject = window.localStream;
         }
-    } catch(e) { console.log("Mic Denied/Error"); }
+    } catch(e) { console.log("Media Denied/Error"); }
 
     roomModalTitle.innerText = "CREATE ROOM"; roomCodeInput.style.display = "none"; roomCodeDisplay.style.display = "block"; roomCodeDisplay.innerText = roomCode; roomStatusText.innerHTML = "Share code. Waiting for friend..."; roomActionBtn.style.display = "none"; roomModal.style.display = "flex";
     await setDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: "O", startingTurn: "O", status: "waiting" }); listenToRoom();
@@ -400,17 +422,21 @@ document.getElementById('joinRoomBtn').onclick = () => {
     menuClickSound(); roomModalTitle.innerText = "JOIN ROOM"; roomCodeDisplay.style.display = "none"; roomCodeInput.style.display = "block"; roomCodeInput.value = ""; roomStatusText.innerHTML = "Enter 4-digit code to join"; roomActionBtn.style.display = "inline-block"; roomActionBtn.innerText = "JOIN"; roomModal.style.display = "flex";
 };
 
+// ⭐ REQUEST BOTH AUDIO & VIDEO WHEN JOINING ROOM ⭐
 roomActionBtn.onclick = async () => {
     menuClickSound(); const code = roomCodeInput.value.trim(); if(code.length !== 4) { roomStatusText.innerHTML = "<span style='color:#ff0055;'>❌ Enter a 4-digit code!</span>"; return; }
     roomActionBtn.innerText = "Joining..."; 
     
     try {
         if(!window.localStream) {
-            window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             window.localStream.getAudioTracks()[0].enabled = false;
+            window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
             document.getElementById('micBtn').style.display = 'block';
+            document.getElementById('camBtn').style.display = 'block';
+            document.getElementById('localVideo').srcObject = window.localStream;
         }
-    } catch(e) { console.log("Mic Denied/Error"); }
+    } catch(e) { console.log("Media Denied/Error"); }
 
     const docRef = doc(db, "rooms", code); const docSnap = await getDoc(docRef);
     if (docSnap.exists() && docSnap.data().status === "waiting") {
@@ -420,11 +446,13 @@ roomActionBtn.onclick = async () => {
     }
 };
 
-// ⭐ FIX: Cancel karne par Mic Button chhup jayega ⭐
+// ⭐ CANCEL CLEANUP ⭐
 document.getElementById('roomCancelBtn').onclick = async () => {
     menuClickSound(); roomModal.style.display = "none"; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
     if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)); } roomCode = ""; playerRole = "";
     document.getElementById('micBtn').style.display = 'none'; 
+    document.getElementById('camBtn').style.display = 'none'; 
+    if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;}
 };
 
 function listenToRoom() {
@@ -455,9 +483,13 @@ function startGame(selectedMode){
   isLevelUpMode = (selectedMode.includes("LEVEL UP MODE")); if (isLevelUpMode) levelUpMatchCount = 0; 
   drawBoard(); updateScoreboard(); moon.style.display = 'none'; sun.style.display = 'none';
   
-  // ⭐ FIX: Offline mode me Mic Button chhup jayega ⭐
-  if (!isOnline) {
+  // ⭐ SHOW VIDEO FEED ONLY IN ONLINE MODE ⭐
+  if (isOnline) {
+      document.getElementById('videoContainer').style.display = 'flex';
+  } else {
       document.getElementById('micBtn').style.display = 'none';
+      document.getElementById('camBtn').style.display = 'none';
+      document.getElementById('videoContainer').style.display = 'none';
       resetGame(); 
   } 
 }
@@ -467,9 +499,26 @@ document.querySelectorAll('.diff').forEach(btn=>{ btn.onclick = ()=>{ menuClickS
 document.getElementById("levelUpMode").onclick = ()=>{ menuClickSound(); vsAI = true; isLevelUpMode = true; startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); };
 document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; startGame('Player O vs Player X'); };
 
+// ⭐ BACK TO LOBBY CLEANUP ⭐
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
-  if (isOnline) { isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } try { await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} roomCode = ""; playerRole = ""; if(window.pc){window.pc.close(); window.pc=null;} if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; }
+  if (isOnline) { 
+      isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } try { await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
+      roomCode = ""; playerRole = ""; 
+      if(window.pc){window.pc.close(); window.pc=null;} 
+      if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
+      
+      // Reset Mic
+      document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; 
+      
+      // Reset Cam
+      document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
+      
+      // Hide Videos
+      document.getElementById('videoContainer').style.display='none';
+      document.getElementById('localVideo').srcObject = null;
+      document.getElementById('remoteVideo').srcObject = null;
+  }
   scoreO = 0; scoreX = 0; isLevelUpMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
   updateScoreboard(); updateLevelSystemInLobby(); 
   if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
