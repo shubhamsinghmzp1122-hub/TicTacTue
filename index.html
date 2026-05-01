@@ -106,6 +106,15 @@
       #localVideo, #remoteVideo { width: 60px !important; height: 60px !important; }
   }
   @media (max-width: 360px) { .board { grid-template-columns: repeat(3, 75px); grid-template-rows: repeat(3, 75px); } .cell { width: 75px; height: 75px; font-size: 40px; } h1 { font-size: 24px !important; } #modeTitle { font-size: 20px !important; margin-top: 50px; } .btn { font-size: 14px; padding: 8px 15px; } }
+    @media (max-width: 280px) { 
+      .board { grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 4px; } 
+      .cell { width: 60px; height: 60px; font-size: 30px; } 
+      h1 { font-size: 18px !important; } 
+      .btn { font-size: 12px; padding: 5px 10px; }
+      #videoContainer { transform: scale(0.7); left: 0px !important; transform-origin: left top; }
+      #micBtn, #camBtn { font-size: 10px; padding: 4px 6px; }
+      #camBtn { left: 90px; }
+    }
 </style>
 </head>
 <body class="default">
