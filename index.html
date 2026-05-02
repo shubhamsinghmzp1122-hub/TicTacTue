@@ -226,8 +226,8 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
+import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  
 const firebaseConfig = {
   apiKey: "AIzaSyDXUTAIDN9oBwFj9N6zRDl4sRVx3tc4STc",
   authDomain: "tic-tac-toe-onlinex.firebaseapp.com",
@@ -438,8 +438,15 @@ document.getElementById('createRoomBtn').onclick = async () => {
     } catch(e) { console.log("Media Denied/Error"); }
 
     roomModalTitle.innerText = "CREATE ROOM"; roomCodeInput.style.display = "none"; roomCodeDisplay.style.display = "block"; roomCodeDisplay.innerText = roomCode; roomStatusText.innerHTML = "Share code. Waiting for friend..."; roomActionBtn.style.display = "none"; roomModal.style.display = "flex";
-    await setDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: "O", startingTurn: "O", status: "waiting" }); listenToRoom();
-};
+    await setDoc(doc(db, "rooms", roomCode), { 
+    board: ["","","","","","","","",""], 
+    currentPlayer: "O", 
+    startingTurn: "O", 
+    status: "waiting",
+    createdAt: serverTimestamp() 
+}); 
+listenToRoom();
+  
 
 document.getElementById('joinRoomBtn').onclick = () => {
     menuClickSound(); roomModalTitle.innerText = "JOIN ROOM"; roomCodeDisplay.style.display = "none"; roomCodeInput.style.display = "block"; roomCodeInput.value = ""; roomStatusText.innerHTML = "Enter 4-digit code to join"; roomActionBtn.style.display = "inline-block"; roomActionBtn.innerText = "JOIN"; roomModal.style.display = "flex";
