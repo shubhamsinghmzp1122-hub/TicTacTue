@@ -310,27 +310,37 @@ async function startVoiceChat(isCreator) {
     }
 }
 
-// ⭐ MIC TOGGLE ⭐
+// ⭐ MIC TOGGLE (FIXED LOGIC) ⭐
 document.getElementById('micBtn').onclick = () => {
-    if(window.localStream && window.localStream.getAudioTracks().length > 0) {
-        const t = window.localStream.getAudioTracks()[0]; t.enabled = !t.enabled;
-        const btn = document.getElementById('micBtn');
-        btn.innerText = t.enabled ? '🎙️ Mic: ON' : '🔇 Mic: OFF';
-        btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
-        btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
-        btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
+    if(window.localStream) {
+        const audioTracks = window.localStream.getAudioTracks();
+        if(audioTracks.length > 0) {
+            const t = audioTracks[0]; t.enabled = !t.enabled;
+            const btn = document.getElementById('micBtn');
+            btn.innerText = t.enabled ? '🎙️ Mic: ON' : '🔇 Mic: OFF';
+            btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
+            btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
+            btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
+        } else {
+            alert("Microphone track not found! Make sure you allowed permissions.");
+        }
     }
 };
 
-// ⭐ CAM TOGGLE ⭐
+// ⭐ CAM TOGGLE (FIXED LOGIC) ⭐
 document.getElementById('camBtn').onclick = () => {
-    if(window.localStream && window.localStream.getVideoTracks().length > 0) {
-        const t = window.localStream.getVideoTracks()[0]; t.enabled = !t.enabled;
-        const btn = document.getElementById('camBtn');
-        btn.innerText = t.enabled ? '📷 Cam: ON' : '📷 Cam: OFF';
-        btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
-        btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
-        btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
+    if(window.localStream) {
+        const videoTracks = window.localStream.getVideoTracks();
+        if(videoTracks.length > 0) {
+            const t = videoTracks[0]; t.enabled = !t.enabled;
+            const btn = document.getElementById('camBtn');
+            btn.innerText = t.enabled ? '📷 Cam: ON' : '📷 Cam: OFF';
+            btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
+            btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
+            btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
+        } else {
+            alert("Camera track not found! Make sure you allowed permissions.");
+        }
     }
 };
 
@@ -352,6 +362,10 @@ document.getElementById('resetModeScoreBtn').onclick = () => { if(confirm("Are y
 
 async function handleCellClick(i) {
     if (board[i] !== "" || checkWinner()) return;
+    
+    // ⭐ FIX: Prevent User from clicking during AI's turn (AI is always 'X' in this game)
+    if (vsAI && currentPlayer === 'X') return; 
+
     if (isOnline) {
         if (currentPlayer !== playerRole) return; 
         let newBoard = [...board]; newBoard[i] = playerRole; let nextPlayer = playerRole === 'O' ? 'X' : 'O';
@@ -415,8 +429,8 @@ document.getElementById('createRoomBtn').onclick = async () => {
     try {
         if(!window.localStream) {
             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-            window.localStream.getAudioTracks()[0].enabled = false;
-            window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
+            if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
+            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
             document.getElementById('micBtn').style.display = 'block';
             document.getElementById('camBtn').style.display = 'block';
             document.getElementById('localVideo').srcObject = window.localStream;
@@ -439,8 +453,8 @@ roomActionBtn.onclick = async () => {
     try {
         if(!window.localStream) {
             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-            window.localStream.getAudioTracks()[0].enabled = false;
-            window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
+            if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
+            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
             document.getElementById('micBtn').style.display = 'block';
             document.getElementById('camBtn').style.display = 'block';
             document.getElementById('localVideo').srcObject = window.localStream;
@@ -508,13 +522,21 @@ document.querySelectorAll('.diff').forEach(btn=>{ btn.onclick = ()=>{ menuClickS
 document.getElementById("levelUpMode").onclick = ()=>{ menuClickSound(); vsAI = true; isLevelUpMode = true; startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); };
 document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; startGame('Player O vs Player X'); };
 
-// ⭐ BACK TO LOBBY CLEANUP ⭐
+// ⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
       isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } try { await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
       roomCode = ""; playerRole = ""; 
-      if(window.pc){window.pc.close(); window.pc=null;} 
+      
+      // Stop peer connection thoroughly
+      if(window.pc){
+          window.pc.ontrack = null;
+          window.pc.onicecandidate = null;
+          window.pc.close(); 
+          window.pc=null;
+      } 
+      
       if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
       
       // Reset Mic
