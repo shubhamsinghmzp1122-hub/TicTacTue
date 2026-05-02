@@ -446,7 +446,7 @@ document.getElementById('createRoomBtn').onclick = async () => {
     createdAt: serverTimestamp() 
 }); 
 listenToRoom();
-  
+};
 
 document.getElementById('joinRoomBtn').onclick = () => {
     menuClickSound(); roomModalTitle.innerText = "JOIN ROOM"; roomCodeDisplay.style.display = "none"; roomCodeInput.style.display = "block"; roomCodeInput.value = ""; roomStatusText.innerHTML = "Enter 4-digit code to join"; roomActionBtn.style.display = "inline-block"; roomActionBtn.innerText = "JOIN"; roomModal.style.display = "flex";
