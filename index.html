@@ -140,7 +140,10 @@
   
     <div id="level-system-container" style="display:none;"><div id="level-info-text">Level: 1</div><div class="progress-bar-wrapper"><div id="level-progress-fill"></div></div></div>
   
-  <button id="profileBtn" class="btn" style="background: linear-gradient(90deg, #00ffff, #00b3b3) !important; color: #000 !important; border-radius: 25px; margin-bottom: 15px; font-size: 16px; padding: 5px 20px; box-shadow: 0 0 15px #00ffff;">👤 MY PROFILE</button>
+    <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 15px; z-index: 15;">
+      <button id="profileBtn" class="btn" style="background: linear-gradient(90deg, #00ffff, #00b3b3) !important; color: #000 !important; border-radius: 25px; font-size: 16px; padding: 5px 20px; box-shadow: 0 0 15px #00ffff; margin: 0;">👤 MY PROFILE</button>
+      <button id="friendsListBtn" class="btn" style="background: linear-gradient(90deg, #ff00ff, #b300b3) !important; color: #fff !important; border-radius: 25px; font-size: 16px; padding: 5px 20px; box-shadow: 0 0 15px #ff00ff; margin: 0;">🤝 FRIENDS</button>
+  </div>
 
   <h1>TIC TAC TOE</h1>
     <button class="btn" id="single">SINGLE PLAYER</button>
@@ -310,6 +313,27 @@
         <button id="sendRequestBtn" class="btn" style="background: #ff00ff !important; color: #fff !important; width: 100%; box-shadow: 0 0 15px #ff00ff; margin-bottom: 10px; border: none !important; transition: 0.3s;">➕ SEND REQUEST</button>
 
         <button class="btn" onclick="document.getElementById('searchedProfileModal').style.display='none';" style="background: transparent !important; border-color:#888; color:#888; width: 100%;">CLOSE</button>
+    </div>
+</div>
+
+<div id="friendsModal" class="room-modal" style="z-index: 4500;">
+    <div class="room-box" style="border-color: #ff00ff; box-shadow: 0 0 25px #ff00ff; width: 350px; max-width: 95vw; background: linear-gradient(145deg, #111, #222); padding: 20px;">
+        <h2 style="color: #ff00ff; text-shadow: 0 0 15px #ff00ff; margin-bottom: 15px; letter-spacing: 2px;">SOCIAL</h2>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <button id="tabMyFriends" class="btn" style="flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;">MY FRIENDS</button>
+            <button id="tabRequests" class="btn" style="flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;">REQUESTS</button>
+        </div>
+
+        <div id="contentMyFriends" style="background: rgba(0,0,0,0.5); border-radius: 10px; height: 280px; overflow-y: auto; padding: 10px; border: 1px solid #ff00ff;">
+            <p style="color: #aaa; margin-top: 110px; font-weight: bold;">Loading friends...</p>
+        </div>
+        
+        <div id="contentRequests" style="background: rgba(0,0,0,0.5); border-radius: 10px; height: 280px; overflow-y: auto; padding: 10px; border: 1px solid #ff00ff; display: none;">
+            <p style="color: #aaa; margin-top: 110px; font-weight: bold;">Loading requests...</p>
+        </div>
+
+        <button class="btn" onclick="document.getElementById('friendsModal').style.display='none';" style="background: transparent !important; border-color:#888; color:#888; width: 100%; margin-top: 15px;">CLOSE</button>
     </div>
 </div>
 
@@ -864,11 +888,32 @@ document.getElementById('sendRequestBtn').onclick = async () => {
     }
 };
 
+// ⭐ FRIENDS MODAL & TABS LOGIC ⭐
+document.getElementById('friendsListBtn').onclick = () => {
+    menuClickSound();
+    document.getElementById('friendsModal').style.display = 'flex';
+    // TODO: Agle phase mein yahan Firebase se asli data kheechenge!
+};
+
+document.getElementById('tabMyFriends').onclick = () => {
+    menuClickSound();
+    document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;";
+    document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
+    document.getElementById('contentMyFriends').style.display = 'block';
+    document.getElementById('contentRequests').style.display = 'none';
+};
+
+document.getElementById('tabRequests').onclick = () => {
+    menuClickSound();
+    document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;";
+    document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
+    document.getElementById('contentRequests').style.display = 'block';
+    document.getElementById('contentMyFriends').style.display = 'none';
+};
+
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
 
-
 // ⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
-
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
@@ -1012,4 +1057,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-  </html>
+</html>
