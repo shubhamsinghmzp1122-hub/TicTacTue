@@ -933,22 +933,64 @@ async function loadFriendRequests() {
     }
 }
 
+// ⭐ HELPER: FIREBASE SE MY FRIENDS LOAD KARNA ⭐
+async function loadMyFriends() {
+    const friendBox = document.getElementById('contentMyFriends');
+    friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Fetching Friends... ⏳</p>";
+    
+    try {
+        const snapshot = await getDocs(collection(db, "users", myUID, "friends"));
+        
+        if(snapshot.empty) {
+            friendBox.innerHTML = "<p style='color:#aaa; margin-top:110px;'>No friends yet 😢<br><span style='font-size:12px;'>Search UID to add!</span></p>";
+            return;
+        }
+        
+        let html = "";
+        // Har ek dost ka detailed data `users` table se kheecho
+        for (const docSnap of snapshot.docs) {
+            const friendID = docSnap.id;
+            const q = query(collection(db, "users"), where("gameUID", "==", friendID));
+            const fSnap = await getDocs(q);
+            
+            fSnap.forEach(fDoc => {
+                const fData = fDoc.data();
+                html += `
+                <div style="background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2);">
+                    <div style="text-align: left;">
+                        <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase;">${fData.playerName || 'GUEST'}</div>
+                        <div style="color:#aaa; font-size:12px; letter-spacing:1px;">Lv. ${fData.level || 1} | ${fData.matchesWon || 0} 🏆</div>
+                    </div>
+                    <button style="background:#333; color:#fff; border:1px solid #00ffff; padding:6px 12px; border-radius:5px; font-weight:bold; cursor:not-allowed; font-size:12px;">FRIEND</button>
+                </div>`;
+            });
+        }
+        friendBox.innerHTML = html;
+    } catch(e) {
+        friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>";
+        console.log("Friend Fetch Error: ", e);
+    }
+}
+
 // ⭐ ACCEPT / REJECT ACTION LOGIC ⭐
 window.handleRequest = async (docId, action, friendUID, friendName) => {
     menuClickSound();
+    
+    // UI Update immediately so user doesn't wait
+    document.getElementById('contentRequests').innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Updating... ⏳</p>";
+
     try {
-        // Request ka status update karo (accepted/rejected)
         await updateDoc(doc(db, "friend_requests", docId), { status: action });
         
         if (action === 'accepted') {
-            // Dono ki friend list me ek dusre ko add karo
             await setDoc(doc(db, "users", myUID, "friends", friendUID), { uid: friendUID, addedAt: serverTimestamp() });
             await setDoc(doc(db, "users", friendUID, "friends", myUID), { uid: myUID, addedAt: serverTimestamp() });
-            alert("Friend Added Successfully! 🎉");
         }
-        loadFriendRequests(); // List refresh karo
+        // Naya data fresh load karo bina alert dikhaye!
+        loadFriendRequests(); 
     } catch(e) {
         console.log("Action Error:", e);
+        loadFriendRequests();
     }
 };
 
@@ -958,7 +1000,8 @@ document.getElementById('tabMyFriends').onclick = () => {
     document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
     document.getElementById('contentMyFriends').style.display = 'block';
     document.getElementById('contentRequests').style.display = 'none';
-    // TODO: Phase 3 mein yahan My Friends ki list load karenge
+    
+    loadMyFriends(); // ⭐ TAB DABTE HI FRIENDS KI LIST LOAD HOGI
 };
 
 document.getElementById('tabRequests').onclick = () => {
@@ -968,10 +1011,18 @@ document.getElementById('tabRequests').onclick = () => {
     document.getElementById('contentRequests').style.display = 'block';
     document.getElementById('contentMyFriends').style.display = 'none';
     
-    loadFriendRequests(); // ⭐ JAISE HI TAB DABEGA, DATABASE SE REQUESTS AAYENGI!
+    loadFriendRequests(); 
+};
+
+// Pehli baar modal khulne par friends list load ho jaye
+document.getElementById('friendsListBtn').onclick = () => {
+    menuClickSound();
+    document.getElementById('friendsModal').style.display = 'flex';
+    document.getElementById('tabMyFriends').click(); 
 };
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
+
 
 // ⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
 backLobbyBtn.onclick = async ()=>{
@@ -1117,4 +1168,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-</html>
+  </html>
