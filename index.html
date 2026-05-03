@@ -154,9 +154,20 @@
   <button class="btn" id="multi">LOCAL MULTI PLAYER</button>
 
   <div id="liveOnlineText" style="margin: 15px 0 5px; font-size: 14px; letter-spacing: 2px;">⚡ LIVE ONLINE ⚡</div>
+
   <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
       <button class="btn" id="createRoomBtn" style="background: linear-gradient(90deg, #ff00cc, #3333ff) !important; border-color: #fff !important; margin: 5px;">CREATE ROOM</button>
       <button class="btn" id="joinRoomBtn" style="background: linear-gradient(90deg, #3333ff, #ff00cc) !important; border-color: #fff !important; margin: 5px;">JOIN ROOM</button>
+  </div>
+
+  <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.6); border: 2px solid #ff00ff; border-radius: 15px; box-shadow: 0 0 15px rgba(255,0,255,0.3); max-width: 90vw;">
+      <h3 style="color: #ff00ff; text-shadow: 0 0 10px #ff00ff; margin-bottom: 10px; font-size: 16px;">🔍 SEARCH PLAYER</h3>
+      <div style="display: flex; justify-content: center; gap: 10px; align-items: center;">
+
+          <input type="text" inputmode="numeric" id="searchUidInput" placeholder="5-Digit UID" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 5);" style="width: 130px; text-align: center; font-size: 16px; padding: 8px; border-radius: 8px; border: 2px solid #00ffff; background: #222; color: #fff; outline: none; font-weight: bold; letter-spacing: 2px;">
+          <button id="searchPlayerBtn" class="btn" style="margin: 0; padding: 8px 15px; font-size: 14px; background: #00ffff !important; color: #000 !important; border: none !important; box-shadow: 0 0 10px #00ffff;">FIND</button>
+      </div>
+      <p id="searchResultText" style="color: #fff; margin-top: 10px; font-size: 15px; display: none; font-weight: bold;"></p>
   </div>
 
   <div style="margin-top: 25px;">
@@ -274,14 +285,40 @@
     </div>
 </div>
 
+<div id="searchedProfileModal" class="room-modal" style="z-index: 4000;">
+    <div class="room-box" style="border-color: #ff00ff; box-shadow: 0 0 25px #ff00ff; width: 320px; max-width: 90vw; background: linear-gradient(145deg, #111, #222);">
+        <h2 style="color: #ff00ff; text-shadow: 0 0 15px #ff00ff; letter-spacing: 2px;">PLAYER FOUND</h2>
+        
+        <div id="searchMainIcon" style="margin: 15px auto; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 15px rgba(255,255,255,0.4)); transition: all 0.4s ease;"></div>
+        
+        <h3 id="searchNameDisplay" style="color: #fff; font-size: 24px; margin-bottom: 5px; text-transform: uppercase;">GUEST</h3>
+        <div style="color: #aaa; font-size: 14px; letter-spacing: 2px; margin-bottom: 10px; font-weight: bold;">UID: <span id="searchUidDisplay" style="color: #ffcc00;">00000</span></div>
+        
+        <div id="searchBadgeDisplay" style="color: #00ffff; font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px #00ffff; font-size: 18px; letter-spacing: 1px;">🎖️ ROOKIE</div>
+        
+        <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #ff00ff; box-shadow: inset 0 0 10px rgba(255,0,255,0.2);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
+                <span style="color: #ccc; font-size: 16px;">Level:</span>
+                <span id="searchLevelDisplay" style="color: #00ffff; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ffff;">1</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #ccc; font-size: 16px;">Total Wins:</span>
+                <span id="searchWinsDisplay" style="color: #00ff4d; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ff4d;">0 🏆</span>
+            </div>
+        </div>
+        
+        <button class="btn" style="background: #ff00ff !important; color: #fff !important; width: 100%; box-shadow: 0 0 15px #ff00ff; margin-bottom: 10px; border: none !important;">➕ SEND REQUEST</button>
+        <button class="btn" onclick="document.getElementById('searchedProfileModal').style.display='none';" style="background: transparent !important; border-color:#888; color:#888; width: 100%;">CLOSE</button>
+    </div>
+</div>
+
 <script type="module">
 
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-  
 const firebaseConfig = {
   apiKey: "AIzaSyDXUTAIDN9oBwFj9N6zRDl4sRVx3tc4STc",
   authDomain: "tic-tac-toe-onlinex.firebaseapp.com",
@@ -409,7 +446,18 @@ let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let c
 
 
 function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
-function saveGameData() { calculateNextLevelRequirement(); const dataToSave = { level: playerLevel, exp: currentExp, matchesWon: totalMatchesWon, name: playerName }; localStorage.setItem('tictactoe_player_data', JSON.stringify(dataToSave)); }
+
+function saveGameData() { 
+    calculateNextLevelRequirement(); 
+    const dataToSave = { level: playerLevel, exp: currentExp, matchesWon: totalMatchesWon, name: playerName }; 
+    localStorage.setItem('tictactoe_player_data', JSON.stringify(dataToSave)); 
+    // ⭐ Database mein Level aur Wins update karo taaki dost dekh sakein!
+    if (auth && auth.currentUser) {
+        updateDoc(doc(db, "users", auth.currentUser.uid), {
+            level: playerLevel, exp: currentExp, matchesWon: totalMatchesWon, playerName: playerName
+        }).catch(e => console.log(e));
+    }
+}
 
 function calculateNextLevelRequirement() { expToNextLevel = BASE_EXP_REQ * playerLevel; }
 function gainExperience(amount) { currentExp += amount; while (currentExp >= expToNextLevel) { currentExp -= expToNextLevel; playerLevel++; calculateNextLevelRequirement(); } saveGameData(); updateLevelDisplay(); }
@@ -703,9 +751,75 @@ document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficul
 
 document.querySelectorAll('.diff').forEach(btn=>{ btn.onclick = ()=>{ menuClickSound(); aiLevel = btn.dataset.level; vsAI = true; let modeText = (aiLevel === 'ultrahard') ? `AI (ULTRA HARD +)` : 'AI ('+aiLevel.toUpperCase()+')'; startGame(modeText); }; });
 document.getElementById("levelUpMode").onclick = ()=>{ menuClickSound(); vsAI = true; isLevelUpMode = true; startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); };
+
 document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; startGame('Player O vs Player X'); };
 
+// ⭐ PLAYER SEARCH LOGIC & SHOW CARD ⭐
+document.getElementById('searchPlayerBtn').onclick = async () => {
+    menuClickSound();
+    const searchInput = document.getElementById('searchUidInput');
+    const searchUid = searchInput.value.trim();
+    const resultText = document.getElementById('searchResultText');
+    
+    // ⭐ Error dikhane aur turant input saaf karne ka function
+    const showError = (msg) => {
+        searchInput.value = ''; // Galat UID turant saaf!
+        document.getElementById('searchedProfileModal').style.display = 'none';
+        resultText.style.display = 'block';
+        resultText.innerHTML = msg;
+        setTimeout(() => { resultText.style.display = 'none'; }, 2000); // 2 second baad warning gayab
+    };
+    
+    if (searchUid.length !== 5) { showError("<span style='color: #ff0055;'>❌ Sirf 5-Digit UID dal bhai!</span>"); return; }
+    if (searchUid === myUID) { showError("<span style='color: #ffcc00;'>⚠️ Ye tera hi UID hai bhai!</span>"); return; }
+
+    resultText.style.display = 'block'; resultText.innerHTML = "<span style='color: #00ffff;'>Searching Radar... ⏳</span>";
+
+    try {
+        const q = query(collection(db, "users"), where("gameUID", "==", searchUid));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            showError("<span style='color: #ff0055;'>❌ Player Not Found!</span>");
+        } else {
+            resultText.style.display = 'none'; // Text hatao
+            searchInput.value = ''; // Sahi UID milne par bhi box khali karo
+            
+            querySnapshot.forEach((docSnap) => {
+                const pData = docSnap.data();
+                let pLevel = pData.level || 1;
+                
+                document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST";
+                document.getElementById('searchUidDisplay').innerText = pData.gameUID;
+                document.getElementById('searchLevelDisplay').innerText = pLevel;
+                document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
+                
+                let rName="", rColor="", rSvg="";
+                if (pLevel < 10) { rName="NOVICE"; rColor="#a0a0a0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
+                else if (pLevel < 20) { rName="FIGHTER"; rColor="#cd7f32"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
+                else if (pLevel < 30) { rName="WARRIOR"; rColor="#c0c0c0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`; }
+                else if (pLevel < 40) { rName="ELITE"; rColor="#ffd700"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`; }
+                else if (pLevel < 50) { rName="MASTER"; rColor="#00ffff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`; }
+                else if (pLevel < 60) { rName="GRANDMASTER"; rColor="#ff00ff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`; }
+                else if (pLevel < 70) { rName="EPIC"; rColor="#ff0055"; rSvg=`<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`; }
+                else if (pLevel < 80) { rName="MYTHIC"; rColor="#8a2be2"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`; }
+                else if (pLevel < 90) { rName="LEGEND"; rColor="#ff4500"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`; }
+                else if (pLevel < 100) { rName="SUPREME"; rColor="#ffffff"; rSvg=`<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
+                else { rName="IMMORTAL"; rColor="#ff2a2a"; rSvg=`<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
+
+                const sBadge = document.getElementById('searchBadgeDisplay');
+                sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
+                const sIcon = document.getElementById('searchMainIcon');
+                sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
+
+                document.getElementById('searchedProfileModal').style.display = 'flex';
+            });
+        }
+    } catch (error) { showError("<span style='color: #ff0055;'>❌ Server Error!</span>"); console.log(error); }
+};
+
 // ⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
+
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
@@ -785,12 +899,16 @@ function initializePlayerAuth() {
             } else {
                 // Naya user hai, random 5-digit UID (10000 - 99999) bana kar save karo
                 let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
+
                 await setDoc(userDocRef, {
                     gameUID: newGameUID,
                     playerName: playerName,
                     level: playerLevel,
+                    matchesWon: totalMatchesWon,
+                    exp: currentExp,
                     createdAt: serverTimestamp()
                 });
+
                 myUID = newGameUID;
             }
         } else {
@@ -845,4 +963,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-</html>
+  </html>
