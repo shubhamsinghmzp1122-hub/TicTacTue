@@ -788,13 +788,12 @@ document.getElementById('searchPlayerBtn').onclick = async () => {
     const searchUid = searchInput.value.trim();
     const resultText = document.getElementById('searchResultText');
     
-    // ⭐ Error dikhane aur turant input saaf karne ka function
     const showError = (msg) => {
-        searchInput.value = ''; // Galat UID turant saaf!
+        searchInput.value = ''; 
         document.getElementById('searchedProfileModal').style.display = 'none';
         resultText.style.display = 'block';
         resultText.innerHTML = msg;
-        setTimeout(() => { resultText.style.display = 'none'; }, 2000); // 2 second baad warning gayab
+        setTimeout(() => { resultText.style.display = 'none'; }, 2000); 
     };
     
     if (searchUid.length !== 5) { showError("<span style='color: #ff0055;'>❌ Sirf 5-Digit UID dal bhai!</span>"); return; }
@@ -809,46 +808,52 @@ document.getElementById('searchPlayerBtn').onclick = async () => {
         if (querySnapshot.empty) {
             showError("<span style='color: #ff0055;'>❌ Player Not Found!</span>");
         } else {
-            resultText.style.display = 'none'; // Text hatao
-            searchInput.value = ''; // Sahi UID milne par bhi box khali karo
+            resultText.style.display = 'none'; 
+            searchInput.value = ''; 
             
-            querySnapshot.forEach((docSnap) => {
-                const pData = docSnap.data();
-                let pLevel = pData.level || 1;
-                
-                document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST";
-                document.getElementById('searchUidDisplay').innerText = pData.gameUID;
-                document.getElementById('searchLevelDisplay').innerText = pLevel;
-                document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
-                
-                // ⭐ NAYA: Kisko request bhejni hai wo set karo aur button reset karo
-                currentSearchedUID = pData.gameUID;
-                const reqBtn = document.getElementById('sendRequestBtn');
-                reqBtn.innerText = "➕ SEND REQUEST";
-                reqBtn.style.background = "#ff00ff";
-                reqBtn.style.boxShadow = "0 0 15px #ff00ff";
-                reqBtn.disabled = false;
+            const pData = querySnapshot.docs[0].data();
+            let pLevel = pData.level || 1;
+            
+            document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST";
+            document.getElementById('searchUidDisplay').innerText = pData.gameUID;
+            document.getElementById('searchLevelDisplay').innerText = pLevel;
+            document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
+            
+            currentSearchedUID = pData.gameUID;
+            const reqBtn = document.getElementById('sendRequestBtn');
+            reqBtn.innerText = "➕ SEND REQUEST";
+            reqBtn.style.background = "#ff00ff";
+            reqBtn.style.boxShadow = "0 0 15px #ff00ff";
+            reqBtn.disabled = false;
+            reqBtn.style.display = 'block'; // Default dikhao
+            
+            // ⭐ SMART FIX: Check karo ki kya ye pehle se dost hai?
+            try {
+                const friendCheckSnap = await getDoc(doc(db, "users", myUID, "friends", currentSearchedUID));
+                if (friendCheckSnap.exists()) {
+                    reqBtn.style.display = 'none'; // Agar dost hai toh Request button gayab!
+                }
+            } catch(e) { console.log(e); }
        
-                let rName="", rColor="", rSvg="";
-                if (pLevel < 10) { rName="NOVICE"; rColor="#a0a0a0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
-                else if (pLevel < 20) { rName="FIGHTER"; rColor="#cd7f32"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
-                else if (pLevel < 30) { rName="WARRIOR"; rColor="#c0c0c0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`; }
-                else if (pLevel < 40) { rName="ELITE"; rColor="#ffd700"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`; }
-                else if (pLevel < 50) { rName="MASTER"; rColor="#00ffff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`; }
-                else if (pLevel < 60) { rName="GRANDMASTER"; rColor="#ff00ff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`; }
-                else if (pLevel < 70) { rName="EPIC"; rColor="#ff0055"; rSvg=`<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`; }
-                else if (pLevel < 80) { rName="MYTHIC"; rColor="#8a2be2"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`; }
-                else if (pLevel < 90) { rName="LEGEND"; rColor="#ff4500"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`; }
-                else if (pLevel < 100) { rName="SUPREME"; rColor="#ffffff"; rSvg=`<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
-                else { rName="IMMORTAL"; rColor="#ff2a2a"; rSvg=`<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
+            let rName="", rColor="", rSvg="";
+            if (pLevel < 10) { rName="NOVICE"; rColor="#a0a0a0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 20) { rName="FIGHTER"; rColor="#cd7f32"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 30) { rName="WARRIOR"; rColor="#c0c0c0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 40) { rName="ELITE"; rColor="#ffd700"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 50) { rName="MASTER"; rColor="#00ffff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 60) { rName="GRANDMASTER"; rColor="#ff00ff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 70) { rName="EPIC"; rColor="#ff0055"; rSvg=`<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 80) { rName="MYTHIC"; rColor="#8a2be2"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`; }
+            else if (pLevel < 90) { rName="LEGEND"; rColor="#ff4500"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`; }
+            else if (pLevel < 100) { rName="SUPREME"; rColor="#ffffff"; rSvg=`<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
+            else { rName="IMMORTAL"; rColor="#ff2a2a"; rSvg=`<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
 
-                const sBadge = document.getElementById('searchBadgeDisplay');
-                sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
-                const sIcon = document.getElementById('searchMainIcon');
-                sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
+            const sBadge = document.getElementById('searchBadgeDisplay');
+            sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
+            const sIcon = document.getElementById('searchMainIcon');
+            sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
 
-                document.getElementById('searchedProfileModal').style.display = 'flex';
-            });
+            document.getElementById('searchedProfileModal').style.display = 'flex';
         }
     } catch (error) { showError("<span style='color: #ff0055;'>❌ Server Error!</span>"); console.log(error); }
 };
@@ -862,7 +867,6 @@ document.getElementById('sendRequestBtn').onclick = async () => {
     btn.disabled = true;
 
     try {
-        // Ek unique ID banate hain taaki ek hi dost ko 10 baar request na chali jaye (Jaise: 12345_67890)
         const requestDocId = myUID + "_" + currentSearchedUID;
         
         await setDoc(doc(db, "friend_requests", requestDocId), {
@@ -873,12 +877,10 @@ document.getElementById('sendRequestBtn').onclick = async () => {
             timestamp: serverTimestamp()
         });
 
-        // Success Effect!
         btn.innerText = "✅ SENT!";
-        btn.style.background = "#00ff4d"; // Green color
+        btn.style.background = "#00ff4d"; 
         btn.style.boxShadow = "0 0 15px #00ff4d";
         
-        // 1.5 second baad popup apne aap band ho jayega
         setTimeout(() => { document.getElementById('searchedProfileModal').style.display = 'none'; }, 1500);
 
     } catch (error) {
@@ -888,20 +890,12 @@ document.getElementById('sendRequestBtn').onclick = async () => {
     }
 };
 
-// ⭐ FRIENDS MODAL & TABS LOGIC ⭐
-document.getElementById('friendsListBtn').onclick = () => {
-    menuClickSound();
-    document.getElementById('friendsModal').style.display = 'flex';
-    document.getElementById('tabMyFriends').click(); // Default My Friends tab kholo
-};
-
 // ⭐ HELPER: FIREBASE SE REQUESTS LOAD KARNA ⭐
-async function loadFriendRequests() {
+window.loadFriendRequests = async function() {
     const reqBox = document.getElementById('contentRequests');
     reqBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Radar scanning... ⏳</p>";
     
     try {
-        // Query: Wo requests dhoondho jisme 'toUID' mera UID ho aur status 'pending' ho
         const q = query(collection(db, "friend_requests"), where("toUID", "==", myUID), where("status", "==", "pending"));
         const snapshot = await getDocs(q);
         
@@ -931,10 +925,10 @@ async function loadFriendRequests() {
         reqBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>";
         console.log("Fetch Error: ", e);
     }
-}
+};
 
 // ⭐ HELPER: FIREBASE SE MY FRIENDS LOAD KARNA ⭐
-async function loadMyFriends() {
+window.loadMyFriends = async function() {
     const friendBox = document.getElementById('contentMyFriends');
     friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Fetching Friends... ⏳</p>";
     
@@ -947,7 +941,6 @@ async function loadMyFriends() {
         }
         
         let html = "";
-        // Har ek dost ka detailed data `users` table se kheecho
         for (const docSnap of snapshot.docs) {
             const friendID = docSnap.id;
             const q = query(collection(db, "users"), where("gameUID", "==", friendID));
@@ -959,7 +952,7 @@ async function loadMyFriends() {
                 <div style="background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2);">
                     <div style="text-align: left;">
                         <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase;">${fData.playerName || 'GUEST'}</div>
-                        <div style="color:#aaa; font-size:12px; letter-spacing:1px;">Lv. ${fData.level || 1} | ${fData.matchesWon || 0} 🏆</div>
+                        <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold;">Lv. ${fData.level || 1}</div>
                     </div>
                     <button style="background:#333; color:#fff; border:1px solid #00ffff; padding:6px 12px; border-radius:5px; font-weight:bold; cursor:not-allowed; font-size:12px;">FRIEND</button>
                 </div>`;
@@ -970,28 +963,31 @@ async function loadMyFriends() {
         friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>";
         console.log("Friend Fetch Error: ", e);
     }
-}
+};
 
-// ⭐ ACCEPT / REJECT ACTION LOGIC ⭐
+// ⭐ NO ALERT ACCEPT / REJECT LOGIC ⭐
 window.handleRequest = async (docId, action, friendUID, friendName) => {
     menuClickSound();
-    
-    // UI Update immediately so user doesn't wait
     document.getElementById('contentRequests').innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Updating... ⏳</p>";
 
     try {
         await updateDoc(doc(db, "friend_requests", docId), { status: action });
-        
         if (action === 'accepted') {
             await setDoc(doc(db, "users", myUID, "friends", friendUID), { uid: friendUID, addedAt: serverTimestamp() });
             await setDoc(doc(db, "users", friendUID, "friends", myUID), { uid: myUID, addedAt: serverTimestamp() });
         }
-        // Naya data fresh load karo bina alert dikhaye!
-        loadFriendRequests(); 
+        loadFriendRequests(); // Bina alert ke silent update!
     } catch(e) {
         console.log("Action Error:", e);
         loadFriendRequests();
     }
+};
+
+// ⭐ TABS LOGIC ⭐
+document.getElementById('friendsListBtn').onclick = () => {
+    menuClickSound();
+    document.getElementById('friendsModal').style.display = 'flex';
+    document.getElementById('tabMyFriends').click(); 
 };
 
 document.getElementById('tabMyFriends').onclick = () => {
@@ -1000,8 +996,7 @@ document.getElementById('tabMyFriends').onclick = () => {
     document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
     document.getElementById('contentMyFriends').style.display = 'block';
     document.getElementById('contentRequests').style.display = 'none';
-    
-    loadMyFriends(); // ⭐ TAB DABTE HI FRIENDS KI LIST LOAD HOGI
+    loadMyFriends(); 
 };
 
 document.getElementById('tabRequests').onclick = () => {
@@ -1010,21 +1005,12 @@ document.getElementById('tabRequests').onclick = () => {
     document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
     document.getElementById('contentRequests').style.display = 'block';
     document.getElementById('contentMyFriends').style.display = 'none';
-    
     loadFriendRequests(); 
-};
-
-// Pehli baar modal khulne par friends list load ho jaye
-document.getElementById('friendsListBtn').onclick = () => {
-    menuClickSound();
-    document.getElementById('friendsModal').style.display = 'flex';
-    document.getElementById('tabMyFriends').click(); 
 };
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
 
-
-// ⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
+//⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
@@ -1168,4 +1154,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-  </html>
+</html>
