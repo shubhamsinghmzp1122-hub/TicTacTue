@@ -138,10 +138,14 @@
     </div>
   </div>
   
-  <div id="level-system-container" style="display:none;"><div id="level-info-text">Level: 1</div><div class="progress-bar-wrapper"><div id="level-progress-fill"></div></div></div>
+    <div id="level-system-container" style="display:none;"><div id="level-info-text">Level: 1</div><div class="progress-bar-wrapper"><div id="level-progress-fill"></div></div></div>
   
+  <button id="profileBtn" class="btn" style="background: linear-gradient(90deg, #00ffff, #00b3b3) !important; color: #000 !important; border-radius: 25px; margin-bottom: 15px; font-size: 16px; padding: 5px 20px; box-shadow: 0 0 15px #00ffff;">👤 MY PROFILE</button>
+
   <h1>TIC TAC TOE</h1>
-  <button class="btn" id="single">SINGLE PLAYER</button>
+
+  
+    <button class="btn" id="single">SINGLE PLAYER</button>
   <div class="difficulty" id="difficulty">
     <button class="btn diff" data-level="easy">EASY</button>
     <button class="btn diff" data-level="medium">MEDIUM</button>
@@ -220,11 +224,41 @@
             2. Select <b>"Add to Home screen"</b> or <b>"Install app"</b>.<br>
             3. Enjoy the VIP Ad-Free experience! 😎
         </p>
+
         <button class="btn" onclick="document.getElementById('installModal').style.display='none';" style="border-color:#ffcc00; color:#ffcc00;">GOT IT!</button>
     </div>
 </div>
 
+<div id="profileModal" class="room-modal" style="z-index: 4000;">
+    <div class="room-box" style="border-color: #00ffff; box-shadow: 0 0 25px #00ffff; width: 320px; max-width: 90vw; background: linear-gradient(145deg, #111, #222);">
+        <h2 style="color: #00ffff; text-shadow: 0 0 15px #00ffff; letter-spacing: 2px;">PLAYER CARD</h2>
+        
+        <div style="font-size: 70px; margin: 10px 0; text-shadow: 0 0 20px rgba(255,255,255,0.5);">😎</div>
+        <h3 id="profileNameDisplay" style="color: #fff; margin-bottom: 5px; font-size: 24px;">GUEST</h3>
+        <div id="profileBadgeDisplay" style="color: #ff00ff; font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px #ff00ff; font-size: 18px; letter-spacing: 1px;">🎖️ ROOKIE</div>
+        
+        <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #00ffff; box-shadow: inset 0 0 10px rgba(0,255,255,0.2);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
+                <span style="color: #ccc; font-size: 16px;">Current Level:</span>
+                <span id="profileLevelDisplay" style="color: #00ffff; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ffff;">1</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
+                <span style="color: #ccc; font-size: 16px;">Total Wins:</span>
+                <span id="profileWinsDisplay" style="color: #00ff4d; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ff4d;">0 🏆</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #ccc; font-size: 16px;">Next Level In:</span>
+                <span id="profileExpDisplay" style="color: #ff00ff; font-weight: bold; font-size: 16px;">0 / 10 EXP</span>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="document.getElementById('profileModal').style.display='none';" style="background: transparent !important; border-color:#ff0055; color:#ff0055; width: 100%; box-shadow: 0 0 10px #ff0055;">CLOSE</button>
+    </div>
+</div>
+
 <script type="module">
+
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
   
@@ -524,7 +558,25 @@ function startGame(selectedMode){
   } 
 }
 
+// ⭐ PROFILE BUTTON CLICK LOGIC ⭐
+document.getElementById('profileBtn').onclick = () => {
+    menuClickSound();
+    document.getElementById('profileLevelDisplay').innerText = playerLevel;
+    document.getElementById('profileWinsDisplay').innerText = totalMatchesWon + ' 🏆';
+    document.getElementById('profileExpDisplay').innerText = currentExp + ' / ' + expToNextLevel + ' EXP';
+    
+    let badge = "🎖️ ROOKIE";
+    if(playerLevel >= 10) badge = "⚔️ PRO PLAYER";
+    if(playerLevel >= 25) badge = "👑 KING";
+    if(playerLevel >= 50) badge = "☠️ CONQUEROR";
+    document.getElementById('profileBadgeDisplay').innerText = badge;
+
+    document.getElementById('profileModal').style.display = 'flex';
+};
+
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
+
+
 document.querySelectorAll('.diff').forEach(btn=>{ btn.onclick = ()=>{ menuClickSound(); aiLevel = btn.dataset.level; vsAI = true; let modeText = (aiLevel === 'ultrahard') ? `AI (ULTRA HARD +)` : 'AI ('+aiLevel.toUpperCase()+')'; startGame(modeText); }; });
 document.getElementById("levelUpMode").onclick = ()=>{ menuClickSound(); vsAI = true; isLevelUpMode = true; startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); };
 document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; startGame('Player O vs Player X'); };
@@ -627,7 +679,15 @@ downloadAppBtn.addEventListener('click', async () => {
             console.log('VIP PWA Installed!');
             downloadAppBtn.style.display = 'none';
         }
+
         deferredPrompt = null;
+    }
+});
+
+// ⭐ AUTO CLEANUP: Jab user achanak app/tab band karega ⭐
+window.addEventListener('beforeunload', () => {
+    if (roomCode !== "" && playerRole === "O") {
+        deleteDoc(doc(db, "rooms", roomCode));
     }
 });
 
