@@ -250,7 +250,10 @@
             <button id="saveNameBtn" style="background: #00ffff; color: #000; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; cursor: pointer;">SAVE</button>
         </div>
 
+        <div style="color: #aaa; font-size: 16px; letter-spacing: 3px; margin-bottom: 15px; font-weight: bold;">UID: <span id="uidTextDisplay" style="color: #00ffff; text-shadow: 0 0 5px #00ffff; user-select: text;">LOADING...</span></div>
+
         <div id="profileBadgeDisplay" style="color: #ff00ff; font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px #ff00ff; font-size: 18px; letter-spacing: 1px;">🎖️ ROOKIE</div>
+
         
         <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #00ffff; box-shadow: inset 0 0 10px rgba(0,255,255,0.2);">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
@@ -276,6 +279,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
   
 const firebaseConfig = {
   apiKey: "AIzaSyDXUTAIDN9oBwFj9N6zRDl4sRVx3tc4STc",
@@ -286,8 +291,9 @@ const firebaseConfig = {
   appId: "1:924586025656:web:32e2805f80de726fb20a4d"
 };
 
-const app = initializeApp(firebaseConfig); const db = getFirestore(app);
+const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app);
 let isOnline = false; let roomCode = ""; let playerRole = ""; let unsubscribeRoom = null;
+let myUID = "LOADING..."; 
 
 let pc = null, localStream = null;
 const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
@@ -607,7 +613,9 @@ document.getElementById('profileBtn').onclick = () => {
     
     // Basic UI Update
     profileNameDisplay.innerText = playerName;
+    document.getElementById('uidTextDisplay').innerText = myUID; // ⭐ UID UI mein dikhega
     nameEditContainer.style.display = 'none';
+
     nameDisplayContainer.style.display = 'flex';
     
     document.getElementById('profileLevelDisplay').innerText = playerLevel;
@@ -765,8 +773,36 @@ function createParticle() { const particle = document.createElement('div'); part
 function startLoadingScreen() { loadingOverlay.style.display = 'flex'; loadingOverlay.style.pointerEvents = 'auto'; requestAnimationFrame(() => { loadingOverlay.style.opacity = '1'; }); let currentProgress = 0; loadingBarFill.style.width = '0%'; loadingPercentage.textContent = '0%'; const interval = setInterval(() => { currentProgress += (UPDATE_INTERVAL / LOADING_DURATION) * 100; if (currentProgress >= 100) { currentProgress = 100; clearInterval(interval); } loadingBarFill.style.width = `${currentProgress}%`; loadingPercentage.textContent = `${Math.floor(currentProgress)}%`; if (currentProgress === 100) { setTimeout(() => { loadingOverlay.style.opacity = '0'; setTimeout(() => { loadingOverlay.style.display = 'none'; lobby.style.display='flex'; updateLevelSystemInLobby(); setTheme('default'); }, 1000); }, 500); } }, UPDATE_INTERVAL); }
 function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.transform = 'scale(0.9)'; for (let i = 0; i < PARTICLE_COUNT; i++) { createParticle(); } requestAnimationFrame(() => { splashLogo.style.transform = 'scale(1)'; }); setTimeout(() => { splashOverlay.style.opacity = '0'; splashLogo.style.transform = 'scale(1.2)'; setTimeout(() => { splashOverlay.style.display = 'none'; particleContainer.innerHTML = ''; lightStreak.style.opacity = 0; startLoadingScreen(); }, 1000); }, SPLASH_DURATION); }
 
-window.addEventListener('load', () => { loadGameData(); showSplash(); });
+// ⭐ FIREBASE ANONYMOUS AUTH & 5-DIGIT UID SYSTEM ⭐
+function initializePlayerAuth() {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            // User pehle se login hai, database se 5-digit UID nikal lo
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                myUID = userDoc.data().gameUID;
+            } else {
+                // Naya user hai, random 5-digit UID (10000 - 99999) bana kar save karo
+                let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
+                await setDoc(userDocRef, {
+                    gameUID: newGameUID,
+                    playerName: playerName,
+                    level: playerLevel,
+                    createdAt: serverTimestamp()
+                });
+                myUID = newGameUID;
+            }
+        } else {
+            // Login nahi hai, toh chupke se Anonymous Login kara do
+            signInAnonymously(auth).catch((error) => console.log("Auth Error:", error));
+        }
+    });
+}
+
+window.addEventListener('load', () => { loadGameData(); showSplash(); initializePlayerAuth(); });
 document.addEventListener('touchstart', resumeAudio, {passive:true}); document.addEventListener('click', resumeAudio, {passive:true});
+
 
 // ⭐ NEW PWA DOWNLOAD LOGIC WITH SW REGISTRATION ⭐
 let deferredPrompt;
@@ -809,4 +845,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-  </html>
+</html>
