@@ -143,8 +143,6 @@
   <button id="profileBtn" class="btn" style="background: linear-gradient(90deg, #00ffff, #00b3b3) !important; color: #000 !important; border-radius: 25px; margin-bottom: 15px; font-size: 16px; padding: 5px 20px; box-shadow: 0 0 15px #00ffff;">👤 MY PROFILE</button>
 
   <h1>TIC TAC TOE</h1>
-
-  
     <button class="btn" id="single">SINGLE PLAYER</button>
   <div class="difficulty" id="difficulty">
     <button class="btn diff" data-level="easy">EASY</button>
@@ -233,7 +231,9 @@
     <div class="room-box" style="border-color: #00ffff; box-shadow: 0 0 25px #00ffff; width: 320px; max-width: 90vw; background: linear-gradient(145deg, #111, #222);">
         <h2 style="color: #00ffff; text-shadow: 0 0 15px #00ffff; letter-spacing: 2px;">PLAYER CARD</h2>
         
-        <div style="font-size: 70px; margin: 10px 0; text-shadow: 0 0 20px rgba(255,255,255,0.5);">😎</div>
+        <div id="profileMainIcon" style="margin: 15px auto; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 15px rgba(255,255,255,0.4)); transition: all 0.4s ease;">
+            </div>
+
         <div id="nameDisplayContainer" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px;">
             <h3 id="profileNameDisplay" style="color: #fff; font-size: 24px; margin: 0; text-transform: uppercase;">GUEST</h3>
             <button id="editNameBtn" style="background: none; border: none; cursor: pointer; opacity: 0.8; padding: 5px; display: flex; align-items: center; transition: 0.3s;" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.1)';" onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)';">
@@ -601,11 +601,11 @@ document.getElementById('saveNameBtn').onclick = () => {
     nameDisplayContainer.style.display = 'flex';
 };
 
-// ⭐ PROFILE BUTTON CLICK LOGIC ⭐
+// ⭐ PROFILE BUTTON CLICK LOGIC & ORIGINAL RANKS ⭐
 document.getElementById('profileBtn').onclick = () => {
     menuClickSound();
     
-    // UI Update karo
+    // Basic UI Update
     profileNameDisplay.innerText = playerName;
     nameEditContainer.style.display = 'none';
     nameDisplayContainer.style.display = 'flex';
@@ -614,14 +614,81 @@ document.getElementById('profileBtn').onclick = () => {
     document.getElementById('profileWinsDisplay').innerText = totalMatchesWon + ' 🏆';
     document.getElementById('profileExpDisplay').innerText = currentExp + ' / ' + expToNextLevel + ' EXP';
     
-    let badge = "🎖️ ROOKIE";
-    if(playerLevel >= 10) badge = "⚔️ PRO PLAYER";
-    if(playerLevel >= 25) badge = "👑 KING";
-    if(playerLevel >= 50) badge = "☠️ CONQUEROR";
-    document.getElementById('profileBadgeDisplay').innerText = badge;
+    // ---------------------------------------------------------
+    // ⭐ 10 LEVEL ORIGINAL RANK SYSTEM (WITH CSS SVG BADGES) ⭐
+    // ---------------------------------------------------------
+    let rName = ""; let rColor = ""; let rSvg = "";
+
+    // 1. NOVICE (Level 1-9)
+    if (playerLevel < 10) { 
+        rName = "NOVICE"; rColor = "#a0a0a0"; 
+        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`;
+    }
+    // 2. FIGHTER (Level 10-19)
+    else if (playerLevel < 20) { 
+        rName = "FIGHTER"; rColor = "#cd7f32"; // Bronze type
+        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`;
+    }
+    // 3. WARRIOR (Level 20-29)
+    else if (playerLevel < 30) { 
+        rName = "WARRIOR"; rColor = "#c0c0c0"; // Silver type
+        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`;
+    }
+    // 4. ELITE (Level 30-39)
+    else if (playerLevel < 40) { 
+        rName = "ELITE"; rColor = "#ffd700"; // Gold type
+        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`;
+    }
+    // 5. MASTER (Level 40-49)
+    else if (playerLevel < 50) { 
+        rName = "MASTER"; rColor = "#00ffff"; // Cyan/Neon
+        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`;
+    }
+    // 6. GRANDMASTER (Level 50-59)
+    else if (playerLevel < 60) { 
+        rName = "GRANDMASTER"; rColor = "#ff00ff"; // Pink/Neon
+        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`;
+    }
+    // 7. EPIC (Level 60-69)
+    else if (playerLevel < 70) { 
+        rName = "EPIC"; rColor = "#ff0055"; // Red/Neon
+        rSvg = `<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`;
+    }
+    // 8. MYTHIC (Level 70-79)
+    else if (playerLevel < 80) { 
+        rName = "MYTHIC"; rColor = "#8a2be2"; // Purple
+        rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`;
+    }
+    // 9. LEGEND (Level 80-89)
+    else if (playerLevel < 90) { 
+        rName = "LEGEND"; rColor = "#ff4500"; // Orange Fire
+        rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`;
+    }
+        // 10. SUPREME (Level 90-99)
+    else if (playerLevel < 100) { 
+        rName = "SUPREME"; rColor = "#ffffff"; // Pure White
+        rSvg = `<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`;
+    }
+    // 11. IMMORTAL (Level 100+) - The Ultimate God Tier!
+    else { 
+        rName = "IMMORTAL"; rColor = "#ff2a2a"; // Glowing Blood Red & Gold
+        rSvg = `<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`;
+    }
+
+    // Badge Update
+    const badgeDisplay = document.getElementById('profileBadgeDisplay');
+    badgeDisplay.innerHTML = rName;
+    badgeDisplay.style.color = rColor;
+    badgeDisplay.style.textShadow = `0 0 15px ${rColor}`;
+    
+    // Main Bada SVG Icon Update
+    const mainIcon = document.getElementById('profileMainIcon');
+    mainIcon.innerHTML = rSvg;
+    mainIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
 
     document.getElementById('profileModal').style.display = 'flex';
 };
+
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
 
@@ -742,4 +809,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-</html>
+  </html>
