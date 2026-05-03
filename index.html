@@ -234,7 +234,22 @@
         <h2 style="color: #00ffff; text-shadow: 0 0 15px #00ffff; letter-spacing: 2px;">PLAYER CARD</h2>
         
         <div style="font-size: 70px; margin: 10px 0; text-shadow: 0 0 20px rgba(255,255,255,0.5);">😎</div>
-        <h3 id="profileNameDisplay" style="color: #fff; margin-bottom: 5px; font-size: 24px;">GUEST</h3>
+        <div id="nameDisplayContainer" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px;">
+            <h3 id="profileNameDisplay" style="color: #fff; font-size: 24px; margin: 0; text-transform: uppercase;">GUEST</h3>
+            <button id="editNameBtn" style="background: none; border: none; cursor: pointer; opacity: 0.8; padding: 5px; display: flex; align-items: center; transition: 0.3s;" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.1)';" onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)';">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 5px #00ffff);">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2-2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </svg>
+</button>
+
+        </div>
+        
+        <div id="nameEditContainer" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px;">
+            <input type="text" id="playerNameInput" maxlength="10" placeholder="Enter Name" style="background: #222; border: 1px solid #00ffff; color: #fff; padding: 5px 10px; border-radius: 5px; text-align: center; font-weight: bold; text-transform: uppercase; width: 140px; outline: none;">
+            <button id="saveNameBtn" style="background: #00ffff; color: #000; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; cursor: pointer;">SAVE</button>
+        </div>
+
         <div id="profileBadgeDisplay" style="color: #ff00ff; font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px #ff00ff; font-size: 18px; letter-spacing: 1px;">🎖️ ROOKIE</div>
         
         <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #00ffff; box-shadow: inset 0 0 10px rgba(0,255,255,0.2);">
@@ -384,10 +399,12 @@ function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24);
 const lobby = document.getElementById('lobby'); const difficultyDiv = document.getElementById('difficulty'); const boardDiv = document.getElementById('board'); const gameDiv = document.getElementById('game'); const popup = document.getElementById('popup'); const winnerText = document.getElementById('winnerText'); const modeTitle = document.getElementById('modeTitle'); const winningLine = document.getElementById('winning-line'); const scoreboard = document.getElementById('scoreboard'); const backLobbyBtn = document.getElementById('backLobbyBtn'); const rainContainer = document.getElementById('rain-container'); const moon = document.getElementById('moon'); const sun = document.getElementById('sun'); const starContainer = document.getElementById('star-container'); const loadingOverlay = document.getElementById('loading-overlay'); const loadingBarFill = document.getElementById('loading-bar-fill'); const loadingPercentage = document.getElementById('loading-percentage'); const levelContainer = document.getElementById('level-system-container'); const levelInfoText = document.getElementById('level-info-text'); const levelProgressFill = document.getElementById('level-progress-fill'); const splashOverlay = document.getElementById('splash-overlay'); const splashLogo = document.querySelector('.splash-logo'); const particleContainer = document.getElementById('particle-container'); const lightStreak = document.querySelector('.light-streak');
 const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION = 5000; const UPDATE_INTERVAL = 50; 
 let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = false; let aiLevel = "easy"; let winningCombo = []; let scoreO = 0; let scoreX = 0; let currentTheme = 'default';
-let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; 
+let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
 
-function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
-function saveGameData() { calculateNextLevelRequirement(); const dataToSave = { level: playerLevel, exp: currentExp, matchesWon: totalMatchesWon }; localStorage.setItem('tictactoe_player_data', JSON.stringify(dataToSave)); }
+
+function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
+function saveGameData() { calculateNextLevelRequirement(); const dataToSave = { level: playerLevel, exp: currentExp, matchesWon: totalMatchesWon, name: playerName }; localStorage.setItem('tictactoe_player_data', JSON.stringify(dataToSave)); }
+
 function calculateNextLevelRequirement() { expToNextLevel = BASE_EXP_REQ * playerLevel; }
 function gainExperience(amount) { currentExp += amount; while (currentExp >= expToNextLevel) { currentExp -= expToNextLevel; playerLevel++; calculateNextLevelRequirement(); } saveGameData(); updateLevelDisplay(); }
 function updateLevelDisplay() { if (levelInfoText) { levelInfoText.textContent = `Level: ${playerLevel}`; levelProgressFill.style.width = `${(currentExp / expToNextLevel) * 100}%`; if (currentExp / expToNextLevel > 0.8) { levelProgressFill.style.background = 'linear-gradient(90deg, #00ffff, #ffffff)'; } else { levelProgressFill.style.background = 'linear-gradient(90deg, #00ffff, #ff00ff)'; } } }
@@ -558,9 +575,41 @@ function startGame(selectedMode){
   } 
 }
 
+// ⭐ EDIT NAME LOGIC ⭐
+const nameDisplayContainer = document.getElementById('nameDisplayContainer');
+const nameEditContainer = document.getElementById('nameEditContainer');
+const profileNameDisplay = document.getElementById('profileNameDisplay');
+const playerNameInput = document.getElementById('playerNameInput');
+
+document.getElementById('editNameBtn').onclick = () => {
+    settingClickSound();
+    nameDisplayContainer.style.display = 'none';
+    nameEditContainer.style.display = 'flex';
+    playerNameInput.value = playerName === "GUEST" ? "" : playerName;
+    playerNameInput.focus();
+};
+
+document.getElementById('saveNameBtn').onclick = () => {
+    menuClickSound();
+    let newName = playerNameInput.value.trim().toUpperCase();
+    if(newName === "") newName = "GUEST";
+    playerName = newName;
+    saveGameData(); // Phone mein permanent save!
+    
+    profileNameDisplay.innerText = playerName;
+    nameEditContainer.style.display = 'none';
+    nameDisplayContainer.style.display = 'flex';
+};
+
 // ⭐ PROFILE BUTTON CLICK LOGIC ⭐
 document.getElementById('profileBtn').onclick = () => {
     menuClickSound();
+    
+    // UI Update karo
+    profileNameDisplay.innerText = playerName;
+    nameEditContainer.style.display = 'none';
+    nameDisplayContainer.style.display = 'flex';
+    
     document.getElementById('profileLevelDisplay').innerText = playerLevel;
     document.getElementById('profileWinsDisplay').innerText = totalMatchesWon + ' 🏆';
     document.getElementById('profileExpDisplay').innerText = currentExp + ' / ' + expToNextLevel + ' EXP';
