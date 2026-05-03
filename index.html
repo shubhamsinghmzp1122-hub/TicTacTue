@@ -892,7 +892,64 @@ document.getElementById('sendRequestBtn').onclick = async () => {
 document.getElementById('friendsListBtn').onclick = () => {
     menuClickSound();
     document.getElementById('friendsModal').style.display = 'flex';
-    // TODO: Agle phase mein yahan Firebase se asli data kheechenge!
+    document.getElementById('tabMyFriends').click(); // Default My Friends tab kholo
+};
+
+// ⭐ HELPER: FIREBASE SE REQUESTS LOAD KARNA ⭐
+async function loadFriendRequests() {
+    const reqBox = document.getElementById('contentRequests');
+    reqBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Radar scanning... ⏳</p>";
+    
+    try {
+        // Query: Wo requests dhoondho jisme 'toUID' mera UID ho aur status 'pending' ho
+        const q = query(collection(db, "friend_requests"), where("toUID", "==", myUID), where("status", "==", "pending"));
+        const snapshot = await getDocs(q);
+        
+        if(snapshot.empty) {
+            reqBox.innerHTML = "<p style='color:#aaa; margin-top:110px;'>No new requests 😴</p>";
+            return;
+        }
+        
+        let html = "";
+        snapshot.forEach(docSnap => {
+            const req = docSnap.data();
+            const docId = docSnap.id;
+            html += `
+            <div style="background: rgba(0,0,0,0.8); border: 1px solid #ff00ff; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(255,0,255,0.2);">
+                <div style="text-align: left;">
+                    <div style="color:#fff; font-weight:bold; font-size:16px; text-transform:uppercase;">${req.fromName}</div>
+                    <div style="color:#aaa; font-size:12px; letter-spacing:1px;">UID: ${req.fromUID}</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="handleRequest('${docId}', 'accepted', '${req.fromUID}', '${req.fromName}')" style="background:#00ff4d; color:#000; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px; box-shadow: 0 0 10px #00ff4d;">✅</button>
+                    <button onclick="handleRequest('${docId}', 'rejected', '${req.fromUID}', '${req.fromName}')" style="background:#ff0055; color:#fff; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px; box-shadow: 0 0 10px #ff0055;">❌</button>
+                </div>
+            </div>`;
+        });
+        reqBox.innerHTML = html;
+    } catch(e) {
+        reqBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>";
+        console.log("Fetch Error: ", e);
+    }
+}
+
+// ⭐ ACCEPT / REJECT ACTION LOGIC ⭐
+window.handleRequest = async (docId, action, friendUID, friendName) => {
+    menuClickSound();
+    try {
+        // Request ka status update karo (accepted/rejected)
+        await updateDoc(doc(db, "friend_requests", docId), { status: action });
+        
+        if (action === 'accepted') {
+            // Dono ki friend list me ek dusre ko add karo
+            await setDoc(doc(db, "users", myUID, "friends", friendUID), { uid: friendUID, addedAt: serverTimestamp() });
+            await setDoc(doc(db, "users", friendUID, "friends", myUID), { uid: myUID, addedAt: serverTimestamp() });
+            alert("Friend Added Successfully! 🎉");
+        }
+        loadFriendRequests(); // List refresh karo
+    } catch(e) {
+        console.log("Action Error:", e);
+    }
 };
 
 document.getElementById('tabMyFriends').onclick = () => {
@@ -901,6 +958,7 @@ document.getElementById('tabMyFriends').onclick = () => {
     document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
     document.getElementById('contentMyFriends').style.display = 'block';
     document.getElementById('contentRequests').style.display = 'none';
+    // TODO: Phase 3 mein yahan My Friends ki list load karenge
 };
 
 document.getElementById('tabRequests').onclick = () => {
@@ -909,6 +967,8 @@ document.getElementById('tabRequests').onclick = () => {
     document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
     document.getElementById('contentRequests').style.display = 'block';
     document.getElementById('contentMyFriends').style.display = 'none';
+    
+    loadFriendRequests(); // ⭐ JAISE HI TAB DABEGA, DATABASE SE REQUESTS AAYENGI!
 };
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
