@@ -616,52 +616,6 @@ document.getElementById('roomCancelBtn').onclick = async () => {
     if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;}
 };
 
-// ⭐ SMART DISCONNECT TRACKER ⭐
-function listenToRoom() {
-    if (unsubscribeRoom) unsubscribeRoom();
-    
-    unsubscribeRoom = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
-        // ⭐ MAIN FIX: Agar room delete ho gaya YA FIR status 'abandoned' set ho gaya
-        if (!docSnap.exists() || docSnap.data().status === "abandoned") {
-            if (isOnline) { 
-                // Ye dabba aayega jab tera dost match chhod dega
-                document.getElementById('disconnectModal').style.display = 'flex'; 
-                isOnline = false; 
-                if (unsubscribeRoom) unsubscribeRoom();
-                if(window.pc) { window.pc.close(); window.pc = null; }
-                if(window.localStream) { window.localStream.getTracks().forEach(t=>t.stop()); window.localStream = null; }
-            } 
-            return;
-        }
-
-        const data = docSnap.data();
-        window.startingTurn = data.startingTurn || "O";
-        
-        if (data.status === "playing" && !isOnline) {
-            isOnline = true; 
-            document.getElementById('roomModal').style.display = "none";
-            startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + roomCode + '</span>');
-            startVoiceChat(playerRole === "O");
-        }
-        
-        if (isOnline) {
-            let boardChanged = JSON.stringify(board) !== JSON.stringify(data.board); 
-            board = data.board; 
-            currentPlayer = data.currentPlayer; 
-            document.getElementById('popup').style.display = 'none'; 
-            document.getElementById('winning-line').style.display = 'none'; 
-            drawBoard(); 
-            updateScoreboard();
-            
-            if (boardChanged) { 
-                if (currentPlayer === playerRole) { aiMoveSound(); } else { tapSound(); } 
-            }
-            const winner = checkWinner(); 
-            if (winner) { handleWin(winner); } 
-            else if (board.every(x=>x!=="")) { handleDraw(); }
-        }
-    });
-}
 
 function startGame(selectedMode){
   scoreO = 0; scoreX = 0; lobby.style.display='none'; gameDiv.style.display='flex'; gameDiv.className = 'game-board ' + currentTheme; 
