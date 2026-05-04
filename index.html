@@ -608,7 +608,6 @@ roomActionBtn.onclick = async () => {
     }
 };
 
-// ⭐ CANCEL CLEANUP ⭐
 document.getElementById('roomCancelBtn').onclick = async () => {
     menuClickSound(); roomModal.style.display = "none"; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
     if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)); } roomCode = ""; playerRole = "";
@@ -617,23 +616,49 @@ document.getElementById('roomCancelBtn').onclick = async () => {
     if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;}
 };
 
+// ⭐ SMART DISCONNECT TRACKER ⭐
 function listenToRoom() {
     if (unsubscribeRoom) unsubscribeRoom();
+    
     unsubscribeRoom = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
-        if (!docSnap.exists()) {
-            if (isOnline) { document.getElementById('disconnectModal').style.display = 'flex'; isOnline = false; } return;
+        // ⭐ MAIN FIX: Agar room delete ho gaya YA FIR status 'abandoned' set ho gaya
+        if (!docSnap.exists() || docSnap.data().status === "abandoned") {
+            if (isOnline) { 
+                // Ye dabba aayega jab tera dost match chhod dega
+                document.getElementById('disconnectModal').style.display = 'flex'; 
+                isOnline = false; 
+                if (unsubscribeRoom) unsubscribeRoom();
+                if(window.pc) { window.pc.close(); window.pc = null; }
+                if(window.localStream) { window.localStream.getTracks().forEach(t=>t.stop()); window.localStream = null; }
+            } 
+            return;
         }
+
         const data = docSnap.data();
         window.startingTurn = data.startingTurn || "O";
+        
         if (data.status === "playing" && !isOnline) {
-            isOnline = true; roomModal.style.display = "none";
+            isOnline = true; 
+            document.getElementById('roomModal').style.display = "none";
             startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + roomCode + '</span>');
             startVoiceChat(playerRole === "O");
         }
+        
         if (isOnline) {
-            let boardChanged = JSON.stringify(board) !== JSON.stringify(data.board); board = data.board; currentPlayer = data.currentPlayer; popup.style.display = 'none'; winningLine.style.display = 'none'; drawBoard(); updateScoreboard();
-            if (boardChanged) { if (currentPlayer === playerRole) { aiMoveSound(); } else { tapSound(); } }
-            const winner = checkWinner(); if (winner) { handleWin(winner); } else if (board.every(x=>x!=="")) { handleDraw(); }
+            let boardChanged = JSON.stringify(board) !== JSON.stringify(data.board); 
+            board = data.board; 
+            currentPlayer = data.currentPlayer; 
+            document.getElementById('popup').style.display = 'none'; 
+            document.getElementById('winning-line').style.display = 'none'; 
+            drawBoard(); 
+            updateScoreboard();
+            
+            if (boardChanged) { 
+                if (currentPlayer === playerRole) { aiMoveSound(); } else { tapSound(); } 
+            }
+            const winner = checkWinner(); 
+            if (winner) { handleWin(winner); } 
+            else if (board.every(x=>x!=="")) { handleDraw(); }
         }
     });
 }
@@ -1096,30 +1121,31 @@ document.getElementById('tabRequests').onclick = () => {
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
 
-//⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
+//⭐ LOBBY RETURN FIX: Jab banda game leave kare ⭐
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
-      isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } try { await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
+      isOnline = false; 
+      
+      // ⭐ NAYA: Room ko delete karne se pehle 'abandoned' set karo taaki dusre ki screen pe popup aaye
+      if (roomCode !== "") {
+          try { 
+              await updateDoc(doc(db, "rooms", roomCode), { status: "abandoned" }); 
+              // Thoda time do database update hone ke liye, fir delete kardo
+              setTimeout(async () => { await deleteDoc(doc(db, "rooms", roomCode)); }, 2000);
+          } catch(e) {} 
+      }
+      
+      if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
       roomCode = ""; playerRole = ""; 
       
-      // Stop peer connection thoroughly
-      if(window.pc){
-          window.pc.ontrack = null;
-          window.pc.onicecandidate = null;
-          window.pc.close(); 
-          window.pc=null;
-      } 
+      // Stop media and connections
+      if(window.pc){ window.pc.ontrack = null; window.pc.onicecandidate = null; window.pc.close(); window.pc=null; } 
+      if(window.localStream){ window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null; } 
       
-      if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
-      
-      // Reset Mic
       document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; 
-      
-      // Reset Cam
       document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
       
-      // Hide Videos
       document.getElementById('videoContainer').style.display='none';
       document.getElementById('localVideo').srcObject = null;
       document.getElementById('remoteVideo').srcObject = null;
