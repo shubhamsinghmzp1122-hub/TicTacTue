@@ -92,20 +92,6 @@
   #roomCodeInput { font-size: 40px; text-align: center; width: 200px; max-width: 80vw; padding: 10px; border-radius: 10px; border: 2px solid #ff00ff; background: #222; color: white; margin: 0 auto 20px auto; display: none; outline: none; }
   #roomCodeInput:focus { box-shadow: 0 0 15px #ff00ff; }
 
-  /* ⭐ DISCONNECT MODAL ANIMATION ⭐ */
-  @keyframes disconnectPulse {
-    0%, 100% { box-shadow: 0 0 20px #ff0055, 0 0 40px #ff0055; border-color: #ff0055; }
-    50% { box-shadow: 0 0 40px #ff0055, 0 0 80px #ff0055, 0 0 100px #ff0055; border-color: #ff6688; }
-  }
-  @keyframes shakeModal {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-8px); }
-    40% { transform: translateX(8px); }
-    60% { transform: translateX(-5px); }
-    80% { transform: translateX(5px); }
-  }
-  .disconnect-box-animate { animation: disconnectPulse 1.5s infinite, shakeModal 0.5s ease-out; }
-
   /* ⭐ MEDIA BUTTONS (MIC & CAM) CSS ⭐ */
   #micBtn { position: absolute; top: 20px; left: 20px; padding: 8px 15px; border-radius: 12px; cursor: pointer; transition: 0.3s; background: rgba(0,0,0,0.8); color: #ff0000; border: 2px solid #ff0000; font-weight: 900; box-shadow: 0 0 10px #ff0000; z-index: 100; display: none; font-size: 16px; }
   #camBtn { position: absolute; top: 20px; left: 140px; padding: 8px 15px; border-radius: 12px; cursor: pointer; transition: 0.3s; background: rgba(0,0,0,0.8); color: #ff0000; border: 2px solid #ff0000; font-weight: 900; box-shadow: 0 0 10px #ff0000; z-index: 100; display: none; font-size: 16px; }
@@ -233,14 +219,11 @@
     </div>
 </div>
 
-<!-- ⭐ DISCONNECT MODAL — IMPROVED ⭐ -->
 <div id="disconnectModal" class="room-modal" style="z-index: 2000;">
-    <div id="disconnectBox" class="room-box" style="border-color: #ff0055; box-shadow: 0 0 20px #ff0055; max-width: 320px; width: 90vw;">
-        <div style="font-size: 60px; margin-bottom: 10px; animation: neonLoadPulse 0.8s infinite alternate;">😢</div>
-        <h2 style="color: #ff0055; text-shadow: 0 0 15px #ff0055; font-size: 26px; letter-spacing: 2px;">OPPONENT LEFT!</h2>
-        <p style="color: #aaa; margin: 5px 0 5px; font-size: 14px; letter-spacing: 1px;">— — — — — — — — — —</p>
-        <p style="color: #fff; margin: 10px 0 25px; font-size: 17px; line-height: 1.6;">Your opponent has <span style="color:#ff0055; font-weight:bold;">left the game</span> mid-match.<br><span style="color:#aaa; font-size:14px;">You don't need to wait anymore.</span></p>
-        <button class="btn" onclick="disconnectAndGoLobby()" style="border-color:#ff0055; color:#ff0055; width: 100%; font-size: 18px; background: rgba(255,0,85,0.15) !important; box-shadow: 0 0 15px rgba(255,0,85,0.4);">🏠 BACK TO LOBBY</button>
+    <div class="room-box" style="border-color: #ff0055; box-shadow: 0 0 20px #ff0055;">
+        <h2 style="color: #ff0055; text-shadow: 0 0 15px #ff0055;">DISCONNECTED</h2>
+        <p style="color: #fff; margin: 15px 0 25px; font-size: 18px;">Opponent has left the game.</p>
+        <button class="btn" onclick="document.getElementById('disconnectModal').style.display='none'; document.getElementById('backLobbyBtn').click();" style="border-color:#ff0055; color:#ff0055;">BACK TO LOBBY</button>
     </div>
 </div>
 
@@ -373,7 +356,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app);
 let isOnline = false; let roomCode = ""; let playerRole = ""; let unsubscribeRoom = null;
 let myUID = "LOADING..."; 
-let currentSearchedUID = "";
+let currentSearchedUID = ""; // ⭐ NAYA: Dost ka UID yaad rakhne ke liye
 
 let pc = null, localStream = null;
 
@@ -446,7 +429,7 @@ async function startVoiceChat(isCreator) {
     }
 }
 
-// ⭐ MIC TOGGLE ⭐
+// ⭐ MIC TOGGLE (FIXED LOGIC) ⭐
 document.getElementById('micBtn').onclick = () => {
     if(window.localStream) {
         const audioTracks = window.localStream.getAudioTracks();
@@ -463,7 +446,7 @@ document.getElementById('micBtn').onclick = () => {
     }
 };
 
-// ⭐ CAM TOGGLE ⭐
+// ⭐ CAM TOGGLE (FIXED LOGIC) ⭐
 document.getElementById('camBtn').onclick = () => {
     if(window.localStream) {
         const videoTracks = window.localStream.getVideoTracks();
@@ -481,9 +464,7 @@ document.getElementById('camBtn').onclick = () => {
 };
 
 const AudioCtx = window.AudioContext || window.webkitAudioContext; const audioCtx = new AudioCtx(); function beep(freq, time=0.16){ try{ const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='sine'; o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + time); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + time); }catch(e){} }
-function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24); } function winOSound(){ beep(800,0.1); setTimeout(()=>beep(950,0.1),100); setTimeout(()=>beep(1100,0.1),200); } function winXSound(){ beep(400,0.1); setTimeout(()=>beep(350,0.1),100); setTimeout(()=>beep(300,0.1),200); } function drawSound(){ beep(500,0.12); setTimeout(()=>beep(250,0.2),120); } function menuClickSound() { beep(620, 0.08); } function settingClickSound() { beep(580, 0.06); } 
-function disconnectSound() { beep(200,0.15); setTimeout(()=>beep(150,0.2),150); setTimeout(()=>beep(100,0.3),350); }
-function resumeAudio(){ try{ audioCtx.resume && audioCtx.resume(); }catch(e){} document.removeEventListener('touchstart', resumeAudio); document.removeEventListener('click', resumeAudio); }
+function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24); } function winOSound(){ beep(800,0.1); setTimeout(()=>beep(950,0.1),100); setTimeout(()=>beep(1100,0.1),200); } function winXSound(){ beep(400,0.1); setTimeout(()=>beep(350,0.1),100); setTimeout(()=>beep(300,0.1),200); } function drawSound(){ beep(500,0.12); setTimeout(()=>beep(250,0.2),120); } function menuClickSound() { beep(620, 0.08); } function settingClickSound() { beep(580, 0.06); } function resumeAudio(){ try{ audioCtx.resume && audioCtx.resume(); }catch(e){} document.removeEventListener('touchstart', resumeAudio); document.removeEventListener('click', resumeAudio); }
 
 const lobby = document.getElementById('lobby'); const difficultyDiv = document.getElementById('difficulty'); const boardDiv = document.getElementById('board'); const gameDiv = document.getElementById('game'); const popup = document.getElementById('popup'); const winnerText = document.getElementById('winnerText'); const modeTitle = document.getElementById('modeTitle'); const winningLine = document.getElementById('winning-line'); const scoreboard = document.getElementById('scoreboard'); const backLobbyBtn = document.getElementById('backLobbyBtn'); const rainContainer = document.getElementById('rain-container'); const moon = document.getElementById('moon'); const sun = document.getElementById('sun'); const starContainer = document.getElementById('star-container'); const loadingOverlay = document.getElementById('loading-overlay'); const loadingBarFill = document.getElementById('loading-bar-fill'); const loadingPercentage = document.getElementById('loading-percentage'); const levelContainer = document.getElementById('level-system-container'); const levelInfoText = document.getElementById('level-info-text'); const levelProgressFill = document.getElementById('level-progress-fill'); const splashOverlay = document.getElementById('splash-overlay'); const splashLogo = document.querySelector('.splash-logo'); const particleContainer = document.getElementById('particle-container'); const lightStreak = document.querySelector('.light-streak');
 const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION = 5000; const UPDATE_INTERVAL = 50; 
@@ -497,6 +478,7 @@ function saveGameData() {
     calculateNextLevelRequirement(); 
     const dataToSave = { level: playerLevel, exp: currentExp, matchesWon: totalMatchesWon, name: playerName }; 
     localStorage.setItem('tictactoe_player_data', JSON.stringify(dataToSave)); 
+    // ⭐ Database mein Level aur Wins update karo taaki dost dekh sakein!
     if (auth && auth.currentUser) {
         updateDoc(doc(db, "users", auth.currentUser.uid), {
             level: playerLevel, exp: currentExp, matchesWon: totalMatchesWon, playerName: playerName
@@ -512,6 +494,8 @@ document.getElementById('resetModeScoreBtn').onclick = () => { if(confirm("Are y
 
 async function handleCellClick(i) {
     if (board[i] !== "" || checkWinner()) return;
+    
+    // ⭐ FIX: Prevent User from clicking during AI's turn (AI is always 'X' in this game)
     if (vsAI && currentPlayer === 'X') return; 
 
     if (isOnline) {
@@ -570,6 +554,7 @@ window.resetGame = async function(){
 const roomModal = document.getElementById('roomModal'); const roomCodeInput = document.getElementById('roomCodeInput'); const roomCodeDisplay = document.getElementById('roomCodeDisplay'); const roomStatusText = document.getElementById('roomStatusText'); const roomActionBtn = document.getElementById('roomActionBtn'); const roomModalTitle = document.getElementById('roomModalTitle');
 function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
+// ⭐ REQUEST BOTH AUDIO & VIDEO WHEN CREATING ROOM ⭐
 document.getElementById('createRoomBtn').onclick = async () => {
     menuClickSound(); roomCode = generateRoomCode(); playerRole = "O"; 
     
@@ -577,7 +562,7 @@ document.getElementById('createRoomBtn').onclick = async () => {
         if(!window.localStream) {
             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
-            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false;
+            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
             document.getElementById('micBtn').style.display = 'block';
             document.getElementById('camBtn').style.display = 'block';
             document.getElementById('localVideo').srcObject = window.localStream;
@@ -599,6 +584,7 @@ document.getElementById('joinRoomBtn').onclick = () => {
     menuClickSound(); roomModalTitle.innerText = "JOIN ROOM"; roomCodeDisplay.style.display = "none"; roomCodeInput.style.display = "block"; roomCodeInput.value = ""; roomStatusText.innerHTML = "Enter 4-digit code to join"; roomActionBtn.style.display = "inline-block"; roomActionBtn.innerText = "JOIN"; roomModal.style.display = "flex";
 };
 
+// ⭐ REQUEST BOTH AUDIO & VIDEO WHEN JOINING ROOM ⭐
 roomActionBtn.onclick = async () => {
     menuClickSound(); const code = roomCodeInput.value.trim(); if(code.length !== 4) { roomStatusText.innerHTML = "<span style='color:#ff0055;'>❌ Enter a 4-digit code!</span>"; return; }
     roomActionBtn.innerText = "Joining..."; 
@@ -607,7 +593,7 @@ roomActionBtn.onclick = async () => {
         if(!window.localStream) {
             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
-            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false;
+            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; // Start with cam off
             document.getElementById('micBtn').style.display = 'block';
             document.getElementById('camBtn').style.display = 'block';
             document.getElementById('localVideo').srcObject = window.localStream;
@@ -622,6 +608,7 @@ roomActionBtn.onclick = async () => {
     }
 };
 
+// ⭐ CANCEL CLEANUP ⭐
 document.getElementById('roomCancelBtn').onclick = async () => {
     menuClickSound(); roomModal.style.display = "none"; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
     if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)); } roomCode = ""; playerRole = "";
@@ -630,80 +617,11 @@ document.getElementById('roomCancelBtn').onclick = async () => {
     if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;}
 };
 
-// ⭐ NAYA FUNCTION: Opponent disconnect hone pe proper cleanup + lobby wapas ⭐
-window.disconnectAndGoLobby = function() {
-    document.getElementById('disconnectModal').style.display = 'none';
-
-    // Unsubscribe listener
-    if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
-
-    // Peer connection band karo
-    if(window.pc) {
-        window.pc.ontrack = null;
-        window.pc.onicecandidate = null;
-        window.pc.close();
-        window.pc = null;
-    }
-
-    // Media streams band karo
-    if(window.localStream) {
-        window.localStream.getTracks().forEach(t => t.stop());
-        window.localStream = null;
-    }
-
-    // Mic/Cam buttons reset
-    const micBtn = document.getElementById('micBtn');
-    const camBtn = document.getElementById('camBtn');
-    micBtn.style.display = 'none'; micBtn.innerHTML = '🔇 Mic: OFF';
-    micBtn.style.color = '#ff0000'; micBtn.style.borderColor = '#ff0000'; micBtn.style.boxShadow = '0 0 10px #ff0000';
-    camBtn.style.display = 'none'; camBtn.innerHTML = '📷 Cam: OFF';
-    camBtn.style.color = '#ff0000'; camBtn.style.borderColor = '#ff0000'; camBtn.style.boxShadow = '0 0 10px #ff0000';
-
-    // Video feeds saaf karo
-    document.getElementById('videoContainer').style.display = 'none';
-    document.getElementById('localVideo').srcObject = null;
-    document.getElementById('remoteVideo').srcObject = null;
-
-    // Game state reset
-    isOnline = false;
-    roomCode = ""; playerRole = "";
-    scoreO = 0; scoreX = 0;
-    isLevelUpMode = false; levelUpMatchCount = 0;
-    board = ["","","","","","","","",""];
-    winningCombo = []; currentPlayer = "O";
-
-    // UI reset
-    popup.style.display = 'none';
-    winningLine.style.display = 'none';
-    gameDiv.style.display = 'none';
-    difficultyDiv.style.display = 'none';
-    gameDiv.className = 'game-board ' + currentTheme;
-    document.getElementById('resetModeScoreBtn').style.display = 'block';
-    lobby.style.display = 'flex';
-
-    updateScoreboard();
-    updateLevelSystemInLobby();
-    if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; }
-    if (currentTheme === 'light') { sun.style.display = 'block'; }
-};
-
 function listenToRoom() {
     if (unsubscribeRoom) unsubscribeRoom();
     unsubscribeRoom = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
-        // ⭐ FIX: Room delete hone pe — opponent left popup dikhao ⭐
         if (!docSnap.exists()) {
-            if (isOnline) {
-                isOnline = false;
-                if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
-                disconnectSound();
-                // Shake animation add karo box pe
-                const dBox = document.getElementById('disconnectBox');
-                dBox.classList.remove('disconnect-box-animate');
-                void dBox.offsetWidth; // reflow for re-trigger
-                dBox.classList.add('disconnect-box-animate');
-                document.getElementById('disconnectModal').style.display = 'flex';
-            }
-            return;
+            if (isOnline) { document.getElementById('disconnectModal').style.display = 'flex'; isOnline = false; } return;
         }
         const data = docSnap.data();
         window.startingTurn = data.startingTurn || "O";
@@ -727,6 +645,7 @@ function startGame(selectedMode){
   isLevelUpMode = (selectedMode.includes("LEVEL UP MODE")); if (isLevelUpMode) levelUpMatchCount = 0; 
   drawBoard(); updateScoreboard(); moon.style.display = 'none'; sun.style.display = 'none';
   
+  // ⭐ SHOW VIDEO FEED ONLY IN ONLINE MODE ⭐
   if (isOnline) {
       document.getElementById('videoContainer').style.display = 'flex';
   } else {
@@ -756,7 +675,7 @@ document.getElementById('saveNameBtn').onclick = () => {
     let newName = playerNameInput.value.trim().toUpperCase();
     if(newName === "") newName = "GUEST";
     playerName = newName;
-    saveGameData();
+    saveGameData(); // Phone mein permanent save!
     
     profileNameDisplay.innerText = playerName;
     nameEditContainer.style.display = 'none';
@@ -767,8 +686,9 @@ document.getElementById('saveNameBtn').onclick = () => {
 document.getElementById('profileBtn').onclick = () => {
     menuClickSound();
     
+    // Basic UI Update
     profileNameDisplay.innerText = playerName;
-    document.getElementById('uidTextDisplay').innerText = myUID;
+    document.getElementById('uidTextDisplay').innerText = myUID; // ⭐ UID UI mein dikhega
     nameEditContainer.style.display = 'none';
 
     nameDisplayContainer.style.display = 'flex';
@@ -777,58 +697,74 @@ document.getElementById('profileBtn').onclick = () => {
     document.getElementById('profileWinsDisplay').innerText = totalMatchesWon + ' 🏆';
     document.getElementById('profileExpDisplay').innerText = currentExp + ' / ' + expToNextLevel + ' EXP';
     
+    // ---------------------------------------------------------
+    // ⭐ 10 LEVEL ORIGINAL RANK SYSTEM (WITH CSS SVG BADGES) ⭐
+    // ---------------------------------------------------------
     let rName = ""; let rColor = ""; let rSvg = "";
 
+    // 1. NOVICE (Level 1-9)
     if (playerLevel < 10) { 
         rName = "NOVICE"; rColor = "#a0a0a0"; 
         rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`;
     }
+    // 2. FIGHTER (Level 10-19)
     else if (playerLevel < 20) { 
-        rName = "FIGHTER"; rColor = "#cd7f32";
+        rName = "FIGHTER"; rColor = "#cd7f32"; // Bronze type
         rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`;
     }
+    // 3. WARRIOR (Level 20-29)
     else if (playerLevel < 30) { 
-        rName = "WARRIOR"; rColor = "#c0c0c0";
+        rName = "WARRIOR"; rColor = "#c0c0c0"; // Silver type
         rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`;
     }
+    // 4. ELITE (Level 30-39)
     else if (playerLevel < 40) { 
-        rName = "ELITE"; rColor = "#ffd700";
+        rName = "ELITE"; rColor = "#ffd700"; // Gold type
         rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`;
     }
+    // 5. MASTER (Level 40-49)
     else if (playerLevel < 50) { 
-        rName = "MASTER"; rColor = "#00ffff";
+        rName = "MASTER"; rColor = "#00ffff"; // Cyan/Neon
         rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`;
     }
+    // 6. GRANDMASTER (Level 50-59)
     else if (playerLevel < 60) { 
-        rName = "GRANDMASTER"; rColor = "#ff00ff";
+        rName = "GRANDMASTER"; rColor = "#ff00ff"; // Pink/Neon
         rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`;
     }
+    // 7. EPIC (Level 60-69)
     else if (playerLevel < 70) { 
-        rName = "EPIC"; rColor = "#ff0055";
+        rName = "EPIC"; rColor = "#ff0055"; // Red/Neon
         rSvg = `<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`;
     }
+    // 8. MYTHIC (Level 70-79)
     else if (playerLevel < 80) { 
-        rName = "MYTHIC"; rColor = "#8a2be2";
+        rName = "MYTHIC"; rColor = "#8a2be2"; // Purple
         rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`;
     }
+    // 9. LEGEND (Level 80-89)
     else if (playerLevel < 90) { 
-        rName = "LEGEND"; rColor = "#ff4500";
+        rName = "LEGEND"; rColor = "#ff4500"; // Orange Fire
         rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`;
     }
+        // 10. SUPREME (Level 90-99)
     else if (playerLevel < 100) { 
-        rName = "SUPREME"; rColor = "#ffffff";
+        rName = "SUPREME"; rColor = "#ffffff"; // Pure White
         rSvg = `<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`;
     }
+    // 11. IMMORTAL (Level 100+) - The Ultimate God Tier!
     else { 
-        rName = "IMMORTAL"; rColor = "#ff2a2a";
+        rName = "IMMORTAL"; rColor = "#ff2a2a"; // Glowing Blood Red & Gold
         rSvg = `<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`;
     }
 
+    // Badge Update
     const badgeDisplay = document.getElementById('profileBadgeDisplay');
     badgeDisplay.innerHTML = rName;
     badgeDisplay.style.color = rColor;
     badgeDisplay.style.textShadow = `0 0 15px ${rColor}`;
     
+    // Main Bada SVG Icon Update
     const mainIcon = document.getElementById('profileMainIcon');
     mainIcon.innerHTML = rSvg;
     mainIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
@@ -889,12 +825,13 @@ document.getElementById('searchPlayerBtn').onclick = async () => {
             reqBtn.style.background = "#ff00ff";
             reqBtn.style.boxShadow = "0 0 15px #ff00ff";
             reqBtn.disabled = false;
-            reqBtn.style.display = 'block';
+            reqBtn.style.display = 'block'; // Default dikhao
             
+            // ⭐ SMART FIX: Check karo ki kya ye pehle se dost hai?
             try {
                 const friendCheckSnap = await getDoc(doc(db, "users", myUID, "friends", currentSearchedUID));
                 if (friendCheckSnap.exists()) {
-                    reqBtn.style.display = 'none';
+                    reqBtn.style.display = 'none'; // Agar dost hai toh Request button gayab!
                 }
             } catch(e) { console.log(e); }
        
@@ -1028,9 +965,11 @@ window.loadMyFriends = async function() {
     }
 };
 
+// ⭐ NAYA: FRIEND KO DELETE KARNE KA LOGIC (NO POPUP) ⭐
 window.removeFriend = async (friendUID) => {
     menuClickSound();
     
+    // UI update turant dikhane ke liye
     const frBox = document.getElementById(`friendBox_${friendUID}`);
     const rmBtn = document.getElementById(`removeBtn_${friendUID}`);
     
@@ -1043,6 +982,7 @@ window.removeFriend = async (friendUID) => {
     try {
         await deleteDoc(doc(db, "users", myUID, "friends", friendUID));
         await deleteDoc(doc(db, "users", friendUID, "friends", myUID));
+        // Remove successful, list reload kardo
         loadMyFriends(); 
     } catch(e) {
         console.log("Remove Error:", e);
@@ -1051,11 +991,12 @@ window.removeFriend = async (friendUID) => {
     }
 };
 
-let isCardOpenedFromFriendList = false;
+// ⭐ NAYA: FRIEND KA CARD KHOLE BINA REQUEST BUTTON KE ⭐
+let isCardOpenedFromFriendList = false; // Yaad rakhne ke liye ki card kahan se khula
 
 window.viewPlayerCard = async (uid, fromFriendList = false) => {
     menuClickSound();
-    isCardOpenedFromFriendList = fromFriendList;
+    isCardOpenedFromFriendList = fromFriendList; // Set tracker
     try {
         const q = query(collection(db, "users"), where("gameUID", "==", uid));
         const querySnapshot = await getDocs(q);
@@ -1068,6 +1009,7 @@ window.viewPlayerCard = async (uid, fromFriendList = false) => {
             document.getElementById('searchLevelDisplay').innerText = pLevel;
             document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
             
+            // ⭐ JADOO: Send Request button hide kar do!
             document.getElementById('sendRequestBtn').style.display = 'none';
             
             let rName="", rColor="", rSvg="";
@@ -1088,6 +1030,7 @@ window.viewPlayerCard = async (uid, fromFriendList = false) => {
             const sIcon = document.getElementById('searchMainIcon');
             sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
 
+            // Agar list se aaye hain toh List Modal chupa do
             if(fromFriendList){ document.getElementById('friendsModal').style.display = 'none'; }
             
             document.getElementById('searchedProfileModal').style.display = 'flex';
@@ -1095,16 +1038,20 @@ window.viewPlayerCard = async (uid, fromFriendList = false) => {
     } catch (e) { console.log("Card View Error:", e); }
 };
 
+// ⭐ CLOSE BUTTON LOGIC FIX FOR PLAYER CARD ⭐
+// Pehle wale static HTML ko js se bind karenge:
 document.querySelector('#searchedProfileModal button:last-child').onclick = () => {
     menuClickSound();
     document.getElementById('searchedProfileModal').style.display = 'none';
     
+    // Agar hum Friend List se aaye the, toh wapas List Modal khol do!
     if (isCardOpenedFromFriendList) {
         document.getElementById('friendsModal').style.display = 'flex';
-        isCardOpenedFromFriendList = false;
+        isCardOpenedFromFriendList = false; // Reset 
     }
 };
 
+// ⭐ NO ALERT ACCEPT / REJECT LOGIC ⭐
 window.handleRequest = async (docId, action, friendUID, friendName) => {
     menuClickSound();
     document.getElementById('contentRequests').innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Updating... ⏳</p>";
@@ -1115,7 +1062,7 @@ window.handleRequest = async (docId, action, friendUID, friendName) => {
             await setDoc(doc(db, "users", myUID, "friends", friendUID), { uid: friendUID, addedAt: serverTimestamp() });
             await setDoc(doc(db, "users", friendUID, "friends", myUID), { uid: myUID, addedAt: serverTimestamp() });
         }
-        loadFriendRequests();
+        loadFriendRequests(); // Bina alert ke silent update!
     } catch(e) {
         console.log("Action Error:", e);
         loadFriendRequests();
@@ -1149,13 +1096,14 @@ document.getElementById('tabRequests').onclick = () => {
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
 
-// ⭐ BACK TO LOBBY CLEANUP ⭐
+//⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
       isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } try { await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
       roomCode = ""; playerRole = ""; 
       
+      // Stop peer connection thoroughly
       if(window.pc){
           window.pc.ontrack = null;
           window.pc.onicecandidate = null;
@@ -1165,10 +1113,13 @@ backLobbyBtn.onclick = async ()=>{
       
       if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
       
+      // Reset Mic
       document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; 
       
+      // Reset Cam
       document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
       
+      // Hide Videos
       document.getElementById('videoContainer').style.display='none';
       document.getElementById('localVideo').srcObject = null;
       document.getElementById('remoteVideo').srcObject = null;
@@ -1217,11 +1168,13 @@ function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.t
 function initializePlayerAuth() {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            // User pehle se login hai, database se 5-digit UID nikal lo
             const userDocRef = doc(db, "users", user.uid);
             const userDoc = await getDoc(userDocRef);
             if (userDoc.exists()) {
                 myUID = userDoc.data().gameUID;
             } else {
+                // Naya user hai, random 5-digit UID (10000 - 99999) bana kar save karo
                 let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
 
                 await setDoc(userDocRef, {
@@ -1236,6 +1189,7 @@ function initializePlayerAuth() {
                 myUID = newGameUID;
             }
         } else {
+            // Login nahi hai, toh chupke se Anonymous Login kara do
             signInAnonymously(auth).catch((error) => console.log("Auth Error:", error));
         }
     });
@@ -1260,7 +1214,7 @@ if ('serviceWorker' in navigator) {
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    downloadAppBtn.style.display = 'inline-block';
+    downloadAppBtn.style.display = 'inline-block'; // Button sirf tab dikhega jab install ho sakta hai
 });
 
 downloadAppBtn.addEventListener('click', async () => {
@@ -1277,9 +1231,9 @@ downloadAppBtn.addEventListener('click', async () => {
     }
 });
 
-// ⭐ FIX: Dono players ke liye room delete hoga — sirf O ke liye nahi ⭐
+// ⭐ AUTO CLEANUP: Jab user achanak app/tab band karega ⭐
 window.addEventListener('beforeunload', () => {
-    if (roomCode !== "") {
+    if (roomCode !== "" && playerRole === "O") {
         deleteDoc(doc(db, "rooms", roomCode));
     }
 });
