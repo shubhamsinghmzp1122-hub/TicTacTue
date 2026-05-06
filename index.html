@@ -363,11 +363,34 @@ let pc = null, localStream = null;
 const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 window.pc = pc; window.localStream = localStream;
 
-// ⭐ REWRITTEN FOR VIDEO + AUDIO ⭐
+// ⭐ REWRITTEN FOR VIDEO + AUDIO (WITH DISCONNECT DETECTOR & DATA CHANNEL) ⭐
 async function startVoiceChat(isCreator) {
     window.pc = new RTCPeerConnection(servers);
-    let remoteStream = new MediaStream();
     
+    // ⭐ NAYA: Dummy Data Channel (Bina mic/cam ke WebRTC ko zinda rakhne ke liye)
+    if (isCreator) {
+        window.pc.createDataChannel("dummyChannel"); 
+    } else {
+        window.pc.ondatachannel = (e) => { console.log("Data channel connected!"); }; 
+    }
+
+    // ⭐ NAYA: WebRTC Drop Detector (Net off ya App Kill pakadne ke liye)
+    window.pc.oniceconnectionstatechange = () => {
+        if (window.pc.iceConnectionState === 'disconnected' || 
+            window.pc.iceConnectionState === 'failed' || 
+            window.pc.iceConnectionState === 'closed') {
+            
+            if (isOnline) {
+                document.getElementById('disconnectModal').style.display = 'flex';
+                isOnline = false;
+                if (roomCode !== "") {
+                    try { updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {}
+                }
+            }
+        }
+    };
+
+    let remoteStream = new MediaStream();
     const remoteVideoEl = document.getElementById('remoteVideo');
     remoteVideoEl.srcObject = remoteStream;
 
