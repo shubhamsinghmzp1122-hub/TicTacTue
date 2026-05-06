@@ -620,8 +620,13 @@ document.getElementById('roomCancelBtn').onclick = async () => {
 function listenToRoom() {
     if (unsubscribeRoom) unsubscribeRoom();
     unsubscribeRoom = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
-        if (!docSnap.exists()) {
-            if (isOnline) { document.getElementById('disconnectModal').style.display = 'flex'; isOnline = false; } return;
+        // NAYA CHECK: Agar doc na ho YA status disconnected ho jaye
+        if (!docSnap.exists() || docSnap.data().status === "disconnected") {
+            if (isOnline) { 
+                document.getElementById('disconnectModal').style.display = 'flex'; 
+                isOnline = false; 
+            } 
+            return;
         }
         const data = docSnap.data();
         window.startingTurn = data.startingTurn || "O";
@@ -1096,13 +1101,20 @@ document.getElementById('tabRequests').onclick = () => {
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
 
-//⭐ BACK TO LOBBY CLEANUP (FIXED LEAKS) ⭐
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
-      isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } try { await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
-      roomCode = ""; playerRole = ""; 
+      // 1. Pehle opponent ko signal bhejo ki main ja raha hu
+      try { await updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {}
       
+      isOnline = false; 
+      if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
+      
+      // 2. Sirf Room Creator (O) hi document delete karega taaki error na aaye
+      try { if (playerRole === "O") await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
+      
+      roomCode = ""; playerRole = ""; 
+
       // Stop peer connection thoroughly
       if(window.pc){
           window.pc.ontrack = null;
@@ -1233,9 +1245,9 @@ downloadAppBtn.addEventListener('click', async () => {
 
 // ⭐ AUTO CLEANUP: Jab user achanak app/tab band karega ⭐
 window.addEventListener('beforeunload', () => {
-    // Agar dono mein se koi bhi player tab close kare, toh room delete kar do
-    if (roomCode !== "") {
-        deleteDoc(doc(db, "rooms", roomCode));
+    // Tab close karte waqt delete nahi, sirf status update fast hota hai
+    if (isOnline && roomCode !== "") {
+        updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" });
     }
 });
 
