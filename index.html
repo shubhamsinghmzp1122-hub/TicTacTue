@@ -1233,7 +1233,8 @@ downloadAppBtn.addEventListener('click', async () => {
 
 // ⭐ AUTO CLEANUP: Jab user achanak app/tab band karega ⭐
 window.addEventListener('beforeunload', () => {
-    if (roomCode !== "" && playerRole === "O") {
+    // Agar dono mein se koi bhi player tab close kare, toh room delete kar do
+    if (roomCode !== "") {
         deleteDoc(doc(db, "rooms", roomCode));
     }
 });
