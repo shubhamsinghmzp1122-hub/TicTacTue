@@ -962,13 +962,18 @@ window.loadFriendRequests = async function() {
     }
 };
 
-// ⭐ HELPER: FIREBASE SE MY FRIENDS LOAD KARNA (FREE FIRE STYLE LIVE DOT) ⭐
+// ⭐ HELPER: FIREBASE SE MY FRIENDS LOAD KARNA (FREE FIRE STYLE + SMART SORTING) ⭐
 if(window.friendUnsubs) window.friendUnsubs.forEach(u => u());
 window.friendUnsubs = [];
 
 window.loadMyFriends = async function() {
     const friendBox = document.getElementById('contentMyFriends');
-    friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Fetching Friends... ⏳</p>";
+    
+    // ⭐ NAYA: Flexbox for smart sorting (Auto Upar-Neeche hone ke liye)
+    friendBox.style.display = 'flex';
+    friendBox.style.flexDirection = 'column';
+    
+    friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px; order: 0;'>Fetching Friends... ⏳</p>";
     
     try {
         if(window.friendUnsubs) { window.friendUnsubs.forEach(u => u()); window.friendUnsubs = []; }
@@ -976,17 +981,18 @@ window.loadMyFriends = async function() {
         const snapshot = await getDocs(collection(db, "users", myUID, "friends"));
         
         if(snapshot.empty) {
-            friendBox.innerHTML = "<p style='color:#aaa; margin-top:110px;'>No friends yet 😢<br><span style='font-size:12px;'>Search UID to add!</span></p>";
+            friendBox.innerHTML = "<p style='color:#aaa; margin-top:110px; order: 0;'>No friends yet 😢<br><span style='font-size:12px;'>Search UID to add!</span></p>";
             return;
         }
         
         let html = "";
         const friendIDs = snapshot.docs.map(docSnap => docSnap.id);
 
-        // 1. Basic HTML dalo (Dot ke sath)
+        // 1. Basic HTML dalo (Dot aur Order ke sath)
         friendIDs.forEach(fid => {
+            // Dhyan do: style mein "order: 1" likha hai taaki sab default neeche rahein
             html += `
-            <div id="friendBox_${fid}" style="background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: 0.3s;">
+            <div id="friendBox_${fid}" style="order: 1; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: order 0.3s, background 0.3s;">
                 <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fid}', true)">
                     <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">
                         <span id="fName_${fid}">LOADING...</span>
@@ -1016,18 +1022,22 @@ window.loadMyFriends = async function() {
             });
             window.friendUnsubs.push(unsubFS);
 
-            // B. 🔥 1-SECOND LIVE STATUS (Realtime Database) 🔥
+            // B. 🔥 1-SECOND LIVE STATUS + SMART SORTING (Realtime Database) 🔥
             const statusRef = ref(rtdb, '/status/' + fid);
             const unsubRTDB = onValue(statusRef, (snap) => {
                 const state = snap.val();
                 const statusDot = document.getElementById(`fStatus_${fid}`);
-                if(statusDot) {
+                const friendRow = document.getElementById(`friendBox_${fid}`); // Is box ko upar-neeche karenge
+
+                if(statusDot && friendRow) {
                     if(state === 'online') {
-                        statusDot.style.background = '#00ff4d'; // Hara
+                        statusDot.style.background = '#00ff4d'; // Hara (Green)
                         statusDot.style.boxShadow = '0 0 8px #00ff4d';
+                        friendRow.style.order = "-1"; // 🔥 JADOO: Online aate hi list me sabse UPAR
                     } else {
                         statusDot.style.background = '#555'; // Gray
                         statusDot.style.boxShadow = 'none';
+                        friendRow.style.order = "1"; // ⬇️ Offline jaate hi wapas NEECHE
                     }
                 }
             });
@@ -1035,7 +1045,7 @@ window.loadMyFriends = async function() {
         });
 
     } catch(e) {
-        friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>";
+        friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px; order: 0;'>Error loading ❌</p>";
         console.log("Friend Fetch Error: ", e);
     }
 };
