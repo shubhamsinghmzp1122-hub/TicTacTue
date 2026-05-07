@@ -353,7 +353,13 @@ const firebaseConfig = {
   appId: "1:924586025656:web:32e2805f80de726fb20a4d"
 };
 
-const app = initializeApp(firebaseConfig); const db = getFirestore(app); const auth = getAuth(app);
+import { getDatabase, ref, onValue, onDisconnect, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+const app = initializeApp(firebaseConfig); 
+const db = getFirestore(app); 
+const auth = getAuth(app);
+const rtdb = getDatabase(app); // 🔥 NAYA: Free Fire Style Presence ke liye
+
 let isOnline = false; let roomCode = ""; let playerRole = ""; let unsubscribeRoom = null;
 let myUID = "LOADING..."; 
 let currentSearchedUID = ""; // ⭐ NAYA: Dost ka UID yaad rakhne ke liye
@@ -955,12 +961,17 @@ window.loadFriendRequests = async function() {
     }
 };
 
-// ⭐ HELPER: FIREBASE SE MY FRIENDS LOAD KARNA ⭐
+// ⭐ HELPER: FIREBASE SE MY FRIENDS LOAD KARNA (FREE FIRE STYLE LIVE DOT) ⭐
+if(window.friendUnsubs) window.friendUnsubs.forEach(u => u());
+window.friendUnsubs = [];
+
 window.loadMyFriends = async function() {
     const friendBox = document.getElementById('contentMyFriends');
     friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Fetching Friends... ⏳</p>";
     
     try {
+        if(window.friendUnsubs) { window.friendUnsubs.forEach(u => u()); window.friendUnsubs = []; }
+        
         const snapshot = await getDocs(collection(db, "users", myUID, "friends"));
         
         if(snapshot.empty) {
@@ -969,24 +980,59 @@ window.loadMyFriends = async function() {
         }
         
         let html = "";
-        for (const docSnap of snapshot.docs) {
-            const friendID = docSnap.id;
-            const q = query(collection(db, "users"), where("gameUID", "==", friendID));
-            const fSnap = await getDocs(q);
-            
-            fSnap.forEach(fDoc => {
-                const fData = fDoc.data();
-                html += `
-                <div id="friendBox_${fData.gameUID}" style="background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: 0.3s;">
-                    <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fData.gameUID}', true)">
-                        <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">${fData.playerName || 'GUEST'}</div>
-                        <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold;">Lv. ${fData.level || 1}</div>
+        const friendIDs = snapshot.docs.map(docSnap => docSnap.id);
+
+        // 1. Basic HTML dalo (Dot ke sath)
+        friendIDs.forEach(fid => {
+            html += `
+            <div id="friendBox_${fid}" style="background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: 0.3s;">
+                <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fid}', true)">
+                    <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">
+                        <span id="fName_${fid}">LOADING...</span>
                     </div>
-                    <button id="removeBtn_${fData.gameUID}" onclick="removeFriend('${fData.gameUID}')" style="background:rgba(255,0,85,0.2); color:#ff0055; border:1px solid #ff0055; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px; transition:0.3s; box-shadow: 0 0 5px #ff0055;">❌ REMOVE</button>
-                </div>`;
-            });
-        }
+                    <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+                        Lv. <span id="fLevel_${fid}">-</span>
+                        <span id="fStatus_${fid}" style="width:10px; height:10px; border-radius:50%; background:#555; display:inline-block; transition: 0.3s;"></span>
+                    </div>
+                </div>
+                <button id="removeBtn_${fid}" onclick="removeFriend('${fid}')" style="background:rgba(255,0,85,0.2); color:#ff0055; border:1px solid #ff0055; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px; transition:0.3s; box-shadow: 0 0 5px #ff0055;">❌ REMOVE</button>
+            </div>`;
+        });
         friendBox.innerHTML = html;
+
+        // 2. Har dost par Listeners laga do
+        friendIDs.forEach(fid => {
+            // A. Naam aur Level lane ke liye (Firestore)
+            const q = query(collection(db, "users"), where("gameUID", "==", fid));
+            const unsubFS = onSnapshot(q, (querySnapshot) => {
+                if(!querySnapshot.empty) {
+                    const data = querySnapshot.docs[0].data();
+                    const nameEl = document.getElementById(`fName_${fid}`);
+                    const levelEl = document.getElementById(`fLevel_${fid}`);
+                    if(nameEl) nameEl.innerText = data.playerName || 'GUEST';
+                    if(levelEl) levelEl.innerText = data.level || 1;
+                }
+            });
+            window.friendUnsubs.push(unsubFS);
+
+            // B. 🔥 1-SECOND LIVE STATUS (Realtime Database) 🔥
+            const statusRef = ref(rtdb, '/status/' + fid);
+            const unsubRTDB = onValue(statusRef, (snap) => {
+                const state = snap.val();
+                const statusDot = document.getElementById(`fStatus_${fid}`);
+                if(statusDot) {
+                    if(state === 'online') {
+                        statusDot.style.background = '#00ff4d'; // Hara
+                        statusDot.style.boxShadow = '0 0 8px #00ff4d';
+                    } else {
+                        statusDot.style.background = '#555'; // Gray
+                        statusDot.style.boxShadow = 'none';
+                    }
+                }
+            });
+            window.friendUnsubs.push(() => unsubRTDB()); // Clean up
+        });
+
     } catch(e) {
         friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>";
         console.log("Friend Fetch Error: ", e);
@@ -1199,7 +1245,7 @@ function createParticle() { const particle = document.createElement('div'); part
 function startLoadingScreen() { loadingOverlay.style.display = 'flex'; loadingOverlay.style.pointerEvents = 'auto'; requestAnimationFrame(() => { loadingOverlay.style.opacity = '1'; }); let currentProgress = 0; loadingBarFill.style.width = '0%'; loadingPercentage.textContent = '0%'; const interval = setInterval(() => { currentProgress += (UPDATE_INTERVAL / LOADING_DURATION) * 100; if (currentProgress >= 100) { currentProgress = 100; clearInterval(interval); } loadingBarFill.style.width = `${currentProgress}%`; loadingPercentage.textContent = `${Math.floor(currentProgress)}%`; if (currentProgress === 100) { setTimeout(() => { loadingOverlay.style.opacity = '0'; setTimeout(() => { loadingOverlay.style.display = 'none'; lobby.style.display='flex'; updateLevelSystemInLobby(); setTheme('default'); }, 1000); }, 500); } }, UPDATE_INTERVAL); }
 function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.transform = 'scale(0.9)'; for (let i = 0; i < PARTICLE_COUNT; i++) { createParticle(); } requestAnimationFrame(() => { splashLogo.style.transform = 'scale(1)'; }); setTimeout(() => { splashOverlay.style.opacity = '0'; splashLogo.style.transform = 'scale(1.2)'; setTimeout(() => { splashOverlay.style.display = 'none'; particleContainer.innerHTML = ''; lightStreak.style.opacity = 0; startLoadingScreen(); }, 1000); }, SPLASH_DURATION); }
 
-// ⭐ FIREBASE ANONYMOUS AUTH & 5-DIGIT UID SYSTEM ⭐
+// ⭐ FIREBASE AUTH & FREE FIRE STYLE INSTANT PRESENCE ⭐
 function initializePlayerAuth() {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -1211,7 +1257,6 @@ function initializePlayerAuth() {
             } else {
                 // Naya user hai, random 5-digit UID (10000 - 99999) bana kar save karo
                 let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
-
                 await setDoc(userDocRef, {
                     gameUID: newGameUID,
                     playerName: playerName,
@@ -1220,9 +1265,21 @@ function initializePlayerAuth() {
                     exp: currentExp,
                     createdAt: serverTimestamp()
                 });
-
                 myUID = newGameUID;
             }
+
+            // 🔥 ASLI JADOO: 1-SECOND REALTIME STATUS 🔥
+            const myStatusRef = ref(rtdb, '/status/' + myUID);
+            onValue(ref(rtdb, '.info/connected'), (snap) => {
+                if (snap.val() === true) {
+                    // Agar connection toota (app kill ya net off), toh turant "offline" likh do
+                    onDisconnect(myStatusRef).set("offline").then(() => {
+                        // Jab online aaye, toh "online" likh do
+                        set(myStatusRef, "online");
+                    });
+                }
+            });
+
         } else {
             // Login nahi hai, toh chupke se Anonymous Login kara do
             signInAnonymously(auth).catch((error) => console.log("Auth Error:", error));
