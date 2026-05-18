@@ -918,8 +918,7 @@ document.getElementById('searchPlayerBtn').onclick = async () => {
             const sIcon = document.getElementById('searchMainIcon');
             sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
 
-            if(fromFriendList){ document.getElementById('friendsModal').style.display = 'none'; }
-            
+            // Ye theek kar diya maine idhar!
             document.getElementById('searchedProfileModal').style.display = 'flex';
         }
     } catch (error) { showError("<span style='color: #ff0055;'>❌ Server Error!</span>"); console.log(error); }
@@ -1506,6 +1505,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
     downloadAppBtn.style.display = 'inline-block'; 
 });
 
+//edited 
 downloadAppBtn.addEventListener('click', async () => {
     menuClickSound();
     if (deferredPrompt) {
