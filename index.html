@@ -1603,30 +1603,65 @@ window.showChatBubble = function(text, senderRole) {
     setTimeout(() => { bubble.remove(); }, 3000);
 };
 
-window.lastMsgTime = 0; // Pichla message check karne ke liye
+  // ⭐ CHAT SYSTEM WITH COOLDOWN & ENTER KEY ⭐
+window.lastMsgTime = 0; 
+let lastChatSentTime = 0; 
+const CHAT_COOLDOWN = 2000; // 2 second ka spam timer
 
-  window.lastMsgTime = 0; // Pichla message receive karne ke liye (Ye pehle se hai)
-let lastChatSentTime = 0; // ⭐ NAYA: Send karne ka time track karne ke liye
-const CHAT_COOLDOWN = 2000; // ⭐ NAYA: 2 Second ka cooldown (2000 milliseconds)
+window.showChatBubble = function(text, senderRole) {
+    if(senderRole !== playerRole) tapSound(); 
+
+    const area = document.getElementById('chatDisplayArea');
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+
+    if (senderRole !== playerRole) {
+        bubble.classList.add('enemy');
+    }
+
+    bubble.innerText = (senderRole === playerRole ? "YOU: " : "FRIEND: ") + text;
+    area.appendChild(bubble);
+
+    // 3 second baad bubble apne aap delete
+    setTimeout(() => { bubble.remove(); }, 3000);
+};
 
 window.sendChat = async function(msgText) {
     if (!isOnline || roomCode === "") return;
 
-    // ⭐ COOLDOWN LOGIC START ⭐
+    // COOLDOWN LOGIC
     const now = Date.now();
     if (now - lastChatSentTime < CHAT_COOLDOWN) {
-        showToast("Thoda aaram se bhai! ⏳"); // Spammer ko warning
-        return; // Aage ka code chalne hi mat do
+        showToast("Thoda aaram se bhai! ⏳"); 
+        return; 
     }
-    // ⭐ COOLDOWN LOGIC END ⭐
 
-    const msg = msgText || document.getElementById('chatInput').value.trim();
+    let msg = "";
+    if (typeof msgText === 'string') {
+        msg = msgText; // Agar Emoji par tap kiya
+    } else {
+        msg = document.getElementById('chatInput').value.trim(); // Agar text type kiya
+    }
+
     if (msg === "") return;
 
-    lastChatSentTime = now; // ⭐ NAYA: Time update kar diya taaki agla 2 sec tak na bhej paye
-    document.getElementById('chatInput').value = ""; // Input clear karo
-    menuClickSound(); // Button click sound
-    
+    lastChatSentTime = now; 
+    document.getElementById('chatInput').value = ""; 
+    menuClickSound(); 
+
+    // ⭐ NAYA: Send Button par Timer Dikhane Ke Liye ⭐
+    const sendBtn = document.getElementById('sendChatBtn');
+    if(sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerText = "⏳";
+        sendBtn.style.opacity = "0.5";
+        setTimeout(() => {
+            sendBtn.disabled = false;
+            sendBtn.innerText = "Send";
+            sendBtn.style.opacity = "1";
+        }, CHAT_COOLDOWN);
+    }
+
     try {
         await updateDoc(doc(db, "rooms", roomCode), {
             lastMessage: {
@@ -1638,8 +1673,19 @@ window.sendChat = async function(msgText) {
     } catch(e) { console.log("Chat Error:", e); }
 };
 
+// ⭐ NAYA: Keyboard ke Enter button se send karne ke liye ⭐
+const chatInputBox = document.getElementById('chatInput');
+if(chatInputBox) {
+    chatInputBox.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            window.sendChat();
+        }
+    });
+}
+
 document.getElementById('sendChatBtn').onclick = () => window.sendChat();
-  
+      
 </script>
 </body>
 </html>
