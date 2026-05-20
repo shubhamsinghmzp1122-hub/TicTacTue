@@ -747,7 +747,18 @@ function listenToRoom() {
         const data = docSnap.data();
         window.startingTurn = data.startingTurn || "O";
         
-        if (data.status === "playing" && !isOnline) {
+                if (data.status === "playing" && !isOnline) {
+            
+            // ⭐ NAYA LOGIC: Agar 3rd player galti se aa gaya, toh usko bahar nikal kar naya search karao
+            if (playerRole === "X" && data.joinedBy && data.joinedBy !== myUID) {
+                console.log("Room kisi aur ne le liya, retrying...");
+                if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+                roomCode = ""; playerRole = "";
+                // 1 second baad automatic dobara naya room dhundhega
+                setTimeout(() => { document.getElementById('randomMatchBtn').click(); }, 1000);
+                return;
+            }
+
             isOnline = true; 
             roomModal.style.display = "none";
             
@@ -759,7 +770,7 @@ function listenToRoom() {
             startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + rCodeDisplay + '</span>');
             startVoiceChat(playerRole === "O");
         }
-        
+
         if (isOnline) {
             let boardChanged = JSON.stringify(board) !== JSON.stringify(data.board); 
             board = data.board; currentPlayer = data.currentPlayer; 
@@ -1082,7 +1093,12 @@ document.getElementById('randomMatchBtn').onclick = async () => {
                     document.getElementById('micBtn').style.display = 'block'; document.getElementById('camBtn').style.display = 'block'; document.getElementById('localVideo').srcObject = window.localStream;
                 }
             } catch(e) {}
-            await updateDoc(doc(db, "rooms", roomCode), { status: "playing" }); listenToRoom(); 
+                        // ⭐ NAYA LOGIC: Apna UID chipka do taaki 3rd player na ghus paye
+            await updateDoc(doc(db, "rooms", roomCode), { 
+                status: "playing", 
+                joinedBy: myUID 
+            });
+            listenToRoom(); 
         } else {
             roomCode = generateRoomCode() + "R"; playerRole = "O";
             try {
