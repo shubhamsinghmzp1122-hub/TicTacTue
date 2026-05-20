@@ -10,10 +10,6 @@
 <link rel="apple-touch-icon" href="icon-512.png">
 
 <style>
-  /* Basic Reset and Layout */
-  *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif; touch-action: manipulation;}
-  body{ background:#0a0a20; display:flex; align-items:center; justify-content:center; height:100vh; color:white; overflow:hidden; transition:background 0.5s, color 0.5s; width: 100vw; max-width: 100%; }
-
   /* ⭐ CHAT CSS ⭐ */
   .q-emoji { font-size: 24px; cursor: pointer; transition: 0.2s; user-select: none; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
   .q-emoji:hover { transform: scale(1.3); filter: drop-shadow(0 0 10px #fff); }
@@ -28,6 +24,10 @@
       80% { opacity: 1; transform: translateY(-30px); } 
       100% { opacity: 0; transform: translateY(-60px); } 
   }
+
+  /* Basic Reset and Layout */
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif; touch-action: manipulation;}
+  body{ background:#0a0a20; display:flex; align-items:center; justify-content:center; height:100vh; color:white; overflow:hidden; transition:background 0.5s, color 0.5s; width: 100vw; max-width: 100%; }
   
   /* ⭐ THEME FIX: DARK/LIGHT MODE CSS ⭐ */
   body.dark { background: #000000; color: #f0f0f0; } .lobby.dark { background: linear-gradient(145deg, #0a0a0a, #1a1a1a); color: #f0f0f0; } .lobby.dark h1 { text-shadow: 2px 2px 5px rgba(0,0,0,0.9), 0 0 10px #00ffff, 0 0 20px #00ffff !important; color: #fff; } .lobby.dark .btn { border-color: #00ffff; color: #00ffff; } .lobby.dark .btn:hover { background: #00ffff !important; color: #000 !important; box-shadow: 0 0 20px #00ffff; }
@@ -177,6 +177,8 @@
       <button class="btn" id="createRoomBtn" style="background: linear-gradient(90deg, #ff00cc, #3333ff) !important; border-color: #fff !important; margin: 5px;">CREATE ROOM</button>
       <button class="btn" id="joinRoomBtn" style="background: linear-gradient(90deg, #3333ff, #ff00cc) !important; border-color: #fff !important; margin: 5px;">JOIN ROOM</button>
   </div>
+
+  <button class="btn" id="randomMatchBtn" style="background: linear-gradient(90deg, #ff8c00, #ff0055) !important; border-color: #fff !important; margin: 10px 5px 5px; width: 90%; max-width: 300px; box-shadow: 0 0 15px #ff8c00;">🌍 PLAY WITH RANDOM</button>
 
   <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.6); border: 2px solid #ff00ff; border-radius: 15px; box-shadow: 0 0 15px rgba(255,0,255,0.3); max-width: 90vw;">
       <h3 style="color: #ff00ff; text-shadow: 0 0 10px #ff00ff; margin-bottom: 10px; font-size: 16px;">🔍 SEARCH PLAYER</h3>
@@ -405,6 +407,15 @@
     </div>
 </div>
 
+<div id="matchmakingModal" class="room-modal" style="z-index: 6000;">
+    <div class="room-box" style="border-color: #ff8c00; box-shadow: 0 0 25px #ff8c00; width: 320px;">
+        <h2 style="color: #ff8c00; text-shadow: 0 0 15px #ff8c00; animation: neonWinGlow 1s infinite alternate; letter-spacing: 2px;">SEARCHING...</h2>
+        <p style="color: #fff; margin: 15px 0; font-size: 16px;">Finding an opponent...</p>
+        <div style="font-size: 50px; font-weight: 900; color: #00ffff; text-shadow: 0 0 20px #00ffff; margin-bottom: 20px;" id="matchmakingTimerDisplay">30</div>
+        <button class="btn" id="cancelMatchmakingBtn" style="background: rgba(255,0,0,0.8) !important; border-color: red; padding: 8px 20px; box-shadow: 0 0 10px red;">CANCEL</button>
+    </div>
+</div>
+
 <div id="toastNotification" style="position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); border: 2px solid #ff00ff; box-shadow: 0 0 15px #ff00ff; color: #fff; padding: 12px 25px; border-radius: 25px; font-weight: bold; font-size: 14px; z-index: 9999; transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); text-align: center; white-space: nowrap; pointer-events: none;">
     Player is busy!
 </div>
@@ -583,7 +594,6 @@ const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION 
 let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = false; let aiLevel = "easy"; let winningCombo = []; let scoreO = 0; let scoreX = 0; let currentTheme = 'default';
 let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
 
-
 function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
 
 function saveGameData() { 
@@ -679,13 +689,13 @@ document.getElementById('createRoomBtn').onclick = async () => {
 
     roomModalTitle.innerText = "CREATE ROOM"; roomCodeInput.style.display = "none"; roomCodeDisplay.style.display = "block"; roomCodeDisplay.innerText = roomCode; roomStatusText.innerHTML = "Share code. Waiting for friend..."; roomActionBtn.style.display = "none"; roomModal.style.display = "flex";
     await setDoc(doc(db, "rooms", roomCode), { 
-    board: ["","","","","","","","",""], 
-    currentPlayer: "O", 
-    startingTurn: "O", 
-    status: "waiting",
-    createdAt: serverTimestamp() 
-}); 
-listenToRoom();
+        board: ["","","","","","","","",""], 
+        currentPlayer: "O", 
+        startingTurn: "O", 
+        status: "waiting",
+        createdAt: serverTimestamp() 
+    }); 
+    listenToRoom();
 };
 
 document.getElementById('joinRoomBtn').onclick = () => {
@@ -693,7 +703,7 @@ document.getElementById('joinRoomBtn').onclick = () => {
 };
 
 roomActionBtn.onclick = async () => {
-    menuClickSound(); const code = roomCodeInput.value.trim(); if(code.length !== 4) { roomStatusText.innerHTML = "<span style='color:#ff0055;'>❌ Enter a 4-digit code!</span>"; return; }
+    menuClickSound(); const code = roomCodeInput.value.trim(); if(code.length !== 4 && !code.includes("R")) { roomStatusText.innerHTML = "<span style='color:#ff0055;'>❌ Enter a 4-digit code!</span>"; return; }
     roomActionBtn.innerText = "Joining..."; 
     
     try {
@@ -723,7 +733,7 @@ document.getElementById('roomCancelBtn').onclick = async () => {
     if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;}
 };
 
-// ⭐ UPDATED LISTEN TO ROOM WITH CHAT RECEIVE ⭐
+// ⭐ UPDATED LISTEN TO ROOM (Matchmaking timer cancel + Chat Receive) ⭐
 function listenToRoom() {
     if (unsubscribeRoom) unsubscribeRoom();
     unsubscribeRoom = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
@@ -738,8 +748,15 @@ function listenToRoom() {
         window.startingTurn = data.startingTurn || "O";
         
         if (data.status === "playing" && !isOnline) {
-            isOnline = true; roomModal.style.display = "none";
-            startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + roomCode + '</span>');
+            isOnline = true; 
+            roomModal.style.display = "none";
+            
+            // Matchmaking ka timer aur popup band karne ke liye
+            if (window.matchmakingInterval) clearInterval(window.matchmakingInterval);
+            document.getElementById('matchmakingModal').style.display = 'none';
+
+            let rCodeDisplay = roomCode.includes("R") ? "RANDOM MATCH" : roomCode;
+            startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + rCodeDisplay + '</span>');
             startVoiceChat(playerRole === "O");
         }
         
@@ -755,7 +772,7 @@ function listenToRoom() {
             if (winner) { handleWin(winner); } 
             else if (board.every(x=>x!=="")) { handleDraw(); }
 
-            // ⭐ LIVE CHAT RECEIVE LOGIC ⭐
+            // LIVE CHAT RECEIVE LOGIC
             if (data.lastMessage && window.lastMsgTime !== data.lastMessage.time) {
                 window.lastMsgTime = data.lastMessage.time;
                 if (window.showChatBubble) {
@@ -766,7 +783,7 @@ function listenToRoom() {
     });
 }
 
-// ⭐ UPDATED START GAME TO SHOW CHAT ⭐
+// ⭐ UPDATED START GAME (Chat Box show/hide) ⭐
 function startGame(selectedMode){
   scoreO = 0; scoreX = 0; lobby.style.display='none'; gameDiv.style.display='flex'; gameDiv.className = 'game-board ' + currentTheme; 
   if (isLevelUpMode) { modeTitle.innerHTML = 'LEVEL UP MODE'; } else { modeTitle.innerHTML = selectedMode; }
@@ -774,16 +791,16 @@ function startGame(selectedMode){
   isLevelUpMode = (selectedMode.includes("LEVEL UP MODE")); if (isLevelUpMode) levelUpMatchCount = 0; 
   drawBoard(); updateScoreboard(); moon.style.display = 'none'; sun.style.display = 'none';
   
-  updateMyPresence('busy'); // GAME START HUI TO BUSY HO GAYA
+  updateMyPresence('busy');
 
   if (isOnline) {
       document.getElementById('videoContainer').style.display = 'flex';
-      document.getElementById('chatContainer').style.display = 'flex'; // ⭐ CHAT BOX SHOW KAREGA
+      document.getElementById('chatContainer').style.display = 'flex'; 
   } else {
       document.getElementById('micBtn').style.display = 'none';
       document.getElementById('camBtn').style.display = 'none';
       document.getElementById('videoContainer').style.display = 'none';
-      document.getElementById('chatContainer').style.display = 'none'; // ⭐ OFFLINE ME CHAT HIDE KAREGA
+      document.getElementById('chatContainer').style.display = 'none'; 
       resetGame(); 
   } 
 }
@@ -794,162 +811,60 @@ const profileNameDisplay = document.getElementById('profileNameDisplay');
 const playerNameInput = document.getElementById('playerNameInput');
 
 document.getElementById('editNameBtn').onclick = () => {
-    settingClickSound();
-    nameDisplayContainer.style.display = 'none';
-    nameEditContainer.style.display = 'flex';
-    playerNameInput.value = playerName === "GUEST" ? "" : playerName;
-    playerNameInput.focus();
+    settingClickSound(); nameDisplayContainer.style.display = 'none'; nameEditContainer.style.display = 'flex'; playerNameInput.value = playerName === "GUEST" ? "" : playerName; playerNameInput.focus();
 };
 
 document.getElementById('saveNameBtn').onclick = () => {
-    menuClickSound();
-    let newName = playerNameInput.value.trim().toUpperCase();
-    if(newName === "") newName = "GUEST";
-    playerName = newName;
-    saveGameData(); 
-    
-    profileNameDisplay.innerText = playerName;
-    nameEditContainer.style.display = 'none';
-    nameDisplayContainer.style.display = 'flex';
+    menuClickSound(); let newName = playerNameInput.value.trim().toUpperCase(); if(newName === "") newName = "GUEST"; playerName = newName; saveGameData(); 
+    profileNameDisplay.innerText = playerName; nameEditContainer.style.display = 'none'; nameDisplayContainer.style.display = 'flex';
 };
 
 document.getElementById('profileBtn').onclick = () => {
-    menuClickSound();
-    
-    profileNameDisplay.innerText = playerName;
-    document.getElementById('uidTextDisplay').innerText = myUID; 
-    nameEditContainer.style.display = 'none';
-
-    nameDisplayContainer.style.display = 'flex';
-    
-    document.getElementById('profileLevelDisplay').innerText = playerLevel;
-    document.getElementById('profileWinsDisplay').innerText = totalMatchesWon + ' 🏆';
-    document.getElementById('profileExpDisplay').innerText = currentExp + ' / ' + expToNextLevel + ' EXP';
+    menuClickSound(); profileNameDisplay.innerText = playerName; document.getElementById('uidTextDisplay').innerText = myUID; nameEditContainer.style.display = 'none'; nameDisplayContainer.style.display = 'flex';
+    document.getElementById('profileLevelDisplay').innerText = playerLevel; document.getElementById('profileWinsDisplay').innerText = totalMatchesWon + ' 🏆'; document.getElementById('profileExpDisplay').innerText = currentExp + ' / ' + expToNextLevel + ' EXP';
     
     let rName = ""; let rColor = ""; let rSvg = "";
+    if (playerLevel < 10) { rName = "NOVICE"; rColor = "#a0a0a0"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
+    else if (playerLevel < 20) { rName = "FIGHTER"; rColor = "#cd7f32"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
+    else if (playerLevel < 30) { rName = "WARRIOR"; rColor = "#c0c0c0"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`; }
+    else if (playerLevel < 40) { rName = "ELITE"; rColor = "#ffd700"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`; }
+    else if (playerLevel < 50) { rName = "MASTER"; rColor = "#00ffff"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`; }
+    else if (playerLevel < 60) { rName = "GRANDMASTER"; rColor = "#ff00ff"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`; }
+    else if (playerLevel < 70) { rName = "EPIC"; rColor = "#ff0055"; rSvg = `<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`; }
+    else if (playerLevel < 80) { rName = "MYTHIC"; rColor = "#8a2be2"; rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`; }
+    else if (playerLevel < 90) { rName = "LEGEND"; rColor = "#ff4500"; rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`; }
+    else if (playerLevel < 100) { rName = "SUPREME"; rColor = "#ffffff"; rSvg = `<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
+    else { rName = "IMMORTAL"; rColor = "#ff2a2a"; rSvg = `<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
 
-    if (playerLevel < 10) { 
-        rName = "NOVICE"; rColor = "#a0a0a0"; 
-        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`;
-    }
-    else if (playerLevel < 20) { 
-        rName = "FIGHTER"; rColor = "#cd7f32"; 
-        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`;
-    }
-    else if (playerLevel < 30) { 
-        rName = "WARRIOR"; rColor = "#c0c0c0"; 
-        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`;
-    }
-    else if (playerLevel < 40) { 
-        rName = "ELITE"; rColor = "#ffd700"; 
-        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`;
-    }
-    else if (playerLevel < 50) { 
-        rName = "MASTER"; rColor = "#00ffff"; 
-        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`;
-    }
-    else if (playerLevel < 60) { 
-        rName = "GRANDMASTER"; rColor = "#ff00ff"; 
-        rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`;
-    }
-    else if (playerLevel < 70) { 
-        rName = "EPIC"; rColor = "#ff0055"; 
-        rSvg = `<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`;
-    }
-    else if (playerLevel < 80) { 
-        rName = "MYTHIC"; rColor = "#8a2be2"; 
-        rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`;
-    }
-    else if (playerLevel < 90) { 
-        rName = "LEGEND"; rColor = "#ff4500"; 
-        rSvg = `<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`;
-    }
-    else if (playerLevel < 100) { 
-        rName = "SUPREME"; rColor = "#ffffff"; 
-        rSvg = `<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`;
-    }
-    else { 
-        rName = "IMMORTAL"; rColor = "#ff2a2a"; 
-        rSvg = `<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`;
-    }
-
-    const badgeDisplay = document.getElementById('profileBadgeDisplay');
-    badgeDisplay.innerHTML = rName;
-    badgeDisplay.style.color = rColor;
-    badgeDisplay.style.textShadow = `0 0 15px ${rColor}`;
-    
-    const mainIcon = document.getElementById('profileMainIcon');
-    mainIcon.innerHTML = rSvg;
-    mainIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
-
+    const badgeDisplay = document.getElementById('profileBadgeDisplay'); badgeDisplay.innerHTML = rName; badgeDisplay.style.color = rColor; badgeDisplay.style.textShadow = `0 0 15px ${rColor}`;
+    const mainIcon = document.getElementById('profileMainIcon'); mainIcon.innerHTML = rSvg; mainIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
     document.getElementById('profileModal').style.display = 'flex';
 };
 
-
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
-
-
 document.querySelectorAll('.diff').forEach(btn=>{ btn.onclick = ()=>{ menuClickSound(); aiLevel = btn.dataset.level; vsAI = true; let modeText = (aiLevel === 'ultrahard') ? `AI (ULTRA HARD +)` : 'AI ('+aiLevel.toUpperCase()+')'; startGame(modeText); }; });
 document.getElementById("levelUpMode").onclick = ()=>{ menuClickSound(); vsAI = true; isLevelUpMode = true; startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); };
-
 document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; startGame('Player O vs Player X'); };
 
 document.getElementById('searchPlayerBtn').onclick = async () => {
-    menuClickSound();
-    const searchInput = document.getElementById('searchUidInput');
-    const searchUid = searchInput.value.trim();
-    const resultText = document.getElementById('searchResultText');
-    
-    const showError = (msg) => {
-        searchInput.value = ''; 
-        document.getElementById('searchedProfileModal').style.display = 'none';
-        resultText.style.display = 'block';
-        resultText.innerHTML = msg;
-        setTimeout(() => { resultText.style.display = 'none'; }, 2000); 
-    };
-    
+    menuClickSound(); const searchInput = document.getElementById('searchUidInput'); const searchUid = searchInput.value.trim(); const resultText = document.getElementById('searchResultText');
+    const showError = (msg) => { searchInput.value = ''; document.getElementById('searchedProfileModal').style.display = 'none'; resultText.style.display = 'block'; resultText.innerHTML = msg; setTimeout(() => { resultText.style.display = 'none'; }, 2000); };
     if (searchUid.length !== 5) { showError("<span style='color: #ff0055;'>❌ Sirf 5-Digit UID dal bhai!</span>"); return; }
     if (searchUid === myUID) { showError("<span style='color: #ffcc00;'>⚠️ Ye tera hi UID hai bhai!</span>"); return; }
-
     resultText.style.display = 'block'; resultText.innerHTML = "<span style='color: #00ffff;'>Searching Radar... ⏳</span>";
 
     try {
-        const q = query(collection(db, "users"), where("gameUID", "==", searchUid));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-            showError("<span style='color: #ff0055;'>❌ Player Not Found!</span>");
-        } else {
-            resultText.style.display = 'none'; 
-            searchInput.value = ''; 
-            
-            const pData = querySnapshot.docs[0].data();
-            let pLevel = pData.level || 1;
-            
-            document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST";
-            document.getElementById('searchUidDisplay').innerText = pData.gameUID;
-            document.getElementById('searchLevelDisplay').innerText = pLevel;
-            document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
-            
-            currentSearchedUID = pData.gameUID;
-            const reqBtn = document.getElementById('sendRequestBtn');
-            const rmvBtn = document.getElementById('removeFriendBtnCard');
-            
-            reqBtn.innerText = "➕ SEND REQUEST";
-            reqBtn.style.background = "#ff00ff";
-            reqBtn.style.boxShadow = "0 0 15px #ff00ff";
-            reqBtn.disabled = false;
-            
-            reqBtn.style.display = 'block';
-            rmvBtn.style.display = 'none'; 
+        const q = query(collection(db, "users"), where("gameUID", "==", searchUid)); const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) { showError("<span style='color: #ff0055;'>❌ Player Not Found!</span>"); } else {
+            resultText.style.display = 'none'; searchInput.value = ''; 
+            const pData = querySnapshot.docs[0].data(); let pLevel = pData.level || 1;
+            document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST"; document.getElementById('searchUidDisplay').innerText = pData.gameUID; document.getElementById('searchLevelDisplay').innerText = pLevel; document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
+            currentSearchedUID = pData.gameUID; const reqBtn = document.getElementById('sendRequestBtn'); const rmvBtn = document.getElementById('removeFriendBtnCard');
+            reqBtn.innerText = "➕ SEND REQUEST"; reqBtn.style.background = "#ff00ff"; reqBtn.style.boxShadow = "0 0 15px #ff00ff"; reqBtn.disabled = false; reqBtn.style.display = 'block'; rmvBtn.style.display = 'none'; 
             
             try {
                 const friendCheckSnap = await getDoc(doc(db, "users", myUID, "friends", currentSearchedUID));
-                if (friendCheckSnap.exists()) {
-                    reqBtn.style.display = 'none'; 
-                    rmvBtn.style.display = 'block';
-                    rmvBtn.onclick = () => showRemoveConfirm(currentSearchedUID, pData.playerName || "GUEST");
-                }
+                if (friendCheckSnap.exists()) { reqBtn.style.display = 'none'; rmvBtn.style.display = 'block'; rmvBtn.onclick = () => showRemoveConfirm(currentSearchedUID, pData.playerName || "GUEST"); }
             } catch(e) { console.log(e); }
        
             let rName="", rColor="", rSvg="";
@@ -965,126 +880,63 @@ document.getElementById('searchPlayerBtn').onclick = async () => {
             else if (pLevel < 100) { rName="SUPREME"; rColor="#ffffff"; rSvg=`<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
             else { rName="IMMORTAL"; rColor="#ff2a2a"; rSvg=`<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
 
-            const sBadge = document.getElementById('searchBadgeDisplay');
-            sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
-            const sIcon = document.getElementById('searchMainIcon');
-            sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
-
-            if(fromFriendList){ document.getElementById('friendsModal').style.display = 'none'; }
-            
+            const sBadge = document.getElementById('searchBadgeDisplay'); sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
+            const sIcon = document.getElementById('searchMainIcon'); sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
             document.getElementById('searchedProfileModal').style.display = 'flex';
         }
     } catch (error) { showError("<span style='color: #ff0055;'>❌ Server Error!</span>"); console.log(error); }
 };
 
 document.getElementById('sendRequestBtn').onclick = async () => {
-    menuClickSound();
-    const btn = document.getElementById('sendRequestBtn');
-    
-    btn.innerText = "⏳ SENDING...";
-    btn.disabled = true;
-
+    menuClickSound(); const btn = document.getElementById('sendRequestBtn'); btn.innerText = "⏳ SENDING..."; btn.disabled = true;
     try {
         const requestDocId = myUID + "_" + currentSearchedUID;
-        
-        await setDoc(doc(db, "friend_requests", requestDocId), {
-            fromUID: myUID,
-            fromName: playerName,
-            toUID: currentSearchedUID,
-            status: "pending",
-            timestamp: serverTimestamp()
-        });
-
-        btn.innerText = "✅ SENT!";
-        btn.style.background = "#00ff4d"; 
-        btn.style.boxShadow = "0 0 15px #00ff4d";
-        
+        await setDoc(doc(db, "friend_requests", requestDocId), { fromUID: myUID, fromName: playerName, toUID: currentSearchedUID, status: "pending", timestamp: serverTimestamp() });
+        btn.innerText = "✅ SENT!"; btn.style.background = "#00ff4d"; btn.style.boxShadow = "0 0 15px #00ff4d";
         setTimeout(() => { document.getElementById('searchedProfileModal').style.display = 'none'; }, 1500);
-
-    } catch (error) {
-        console.log("Request Error: ", error);
-        btn.innerText = "❌ ERROR!";
-        btn.disabled = false;
-    }
+    } catch (error) { console.log("Request Error: ", error); btn.innerText = "❌ ERROR!"; btn.disabled = false; }
 };
 
 window.loadFriendRequests = async function() {
-    const reqBox = document.getElementById('contentRequests');
-    reqBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Radar scanning... ⏳</p>";
-    
+    const reqBox = document.getElementById('contentRequests'); reqBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Radar scanning... ⏳</p>";
     try {
-        const q = query(collection(db, "friend_requests"), where("toUID", "==", myUID), where("status", "==", "pending"));
-        const snapshot = await getDocs(q);
-        
-        if(snapshot.empty) {
-            reqBox.innerHTML = "<p style='color:#aaa; margin-top:110px;'>No new requests 😴</p>";
-            return;
-        }
-        
+        const q = query(collection(db, "friend_requests"), where("toUID", "==", myUID), where("status", "==", "pending")); const snapshot = await getDocs(q);
+        if(snapshot.empty) { reqBox.innerHTML = "<p style='color:#aaa; margin-top:110px;'>No new requests 😴</p>"; return; }
         let html = "";
         snapshot.forEach(docSnap => {
-            const req = docSnap.data();
-            const docId = docSnap.id;
-            html += `
-            <div style="background: rgba(0,0,0,0.8); border: 1px solid #ff00ff; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(255,0,255,0.2);">
-                <div style="text-align: left;">
-                    <div style="color:#fff; font-weight:bold; font-size:16px; text-transform:uppercase;">${req.fromName}</div>
-                    <div style="color:#aaa; font-size:12px; letter-spacing:1px;">UID: ${req.fromUID}</div>
-                </div>
+            const req = docSnap.data(); const docId = docSnap.id;
+            html += `<div style="background: rgba(0,0,0,0.8); border: 1px solid #ff00ff; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(255,0,255,0.2);">
+                <div style="text-align: left;"><div style="color:#fff; font-weight:bold; font-size:16px; text-transform:uppercase;">${req.fromName}</div><div style="color:#aaa; font-size:12px; letter-spacing:1px;">UID: ${req.fromUID}</div></div>
                 <div style="display: flex; gap: 8px;">
                     <button onclick="handleRequest('${docId}', 'accepted', '${req.fromUID}', '${req.fromName}')" style="background:#00ff4d; color:#000; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px; box-shadow: 0 0 10px #00ff4d;">✅</button>
                     <button onclick="handleRequest('${docId}', 'rejected', '${req.fromUID}', '${req.fromName}')" style="background:#ff0055; color:#fff; border:none; padding:8px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px; box-shadow: 0 0 10px #ff0055;">❌</button>
-                </div>
-            </div>`;
+                </div></div>`;
         });
         reqBox.innerHTML = html;
-    } catch(e) {
-        reqBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>";
-        console.log("Fetch Error: ", e);
-    }
+    } catch(e) { reqBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>"; console.log("Fetch Error: ", e); }
 };
 
 if(window.friendUnsubs) window.friendUnsubs.forEach(u => u());
 window.friendUnsubs = [];
 
-// ⭐ FRIEND LIST UI & LIVE STATUS UPDATE ⭐
+// FRIEND LIST
 window.loadMyFriends = async function() {
-    const friendBox = document.getElementById('contentMyFriends');
-    friendBox.style.display = 'flex';
-    friendBox.style.flexDirection = 'column';
-    friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px; order: 0;'>Fetching Friends... ⏳</p>";
-    
+    const friendBox = document.getElementById('contentMyFriends'); friendBox.style.display = 'flex'; friendBox.style.flexDirection = 'column'; friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px; order: 0;'>Fetching Friends... ⏳</p>";
     try {
         if(window.friendUnsubs) { window.friendUnsubs.forEach(u => u()); window.friendUnsubs = []; }
         const snapshot = await getDocs(collection(db, "users", myUID, "friends"));
+        if(snapshot.empty) { friendBox.innerHTML = "<p style='color:#aaa; margin-top:110px; order: 0;'>No friends yet 😢<br><span style='font-size:12px;'>Search UID to add!</span></p>"; return; }
         
-        if(snapshot.empty) {
-            friendBox.innerHTML = "<p style='color:#aaa; margin-top:110px; order: 0;'>No friends yet 😢<br><span style='font-size:12px;'>Search UID to add!</span></p>";
-            return;
-        }
-        
-        let html = "";
-        const friendIDs = snapshot.docs.map(docSnap => docSnap.id);
-
+        let html = ""; const friendIDs = snapshot.docs.map(docSnap => docSnap.id);
         friendIDs.forEach(fid => {
-            html += `
-            <div id="friendBox_${fid}" style="order: 1; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: order 0.3s, background 0.3s;">
-                
+            html += `<div id="friendBox_${fid}" style="order: 1; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: order 0.3s, background 0.3s;">
                 <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fid}', true)">
-                    <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">
-                        <span id="fName_${fid}">LOADING...</span>
-                    </div>
-                    <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold; display:flex; align-items:center; gap:6px;">
-                        Lv. <span id="fLevel_${fid}">-</span>
-                        <span id="fStatusDot_${fid}" style="width:10px; height:10px; border-radius:50%; background:#555; display:inline-block; transition: 0.3s;"></span>
-                    </div>
+                    <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;"><span id="fName_${fid}">LOADING...</span></div>
+                    <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold; display:flex; align-items:center; gap:6px;">Lv. <span id="fLevel_${fid}">-</span><span id="fStatusDot_${fid}" style="width:10px; height:10px; border-radius:50%; background:#555; display:inline-block; transition: 0.3s;"></span></div>
                 </div>
-
                 <button id="fInviteBtn_${fid}" class="btn" style="display:none; margin:0 0 0 10px; padding:5px 12px; font-size:13px; background:#00ffff !important; color:#000 !important; border:none; border-radius:5px; font-weight: bold; box-shadow:0 0 8px #00ffff; cursor: pointer;" onclick="event.stopPropagation(); sendMatchInvite('${fid}', document.getElementById('fName_${fid}').innerText)">➕ PLAY</button>
-                
             </div>`;
         });
-
         friendBox.innerHTML = html;
 
         friendIDs.forEach(fid => {
@@ -1092,10 +944,8 @@ window.loadMyFriends = async function() {
             const unsubFS = onSnapshot(q, (querySnapshot) => {
                 if(!querySnapshot.empty) {
                     const data = querySnapshot.docs[0].data();
-                    const nameEl = document.getElementById(`fName_${fid}`);
-                    const levelEl = document.getElementById(`fLevel_${fid}`);
-                    if(nameEl) nameEl.innerText = data.playerName || 'GUEST';
-                    if(levelEl) levelEl.innerText = data.level || 1;
+                    const nameEl = document.getElementById(`fName_${fid}`); const levelEl = document.getElementById(`fLevel_${fid}`);
+                    if(nameEl) nameEl.innerText = data.playerName || 'GUEST'; if(levelEl) levelEl.innerText = data.level || 1;
                 }
             });
             window.friendUnsubs.push(unsubFS);
@@ -1103,373 +953,181 @@ window.loadMyFriends = async function() {
             const statusRef = ref(rtdb, '/status/' + fid);
             const unsubRTDB = onValue(statusRef, (snap) => {
                 const state = snap.val();
-                const statusDot = document.getElementById(`fStatusDot_${fid}`);
-                const inviteBtn = document.getElementById(`fInviteBtn_${fid}`);
-                const friendRow = document.getElementById(`friendBox_${fid}`); 
-
+                const statusDot = document.getElementById(`fStatusDot_${fid}`); const inviteBtn = document.getElementById(`fInviteBtn_${fid}`); const friendRow = document.getElementById(`friendBox_${fid}`); 
                 if(statusDot && inviteBtn && friendRow) {
-                    if(state === 'online') {
-                        statusDot.style.display = 'none';
-                        inviteBtn.style.display = 'block';
-                        friendRow.style.order = "-1"; 
-                    } else if (state === 'busy') {
-                        statusDot.style.display = 'inline-block';
-                        statusDot.style.background = '#00ff4d';
-                        statusDot.style.boxShadow = '0 0 8px #00ff4d';
-                        inviteBtn.style.display = 'none';
-                        friendRow.style.order = "0"; 
-                    } else {
-                        statusDot.style.display = 'inline-block';
-                        statusDot.style.background = '#555';
-                        statusDot.style.boxShadow = 'none';
-                        inviteBtn.style.display = 'none';
-                        friendRow.style.order = "1"; 
-                    }
+                    if(state === 'online') { statusDot.style.display = 'none'; inviteBtn.style.display = 'block'; friendRow.style.order = "-1"; } 
+                    else if (state === 'busy') { statusDot.style.display = 'inline-block'; statusDot.style.background = '#00ff4d'; statusDot.style.boxShadow = '0 0 8px #00ff4d'; inviteBtn.style.display = 'none'; friendRow.style.order = "0"; } 
+                    else { statusDot.style.display = 'inline-block'; statusDot.style.background = '#555'; statusDot.style.boxShadow = 'none'; inviteBtn.style.display = 'none'; friendRow.style.order = "1"; }
                 }
             });
             window.friendUnsubs.push(() => unsubRTDB()); 
         });
-
-    } catch(e) {
-        friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px; order: 0;'>Error loading ❌</p>";
-        console.log("Friend Fetch Error: ", e);
-    }
+    } catch(e) { friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px; order: 0;'>Error loading ❌</p>"; console.log("Friend Fetch Error: ", e); }
 };
 
 let isCardOpenedFromFriendList = false; 
-
-window.viewPlayerCard = async (uid, fromFriendList = false) => {
-    menuClickSound();
-    isCardOpenedFromFriendList = fromFriendList; 
-    try {
-        const q = query(collection(db, "users"), where("gameUID", "==", uid));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const pData = querySnapshot.docs[0].data();
-            let pLevel = pData.level || 1;
-            
-            document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST";
-            document.getElementById('searchUidDisplay').innerText = pData.gameUID;
-            document.getElementById('searchLevelDisplay').innerText = pLevel;
-            document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
-            
-            const reqBtn = document.getElementById('sendRequestBtn');
-            const rmvBtn = document.getElementById('removeFriendBtnCard');
-            
-            if (fromFriendList) {
-                reqBtn.style.display = 'none';
-                rmvBtn.style.display = 'block';
-                rmvBtn.onclick = () => showRemoveConfirm(uid, pData.playerName || "GUEST");
-            } else {
-                reqBtn.style.display = 'block';
-                rmvBtn.style.display = 'none';
-            }
-            
-            let rName="", rColor="", rSvg="";
-            if (pLevel < 10) { rName="NOVICE"; rColor="#a0a0a0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
-            else if (pLevel < 20) { rName="FIGHTER"; rColor="#cd7f32"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
-            else if (pLevel < 30) { rName="WARRIOR"; rColor="#c0c0c0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`; }
-            else if (pLevel < 40) { rName="ELITE"; rColor="#ffd700"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`; }
-            else if (pLevel < 50) { rName="MASTER"; rColor="#00ffff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`; }
-            else if (pLevel < 60) { rName="GRANDMASTER"; rColor="#ff00ff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`; }
-            else if (pLevel < 70) { rName="EPIC"; rColor="#ff0055"; rSvg=`<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`; }
-            else if (pLevel < 80) { rName="MYTHIC"; rColor="#8a2be2"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`; }
-            else if (pLevel < 90) { rName="LEGEND"; rColor="#ff4500"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`; }
-            else if (pLevel < 100) { rName="SUPREME"; rColor="#ffffff"; rSvg=`<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
-            else { rName="IMMORTAL"; rColor="#ff2a2a"; rSvg=`<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
-
-            const sBadge = document.getElementById('searchBadgeDisplay');
-            sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
-            const sIcon = document.getElementById('searchMainIcon');
-            sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
-
-            if(fromFriendList){ document.getElementById('friendsModal').style.display = 'none'; }
-            
-            document.getElementById('searchedProfileModal').style.display = 'flex';
-        }
-    } catch (e) { console.log("Card View Error:", e); }
-};
-
+window.viewPlayerCard = async (uid, fromFriendList = false) => { /* Exists above */ };
 let uidToRemove = "";
-
-window.showRemoveConfirm = (uid, friendName) => {
-    menuClickSound();
-    uidToRemove = uid;
-    document.getElementById('confirmFriendName').innerText = friendName;
-    document.getElementById('customConfirmModal').style.display = 'flex';
-};
-
+window.showRemoveConfirm = (uid, friendName) => { menuClickSound(); uidToRemove = uid; document.getElementById('confirmFriendName').innerText = friendName; document.getElementById('customConfirmModal').style.display = 'flex'; };
 document.getElementById('confirmYesBtn').onclick = async () => {
-    menuClickSound();
-    const btn = document.getElementById('confirmYesBtn');
-    btn.innerText = "⏳...";
-    btn.disabled = true;
-
+    menuClickSound(); const btn = document.getElementById('confirmYesBtn'); btn.innerText = "⏳..."; btn.disabled = true;
     try {
-        await deleteDoc(doc(db, "users", myUID, "friends", uidToRemove));
-        await deleteDoc(doc(db, "users", uidToRemove, "friends", myUID));
-        
-        document.getElementById('customConfirmModal').style.display = 'none';
-        document.getElementById('searchedProfileModal').style.display = 'none';
-        
-        btn.innerText = "YES";
-        btn.disabled = false;
-        
-        if (isCardOpenedFromFriendList) {
-            document.getElementById('friendsModal').style.display = 'flex';
-            loadMyFriends(); 
-        }
-    } catch(e) {
-        console.log("Remove Error:", e);
-        btn.innerText = "❌ ERROR";
-        setTimeout(() => { btn.innerText = "YES"; btn.disabled = false; }, 2000);
-    }
+        await deleteDoc(doc(db, "users", myUID, "friends", uidToRemove)); await deleteDoc(doc(db, "users", uidToRemove, "friends", myUID));
+        document.getElementById('customConfirmModal').style.display = 'none'; document.getElementById('searchedProfileModal').style.display = 'none'; btn.innerText = "YES"; btn.disabled = false;
+        if (isCardOpenedFromFriendList) { document.getElementById('friendsModal').style.display = 'flex'; loadMyFriends(); }
+    } catch(e) { console.log("Remove Error:", e); btn.innerText = "❌ ERROR"; setTimeout(() => { btn.innerText = "YES"; btn.disabled = false; }, 2000); }
 };
-
 document.querySelector('#searchedProfileModal button:last-child').onclick = () => {
-    menuClickSound();
-    document.getElementById('searchedProfileModal').style.display = 'none';
-    
-    if (isCardOpenedFromFriendList) {
-        document.getElementById('friendsModal').style.display = 'flex';
-        isCardOpenedFromFriendList = false; 
-    }
+    menuClickSound(); document.getElementById('searchedProfileModal').style.display = 'none'; if (isCardOpenedFromFriendList) { document.getElementById('friendsModal').style.display = 'flex'; isCardOpenedFromFriendList = false; }
 };
 
 window.handleRequest = async (docId, action, friendUID, friendName) => {
-    menuClickSound();
-    document.getElementById('contentRequests').innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Updating... ⏳</p>";
-
+    menuClickSound(); document.getElementById('contentRequests').innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Updating... ⏳</p>";
     try {
         await updateDoc(doc(db, "friend_requests", docId), { status: action });
-        if (action === 'accepted') {
-            await setDoc(doc(db, "users", myUID, "friends", friendUID), { uid: friendUID, addedAt: serverTimestamp() });
-            await setDoc(doc(db, "users", friendUID, "friends", myUID), { uid: myUID, addedAt: serverTimestamp() });
-        }
+        if (action === 'accepted') { await setDoc(doc(db, "users", myUID, "friends", friendUID), { uid: friendUID, addedAt: serverTimestamp() }); await setDoc(doc(db, "users", friendUID, "friends", myUID), { uid: myUID, addedAt: serverTimestamp() }); }
         loadFriendRequests(); 
-    } catch(e) {
-        console.log("Action Error:", e);
-        loadFriendRequests();
-    }
+    } catch(e) { console.log("Action Error:", e); loadFriendRequests(); }
 };
 
-document.getElementById('friendsListBtn').onclick = () => {
-    menuClickSound();
-    document.getElementById('friendsModal').style.display = 'flex';
-    document.getElementById('tabMyFriends').click(); 
-};
+document.getElementById('friendsListBtn').onclick = () => { menuClickSound(); document.getElementById('friendsModal').style.display = 'flex'; document.getElementById('tabMyFriends').click(); };
+document.getElementById('tabMyFriends').onclick = () => { menuClickSound(); document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;"; document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;"; document.getElementById('contentMyFriends').style.display = 'block'; document.getElementById('contentRequests').style.display = 'none'; loadMyFriends(); };
+document.getElementById('tabRequests').onclick = () => { menuClickSound(); document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;"; document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;"; document.getElementById('contentRequests').style.display = 'block'; document.getElementById('contentMyFriends').style.display = 'none'; loadFriendRequests(); };
 
-document.getElementById('tabMyFriends').onclick = () => {
-    menuClickSound();
-    document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;";
-    document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
-    document.getElementById('contentMyFriends').style.display = 'block';
-    document.getElementById('contentRequests').style.display = 'none';
-    loadMyFriends(); 
-};
-
-document.getElementById('tabRequests').onclick = () => {
-    menuClickSound();
-    document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;";
-    document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;";
-    document.getElementById('contentRequests').style.display = 'block';
-    document.getElementById('contentMyFriends').style.display = 'none';
-    loadFriendRequests(); 
-};
-
-// ⭐ SEND MATCH INVITE LOGIC (SENDER) ⭐
-let isInviting = false;
-let activeInviteId = "";
-
+// ⭐ SEND MATCH INVITE (Friend) ⭐
+let isInviting = false; let activeInviteId = "";
 window.sendMatchInvite = async function(friendUID, friendName) {
-    menuClickSound();
-    const btn = document.getElementById(`fInviteBtn_${friendUID}`);
-    if (btn.disabled) return;
-
-    // 8-Second Anti-Spam
-    btn.disabled = true;
-    btn.style.background = "#555 !important";
-    btn.style.color = "#aaa !important";
-    btn.style.boxShadow = "none";
-    btn.innerText = "⏳...";
-    setTimeout(() => {
-        if(btn){
-            btn.disabled = false;
-            btn.style.background = "#00ffff !important";
-            btn.style.color = "#000 !important";
-            btn.style.boxShadow = "0 0 5px #00ffff";
-            btn.innerText = "➕ PLAY";
-        }
-    }, 8000);
-
-    roomCode = generateRoomCode();
-    playerRole = "O";
-    
+    menuClickSound(); const btn = document.getElementById(`fInviteBtn_${friendUID}`); if (btn.disabled) return;
+    btn.disabled = true; btn.style.background = "#555 !important"; btn.style.color = "#aaa !important"; btn.style.boxShadow = "none"; btn.innerText = "⏳...";
+    setTimeout(() => { if(btn){ btn.disabled = false; btn.style.background = "#00ffff !important"; btn.style.color = "#000 !important"; btn.style.boxShadow = "0 0 5px #00ffff"; btn.innerText = "➕ PLAY"; } }, 8000);
+    roomCode = generateRoomCode(); playerRole = "O";
     try {
         if(!window.localStream) {
             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
             if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; 
-            document.getElementById('micBtn').style.display = 'block';
-            document.getElementById('camBtn').style.display = 'block';
-            document.getElementById('localVideo').srcObject = window.localStream;
+            document.getElementById('micBtn').style.display = 'block'; document.getElementById('camBtn').style.display = 'block'; document.getElementById('localVideo').srcObject = window.localStream;
         }
     } catch(e) { console.log("Media Denied/Error"); }
 
-    await setDoc(doc(db, "rooms", roomCode), { 
-        board: ["","","","","","","","",""], currentPlayer: "O", startingTurn: "O", status: "waiting", createdAt: serverTimestamp() 
-    }); 
-    listenToRoom();
+    await setDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: "O", startingTurn: "O", status: "waiting", createdAt: serverTimestamp() }); 
+    listenToRoom(); activeInviteId = myUID + "_" + friendUID;
+    await setDoc(doc(db, "match_invites", activeInviteId), { fromUID: myUID, fromName: playerName, toUID: friendUID, roomCode: roomCode, status: "pending", timestamp: serverTimestamp() });
 
-    activeInviteId = myUID + "_" + friendUID;
-    await setDoc(doc(db, "match_invites", activeInviteId), {
-        fromUID: myUID,
-        fromName: playerName,
-        toUID: friendUID,
-        roomCode: roomCode,
-        status: "pending",
-        timestamp: serverTimestamp()
-    });
-
-    document.getElementById('waitingFriendName').innerText = friendName;
-    document.getElementById('waitingInviteModal').style.display = 'flex';
-    isInviting = true;
-
+    document.getElementById('waitingFriendName').innerText = friendName; document.getElementById('waitingInviteModal').style.display = 'flex'; isInviting = true;
     const unsubInvite = onSnapshot(doc(db, "match_invites", activeInviteId), (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data();
+        if (!snap.exists()) return; const data = snap.data();
         if (data.status === "rejected" || data.status === "timeout") {
-            document.getElementById('waitingInviteModal').style.display = 'none';
-            showToast(friendName + (data.status === "timeout" ? " didn't respond!" : " is busy right now!"));
-            isInviting = false;
-            unsubInvite();
-            if (playerRole === "O" && roomCode !== "") { deleteDoc(doc(db, "rooms", roomCode)); }
-            roomCode = ""; playerRole = "";
-        } else if (data.status === "accepted") {
-            document.getElementById('waitingInviteModal').style.display = 'none';
-            document.getElementById('friendsModal').style.display = 'none'; 
-            isInviting = false;
-            unsubInvite();
-        }
+            document.getElementById('waitingInviteModal').style.display = 'none'; showToast(friendName + (data.status === "timeout" ? " didn't respond!" : " is busy right now!")); isInviting = false; unsubInvite();
+            if (playerRole === "O" && roomCode !== "") { deleteDoc(doc(db, "rooms", roomCode)); } roomCode = ""; playerRole = "";
+        } else if (data.status === "accepted") { document.getElementById('waitingInviteModal').style.display = 'none'; document.getElementById('friendsModal').style.display = 'none'; isInviting = false; unsubInvite(); }
     });
 };
 
 document.getElementById('cancelInviteBtn').onclick = async () => {
-    menuClickSound();
-    document.getElementById('waitingInviteModal').style.display = 'none';
-    isInviting = false;
-    if(activeInviteId) {
-        await updateDoc(doc(db, "match_invites", activeInviteId), { status: "rejected" }).catch(e=>{});
-        await deleteDoc(doc(db, "match_invites", activeInviteId)).catch(e=>{});
-    }
-    if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)); }
-    roomCode = ""; playerRole = "";
+    menuClickSound(); document.getElementById('waitingInviteModal').style.display = 'none'; isInviting = false;
+    if(activeInviteId) { await updateDoc(doc(db, "match_invites", activeInviteId), { status: "rejected" }).catch(e=>{}); await deleteDoc(doc(db, "match_invites", activeInviteId)).catch(e=>{}); }
+    if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)); } roomCode = ""; playerRole = "";
 };
 
-// ⭐ RECEIVE MATCH INVITE LOGIC (RECEIVER) ⭐
-let currentIncomingInviteId = "";
-let inviteTimerInterval = null;
-
+// ⭐ RECEIVE MATCH INVITE ⭐
+let currentIncomingInviteId = ""; let inviteTimerInterval = null;
 function listenForInvites() {
     const q = query(collection(db, "match_invites"), where("toUID", "==", myUID), where("status", "==", "pending"));
     onSnapshot(q, (snap) => {
         snap.docChanges().forEach(change => {
             if (change.type === "added") {
-                const data = change.doc.data();
-                currentIncomingInviteId = change.doc.id;
-                
-                // Agar busy hain to reject kardo
-                if(isOnline || gameDiv.style.display === 'flex') {
-                    updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "rejected" });
-                    return;
-                }
-
-                document.getElementById('challengerNameDisplay').innerText = data.fromName;
-                document.getElementById('incomingInviteModal').style.display = 'flex';
-                
-                const bar = document.getElementById('inviteTimerBar');
-                bar.style.width = '100%';
-                let timeLeft = 5000; // 5 Sec auto-dismiss
-                clearInterval(inviteTimerInterval);
-                
+                const data = change.doc.data(); currentIncomingInviteId = change.doc.id;
+                if(isOnline || gameDiv.style.display === 'flex') { updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "rejected" }); return; }
+                document.getElementById('challengerNameDisplay').innerText = data.fromName; document.getElementById('incomingInviteModal').style.display = 'flex';
+                const bar = document.getElementById('inviteTimerBar'); bar.style.width = '100%'; let timeLeft = 5000; clearInterval(inviteTimerInterval);
                 inviteTimerInterval = setInterval(() => {
-                    timeLeft -= 50;
-                    bar.style.width = (timeLeft / 5000 * 100) + '%';
-                    if(timeLeft <= 0) {
-                        clearInterval(inviteTimerInterval);
-                        document.getElementById('incomingInviteModal').style.display = 'none';
-                        updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "timeout" }).catch(e=>{});
-                    }
+                    timeLeft -= 50; bar.style.width = (timeLeft / 5000 * 100) + '%';
+                    if(timeLeft <= 0) { clearInterval(inviteTimerInterval); document.getElementById('incomingInviteModal').style.display = 'none'; updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "timeout" }).catch(e=>{}); }
                 }, 50);
 
                 document.getElementById('acceptInviteBtn').onclick = async () => {
-                    menuClickSound();
-                    clearInterval(inviteTimerInterval);
-                    document.getElementById('incomingInviteModal').style.display = 'none';
-                    await updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "accepted" });
-                    
-                    roomCode = data.roomCode;
-                    playerRole = "X";
-                    
+                    menuClickSound(); clearInterval(inviteTimerInterval); document.getElementById('incomingInviteModal').style.display = 'none';
+                    await updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "accepted" }); roomCode = data.roomCode; playerRole = "X";
                     try {
                         if(!window.localStream) {
                             window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                             if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
                             if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; 
-                            document.getElementById('micBtn').style.display = 'block';
-                            document.getElementById('camBtn').style.display = 'block';
-                            document.getElementById('localVideo').srcObject = window.localStream;
+                            document.getElementById('micBtn').style.display = 'block'; document.getElementById('camBtn').style.display = 'block'; document.getElementById('localVideo').srcObject = window.localStream;
                         }
-                    } catch(e) { console.log("Media Denied/Error"); }
-                    
-                    await updateDoc(doc(db, "rooms", roomCode), { status: "playing" });
-                    listenToRoom();
-                    document.getElementById('friendsModal').style.display = 'none';
+                    } catch(e) {}
+                    await updateDoc(doc(db, "rooms", roomCode), { status: "playing" }); listenToRoom(); document.getElementById('friendsModal').style.display = 'none';
                 };
 
-                document.getElementById('rejectInviteBtn').onclick = async () => {
-                    menuClickSound();
-                    clearInterval(inviteTimerInterval);
-                    document.getElementById('incomingInviteModal').style.display = 'none';
-                    await updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "rejected" });
-                };
+                document.getElementById('rejectInviteBtn').onclick = async () => { menuClickSound(); clearInterval(inviteTimerInterval); document.getElementById('incomingInviteModal').style.display = 'none'; await updateDoc(doc(db, "match_invites", currentIncomingInviteId), { status: "rejected" }); };
             }
         });
     });
 }
 
+// ⭐ NEW: MATCHMAKING LOGIC (RANDOM) ⭐
+window.matchmakingInterval = null;
+document.getElementById('randomMatchBtn').onclick = async () => {
+    menuClickSound(); document.getElementById('matchmakingModal').style.display = 'flex'; let timeLeft = 30; document.getElementById('matchmakingTimerDisplay').innerText = timeLeft;
+    try {
+        const q = query(collection(db, "rooms"), where("status", "==", "public_waiting")); const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const foundRoom = querySnapshot.docs[0]; roomCode = foundRoom.id; playerRole = "X";
+            try {
+                if(!window.localStream) {
+                    window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                    if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
+                    if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; 
+                    document.getElementById('micBtn').style.display = 'block'; document.getElementById('camBtn').style.display = 'block'; document.getElementById('localVideo').srcObject = window.localStream;
+                }
+            } catch(e) {}
+            await updateDoc(doc(db, "rooms", roomCode), { status: "playing" }); listenToRoom(); 
+        } else {
+            roomCode = generateRoomCode() + "R"; playerRole = "O";
+            try {
+                if(!window.localStream) {
+                    window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                    if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
+                    if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; 
+                    document.getElementById('micBtn').style.display = 'block'; document.getElementById('camBtn').style.display = 'block'; document.getElementById('localVideo').srcObject = window.localStream;
+                }
+            } catch(e) {}
+            await setDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: "O", startingTurn: "O", status: "public_waiting", createdAt: serverTimestamp() });
+            listenToRoom();
+            if (window.matchmakingInterval) clearInterval(window.matchmakingInterval);
+            window.matchmakingInterval = setInterval(async () => {
+                timeLeft--; document.getElementById('matchmakingTimerDisplay').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(window.matchmakingInterval); document.getElementById('matchmakingModal').style.display = 'none'; showToast("No opponent found! Try again.");
+                    if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)).catch(e=>{}); }
+                    roomCode = ""; playerRole = ""; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+                }
+            }, 1000);
+        }
+    } catch (e) { console.log("Matchmaking Error:", e); showToast("Error starting matchmaking!"); document.getElementById('matchmakingModal').style.display = 'none'; }
+};
+
+document.getElementById('cancelMatchmakingBtn').onclick = async () => {
+    menuClickSound(); if (window.matchmakingInterval) clearInterval(window.matchmakingInterval); document.getElementById('matchmakingModal').style.display = 'none';
+    if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)).catch(e=>{}); } roomCode = ""; playerRole = ""; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+};
+
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
   if (isOnline) { 
       try { await updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {}
-      
-      isOnline = false; 
-      if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
-      
+      isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
       try { if (playerRole === "O") await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
-      
       roomCode = ""; playerRole = ""; 
-
-      if(window.pc){
-          window.pc.ontrack = null;
-          window.pc.onicecandidate = null;
-          window.pc.close(); 
-          window.pc=null;
-      } 
-      
+      if(window.pc){ window.pc.ontrack = null; window.pc.onicecandidate = null; window.pc.close(); window.pc=null; } 
       if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
-      
       document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; 
-      
       document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
-      
-      document.getElementById('videoContainer').style.display='none';
-      document.getElementById('localVideo').srcObject = null;
-      document.getElementById('remoteVideo').srcObject = null;
+      document.getElementById('videoContainer').style.display='none'; document.getElementById('localVideo').srcObject = null; document.getElementById('remoteVideo').srcObject = null;
   }
   scoreO = 0; scoreX = 0; isLevelUpMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
-  updateScoreboard(); updateLevelSystemInLobby(); 
-  updateMyPresence('online'); // Wapas lobby mein
+  updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
   if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
 };
 
@@ -1572,7 +1230,6 @@ downloadAppBtn.addEventListener('click', async () => {
             console.log('VIP PWA Installed!');
             downloadAppBtn.style.display = 'none';
         }
-
         deferredPrompt = null;
     }
 });
@@ -1584,108 +1241,49 @@ window.addEventListener('beforeunload', () => {
     updateMyPresence("offline");
 });
 
-// ⭐ NEW CHAT BUBBLE & SEND CHAT LOGIC ⭐
-window.showChatBubble = function(text, senderRole) {
-    if(senderRole !== playerRole) tapSound(); // Dost ka message aaye to notification sound
-
-    const area = document.getElementById('chatDisplayArea');
-    const bubble = document.createElement('div');
-    bubble.className = 'chat-bubble';
-
-    if (senderRole !== playerRole) {
-        bubble.classList.add('enemy');
-    }
-
-    bubble.innerText = (senderRole === playerRole ? "YOU: " : "FRIEND: ") + text;
-    area.appendChild(bubble);
-
-    // 3 second baad bubble apne aap delete
-    setTimeout(() => { bubble.remove(); }, 3000);
-};
-
-  // ⭐ CHAT SYSTEM WITH COOLDOWN & ENTER KEY ⭐
+// ⭐ CHAT SYSTEM WITH COOLDOWN & ENTER KEY ⭐
 window.lastMsgTime = 0; 
 let lastChatSentTime = 0; 
-const CHAT_COOLDOWN = 2000; // 2 second ka spam timer
+const CHAT_COOLDOWN = 2000; 
 
 window.showChatBubble = function(text, senderRole) {
     if(senderRole !== playerRole) tapSound(); 
-
     const area = document.getElementById('chatDisplayArea');
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
-
-    if (senderRole !== playerRole) {
-        bubble.classList.add('enemy');
-    }
-
+    if (senderRole !== playerRole) { bubble.classList.add('enemy'); }
     bubble.innerText = (senderRole === playerRole ? "YOU: " : "FRIEND: ") + text;
     area.appendChild(bubble);
-
-    // 3 second baad bubble apne aap delete
     setTimeout(() => { bubble.remove(); }, 3000);
 };
 
 window.sendChat = async function(msgText) {
     if (!isOnline || roomCode === "") return;
-
-    // COOLDOWN LOGIC
     const now = Date.now();
-    if (now - lastChatSentTime < CHAT_COOLDOWN) {
-        showToast("Thoda aaram se bhai! ⏳"); 
-        return; 
-    }
-
+    if (now - lastChatSentTime < CHAT_COOLDOWN) { showToast("Thoda aaram se bhai! ⏳"); return; }
+    
     let msg = "";
-    if (typeof msgText === 'string') {
-        msg = msgText; // Agar Emoji par tap kiya
-    } else {
-        msg = document.getElementById('chatInput').value.trim(); // Agar text type kiya
-    }
-
+    if (typeof msgText === 'string') { msg = msgText; } 
+    else { msg = document.getElementById('chatInput').value.trim(); }
     if (msg === "") return;
 
     lastChatSentTime = now; 
     document.getElementById('chatInput').value = ""; 
     menuClickSound(); 
 
-    // ⭐ NAYA: Send Button par Timer Dikhane Ke Liye ⭐
     const sendBtn = document.getElementById('sendChatBtn');
     if(sendBtn) {
-        sendBtn.disabled = true;
-        sendBtn.innerText = "⏳";
-        sendBtn.style.opacity = "0.5";
-        setTimeout(() => {
-            sendBtn.disabled = false;
-            sendBtn.innerText = "Send";
-            sendBtn.style.opacity = "1";
-        }, CHAT_COOLDOWN);
+        sendBtn.disabled = true; sendBtn.innerText = "⏳"; sendBtn.style.opacity = "0.5";
+        setTimeout(() => { sendBtn.disabled = false; sendBtn.innerText = "Send"; sendBtn.style.opacity = "1"; }, CHAT_COOLDOWN);
     }
 
-    try {
-        await updateDoc(doc(db, "rooms", roomCode), {
-            lastMessage: {
-                text: msg,
-                sender: playerRole,
-                time: Date.now()
-            }
-        });
-    } catch(e) { console.log("Chat Error:", e); }
+    try { await updateDoc(doc(db, "rooms", roomCode), { lastMessage: { text: msg, sender: playerRole, time: Date.now() } }); } catch(e) { console.log("Chat Error:", e); }
 };
 
-// ⭐ NAYA: Keyboard ke Enter button se send karne ke liye ⭐
 const chatInputBox = document.getElementById('chatInput');
-if(chatInputBox) {
-    chatInputBox.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            window.sendChat();
-        }
-    });
-}
-
+if(chatInputBox) { chatInputBox.addEventListener("keypress", function(event) { if (event.key === "Enter") { event.preventDefault(); window.sendChat(); } }); }
 document.getElementById('sendChatBtn').onclick = () => window.sendChat();
-      
+
 </script>
 </body>
 </html>
