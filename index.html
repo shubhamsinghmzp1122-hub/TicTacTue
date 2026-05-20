@@ -1605,14 +1605,28 @@ window.showChatBubble = function(text, senderRole) {
 
 window.lastMsgTime = 0; // Pichla message check karne ke liye
 
+  window.lastMsgTime = 0; // Pichla message receive karne ke liye (Ye pehle se hai)
+let lastChatSentTime = 0; // ⭐ NAYA: Send karne ka time track karne ke liye
+const CHAT_COOLDOWN = 2000; // ⭐ NAYA: 2 Second ka cooldown (2000 milliseconds)
+
 window.sendChat = async function(msgText) {
     if (!isOnline || roomCode === "") return;
+
+    // ⭐ COOLDOWN LOGIC START ⭐
+    const now = Date.now();
+    if (now - lastChatSentTime < CHAT_COOLDOWN) {
+        showToast("Thoda aaram se bhai! ⏳"); // Spammer ko warning
+        return; // Aage ka code chalne hi mat do
+    }
+    // ⭐ COOLDOWN LOGIC END ⭐
+
     const msg = msgText || document.getElementById('chatInput').value.trim();
     if (msg === "") return;
 
+    lastChatSentTime = now; // ⭐ NAYA: Time update kar diya taaki agla 2 sec tak na bhej paye
     document.getElementById('chatInput').value = ""; // Input clear karo
     menuClickSound(); // Button click sound
-
+    
     try {
         await updateDoc(doc(db, "rooms", roomCode), {
             lastMessage: {
@@ -1625,7 +1639,7 @@ window.sendChat = async function(msgText) {
 };
 
 document.getElementById('sendChatBtn').onclick = () => window.sendChat();
-
+  
 </script>
 </body>
 </html>
