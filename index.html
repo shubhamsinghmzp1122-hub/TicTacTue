@@ -1013,21 +1013,25 @@ window.loadMyFriends = async function() {
         let html = "";
         const friendIDs = snapshot.docs.map(docSnap => docSnap.id);
 
-        friendIDs.forEach(fid => {
-            html += `
-            <div id="friendBox_${fid}" style="order: 1; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: order 0.3s, background 0.3s;">
-                <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fid}', true)">
-                    <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">
-                        <span id="fName_${fid}">LOADING...</span>
-                    </div>
-                    <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold; display:flex; align-items:center; gap:6px;">
-                        Lv. <span id="fLevel_${fid}">-</span>
-                        <span id="fStatusDot_${fid}" style="width:10px; height:10px; border-radius:50%; background:#555; display:inline-block; transition: 0.3s;"></span>
-                        <button id="fInviteBtn_${fid}" class="btn" style="display:none; margin:0; padding:2px 8px; font-size:12px; background:#00ffff !important; color:#000 !important; border:none; border-radius:5px; box-shadow:0 0 5px #00ffff;" onclick="event.stopPropagation(); sendMatchInvite('${fid}', document.getElementById('fName_${fid}').innerText)">➕ PLAY</button>
-                    </div>
-                </div>
-            </div>`;
-        });
+friendIDs.forEach(fid => {
+    html += `
+    <div id="friendBox_${fid}" style="order: 1; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: order 0.3s, background 0.3s;">
+        
+        <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fid}', true)">
+            <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">
+                <span id="fName_${fid}">LOADING...</span>
+            </div>
+            <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+                Lv. <span id="fLevel_${fid}">-</span>
+                <span id="fStatusDot_${fid}" style="width:10px; height:10px; border-radius:50%; background:#555; display:inline-block; transition: 0.3s;"></span>
+            </div>
+        </div>
+
+        <button id="fInviteBtn_${fid}" class="btn" style="display:none; margin:0 0 0 10px; padding:5px 12px; font-size:13px; background:#00ffff !important; color:#000 !important; border:none; border-radius:5px; font-weight: bold; box-shadow:0 0 8px #00ffff; cursor: pointer;" onclick="event.stopPropagation(); sendMatchInvite('${fid}', document.getElementById('fName_${fid}').innerText)">➕ PLAY</button>
+        
+    </div>`;
+});
+
         friendBox.innerHTML = html;
 
         friendIDs.forEach(fid => {
@@ -1531,4 +1535,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-  </html>
+</html>
