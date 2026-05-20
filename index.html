@@ -332,7 +332,7 @@
         
         <div id="searchBadgeDisplay" style="color: #00ffff; font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px #00ffff; font-size: 18px; letter-spacing: 1px;">🎖️ ROOKIE</div>
         
-        <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #ff00ff; box-shadow: inset 0 0 10px rgba(0,255,255,0.2);">
+        <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #ff00ff; box-shadow: inset 0 0 10px rgba(255,0,255,0.2);">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
                 <span style="color: #ccc; font-size: 16px;">Level:</span>
                 <span id="searchLevelDisplay" style="color: #00ffff; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ffff;">1</span>
@@ -402,7 +402,7 @@
         
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button class="btn" id="acceptInviteBtn" style="background: #00ff4d !important; color: #000 !important; border-color: #00ff4d; padding: 8px 20px; font-weight: bold; box-shadow: 0 0 15px #00ff4d; margin: 0;">ACCEPT</button>
-            <button class="btn" id="rejectInviteBtn" style="background: transparent !important; color: #ff0055 !important; border-color: #ff0055; padding: 8px 20px; margin: 0; box-shadow: 0 0 10px rgba(255,0,85,0.2);">REJECT</button>
+            <button class="btn" id="rejectInviteBtn" style="background: transparent !important; color: #ff0055 !important; border-color: #ff0055; padding: 8px 20px; margin: 0; box-shadow: 0 0 10px rgba(255,0,85,0.3);">REJECT</button>
         </div>
     </div>
 </div>
@@ -421,6 +421,7 @@
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 
 import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -593,47 +594,6 @@ const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION 
 let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = false; let aiLevel = "easy"; let winningCombo = []; let scoreO = 0; let scoreX = 0; let currentTheme = 'default';
 let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
 
-// ⭐ NAYA: WIN STREAK VARIABLE ⭐
-let currentWinStreak = 0; 
-
-// ⭐ NAYA: ADVANCED EXP SYSTEM LOGIC ⭐
-window.calculateAndGainEXP = function(matchResult) {
-    let baseEXP = 0;
-    
-    if (matchResult === "win") {
-        currentWinStreak++; 
-        
-        if (isOnline) { baseEXP = 20; } 
-        else if (vsAI) {
-            if (aiLevel === "easy") baseEXP = 5;
-            else if (aiLevel === "medium") baseEXP = 8;
-            else if (aiLevel === "hard") baseEXP = 12;
-            else if (aiLevel === "ultrahard") baseEXP = 15;
-        } else { baseEXP = 5; }
-        
-        if (currentWinStreak >= 3) {
-            baseEXP += 10; 
-            showToast(`🔥 WIN STREAK X${currentWinStreak}! +10 BONUS EXP`);
-        } else if (currentWinStreak === 2) {
-            baseEXP += 5; 
-            showToast("🔥 Streak Started! +5 BONUS EXP");
-        } else {
-            showToast(`🏆 WON! +${baseEXP} EXP`);
-        }
-        
-    } else if (matchResult === "draw") {
-        currentWinStreak = 0; 
-        baseEXP = 5; 
-        showToast(`🤝 DRAW! +${baseEXP} EXP`);
-    } else if (matchResult === "lose") {
-        currentWinStreak = 0; 
-        baseEXP = 2; 
-        showToast(`😭 LOST! +${baseEXP} EXP`);
-    }
-    
-    gainExperience(baseEXP);
-};
-
 function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
 
 function saveGameData() { 
@@ -651,7 +611,7 @@ function calculateNextLevelRequirement() { expToNextLevel = BASE_EXP_REQ * playe
 function gainExperience(amount) { currentExp += amount; while (currentExp >= expToNextLevel) { currentExp -= expToNextLevel; playerLevel++; calculateNextLevelRequirement(); } saveGameData(); updateLevelDisplay(); }
 function updateLevelDisplay() { if (levelInfoText) { levelInfoText.textContent = `Level: ${playerLevel}`; levelProgressFill.style.width = `${(currentExp / expToNextLevel) * 100}%`; if (currentExp / expToNextLevel > 0.8) { levelProgressFill.style.background = 'linear-gradient(90deg, #00ffff, #ffffff)'; } else { levelProgressFill.style.background = 'linear-gradient(90deg, #00ffff, #ff00ff)'; } } }
 function updateLevelSystemInLobby() { if (lobby.style.display === 'flex') { levelContainer.style.display = 'block'; updateLevelDisplay(); } else { levelContainer.style.display = 'none'; } }
-document.getElementById('resetModeScoreBtn').onclick = () => { if(confirm("Are you sure you want to reset ALL Player Progress?")) { localStorage.removeItem('tictactoe_player_data'); playerLevel = 1; currentExp = 0; totalMatchesWon = 0; currentWinStreak = 0; loadGameData(); alert("Player Progress reset!"); menuClickSound(); } };
+document.getElementById('resetModeScoreBtn').onclick = () => { if(confirm("Are you sure you want to reset ALL Player Progress?")) { localStorage.removeItem('tictactoe_player_data'); playerLevel = 1; currentExp = 0; totalMatchesWon = 0; loadGameData(); alert("Player Progress reset!"); menuClickSound(); } };
 
 async function handleCellClick(i) {
     if (board[i] !== "" || checkWinner()) return;
@@ -676,44 +636,27 @@ function makeMove(i){
   if(vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove,350); }
 }
 
-// ⭐ UPDATED HANDLE WIN ⭐
 function handleWin(winner) {
     if(winner==='O') scoreO++; else scoreX++; totalMatchesWon++; 
+    if (winner === 'O' && isLevelUpMode) gainExperience(1); 
+    if (isOnline && winner === playerRole) gainExperience(1);
     drawWinningLine(winningCombo); 
     if(winner === 'O') winOSound(); else winXSound();
-    
     let winMessage = ''; let loseMessage = '';
-    
     if (isOnline) {
-        if (winner === playerRole) { 
-            winMessage = 'YOU WON! 🎉'; loseMessage = 'OPPONENT LOST'; 
-            window.calculateAndGainEXP("win");
-        } else { 
-            winMessage = 'YOU LOST! 😭'; loseMessage = 'OPPONENT WON'; 
-            window.calculateAndGainEXP("lose");
-        }
+        if (winner === playerRole) { winMessage = 'YOU WON! 🎉'; loseMessage = 'OPPONENT LOST'; } 
+        else { winMessage = 'YOU LOST! 😭'; loseMessage = 'OPPONENT WON'; }
     } else if (vsAI) {
-        if (winner === 'O') { 
-            winMessage = 'YOU WINNER 🎉'; loseMessage = 'AI LOSER'; 
-            window.calculateAndGainEXP("win");
-        } else { 
-            winMessage = 'AI WINNER 🎉'; loseMessage = 'YOU LOSER'; 
-            window.calculateAndGainEXP("lose");
-        }
+        if (winner === 'O') { winMessage = 'YOU WINNER 🎉'; loseMessage = 'AI LOSER'; } 
+        else { winMessage = 'AI WINNER 🎉'; loseMessage = 'YOU LOSER'; }
     } else {
         if (winner === 'O') { winMessage = 'Player O WINNER 🎉'; loseMessage = 'Player X LOSER'; } 
         else { winMessage = 'Player X WINNER 🎉'; loseMessage = 'Player O LOSER'; }
-        window.calculateAndGainEXP("win"); 
     }
     showPopup(winMessage, loseMessage); 
 }
 
-// ⭐ UPDATED HANDLE DRAW ⭐
-function handleDraw() { 
-    drawSound(); 
-    window.calculateAndGainEXP("draw"); 
-    setTimeout(()=> showPopup("DRAW!", ""),400); 
-}
+function handleDraw() { drawSound(); setTimeout(()=> showPopup("DRAW!", ""),400); }
 
 window.resetGame = async function(){
   tapSound();
@@ -727,95 +670,152 @@ window.resetGame = async function(){
   drawBoard(); updateScoreboard(); if (vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove, 350); }
 }
 
-function minimax(newBoard, player) { const human = 'O'; const ai = 'X'; const emptySpots = newBoard.map((v,i) => v === "" ? i : null).filter(x => x !== null); const winner = checkWinnerForMinimax(newBoard); if (winner === ai) return { score: 10 }; if (winner === human) return { score: -10 }; if (emptySpots.length === 0) return { score: 0 }; const moves = []; for (let i of emptySpots) { const move = {}; move.index = i; newBoard[i] = player; const result = minimax(newBoard, player === ai ? human : ai); move.score = result.score; newBoard[i] = ""; moves.push(move); } let bestScore; let bestMoves = []; if (player === ai) { bestScore = -Infinity; for (let i = 0; i < moves.length; i++) { if (moves[i].score > bestScore) { bestScore = moves[i].score; bestMoves = [moves[i]]; } else if (moves[i].score === bestScore) { bestMoves.push(moves[i]); } } } else { bestScore = Infinity; for (let i = 0; i < moves.length; i++) { if (moves[i].score < bestScore) { bestScore = moves[i].score; bestMoves = [moves[i]]; } else if (moves[i].score === bestScore) { bestMoves.push(moves[i]); } } } if (bestMoves.length > 1) { const randomIndex = Math.floor(Math.random() * bestMoves.length); return bestMoves[randomIndex]; } return bestMoves[0]; }
-function checkWinnerForMinimax(currentBoard){ const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,b,c] of winCombos){ if(currentBoard[a] && currentBoard[a]===currentBoard[b] && currentBoard[a]===currentBoard[c]){ return currentBoard[a]; } } return null; }
-function aiMove(){ let empty = board.map((v,i)=> v===""?i:null).filter(x=>x!==null); let move; if(aiLevel === 'ultrahard'){ const bestMove = minimax(board, 'X'); move = bestMove.index; } else if(aiLevel==='easy'){ move = empty[Math.floor(Math.random()*empty.length)]; } else{ for(let i of empty){ board[i]='X'; if(checkWinner()==='X'){ board[i]=''; move=i; break;} board[i]=''; } for(let i of empty){ board[i]='O'; if(checkWinner()==='O'){ board[i]=''; move=i; break;} board[i]=''; } if(move===undefined) move = empty[Math.floor(Math.random()*empty.length)]; } if (move !== undefined && board[move] === "") { makeMove(move); } else if (empty.length > 0 && move === undefined) { makeMove(empty[0]); } }
-function drawBoard(){ Array.from(boardDiv.querySelectorAll('.cell')).forEach(n=>n.remove()); board.forEach((val,i)=>{ const cell = document.createElement('div'); cell.className='cell'; cell.textContent = val; if (currentTheme !== 'custom') { if(val==='O'){ cell.style.color='#00ffff'; cell.style.animation='neonBlue 1s infinite alternate'; } else if(val==='X'){ cell.style.color='#ff0000'; cell.style.animation='neonRed 1s infinite alternate'; } else cell.style.animation='none'; } if(winningCombo.includes(i)) cell.classList.add('winningCell'); cell.onclick = ()=> handleCellClick(i); boardDiv.appendChild(cell); }); boardDiv.appendChild(winningLine); }
-function updateScoreboard(){ scoreboard.innerHTML = isOnline ? '<span style="color:#00ffff">O: ' + scoreO + '</span> &nbsp;|&nbsp; <span style="color:#ff0000">X: ' + scoreX + '</span><br><div style="font-size:16px; color:#ccc; text-shadow:none; margin-top:5px;">You are <b style="color:#fff; font-size:22px;">' + playerRole + '</b></div>' : (vsAI ? 'Player (O): '+scoreO+' | AI (X): '+scoreX : 'Player O: '+scoreO+' | Player X: '+scoreX); }
-function checkWinner(){ const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,b,c] of winCombos){ if(board[a] && board[a]===board[b] && board[a]===board[c]){ winningCombo=[a,b,c]; return board[a]; } } winningCombo=[]; return null; }
-function drawWinningLine(combo){ if(!combo||combo.length!==3) return; const cells=Array.from(boardDiv.querySelectorAll('.cell')); const first=cells[combo[0]], last=cells[combo[2]]; const boardRect=boardDiv.getBoundingClientRect(); const r1=first.getBoundingClientRect(), r2=last.getBoundingClientRect(); const x1=r1.left+r1.width/2-boardRect.left, y1=r1.top+r1.height/2-boardRect.top; const x2=r2.left+r2.width/2-boardRect.left, y2=r2.top+r2.height/2-boardRect.top; const dx=x2-x1, dy=y2-y1; const length=Math.sqrt(dx*dx+dy*dy); const angle=Math.atan2(dy,dx)*(180/Math.PI); const mx=(x1+x2)/2, my=(y1+y2)/2; winningLine.style.width=(length+20)+'px'; winningLine.style.height='10px'; winningLine.style.left=(mx-(length+20)/2)+'px'; winningLine.style.top=(my-5)+'px'; winningLine.style.transform=`rotate(${angle}deg)`; winningLine.style.display='block'; }
-function showPopup(winMsg, loseMsg){ popup.style.display='flex'; let contentHTML = `<div class="win-msg">${winMsg}</div>`; if (loseMsg && loseMsg !== "") { contentHTML += `<div class="lose-msg">${loseMsg}</div>`; } winnerText.innerHTML = contentHTML; }
+const roomModal = document.getElementById('roomModal'); const roomCodeInput = document.getElementById('roomCodeInput'); const roomCodeDisplay = document.getElementById('roomCodeDisplay'); const roomStatusText = document.getElementById('roomStatusText'); const roomActionBtn = document.getElementById('roomActionBtn'); const roomModalTitle = document.getElementById('roomModalTitle');
+function generateRoomCode() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
-function createParticle() { const particle = document.createElement('div'); particle.classList.add('particle'); const size = Math.random() * 4 + 1; const duration = Math.random() * 4 + 3; const left = Math.random() * 100; const top = Math.random() * 100; const delay = Math.random() * -duration; particle.style.width = `${size}px`; particle.style.height = `${size}px`; particle.style.left = `${left}vw`; particle.style.top = `${top}vh`; particle.style.animationDuration = `${duration}s`; particle.style.animationDelay = `${delay}s`; particle.style.opacity = Math.random() * 0.5 + 0.3; particle.addEventListener('animationend', () => { particle.remove(); createParticle(); }); particleContainer.appendChild(particle); }
-function startLoadingScreen() { loadingOverlay.style.display = 'flex'; loadingOverlay.style.pointerEvents = 'auto'; requestAnimationFrame(() => { loadingOverlay.style.opacity = '1'; }); let currentProgress = 0; loadingBarFill.style.width = '0%'; loadingPercentage.textContent = '0%'; const interval = setInterval(() => { currentProgress += (UPDATE_INTERVAL / LOADING_DURATION) * 100; if (currentProgress >= 100) { currentProgress = 100; clearInterval(interval); } loadingBarFill.style.width = `${currentProgress}%`; loadingPercentage.textContent = `${Math.floor(currentProgress)}%`; if (currentProgress === 100) { setTimeout(() => { loadingOverlay.style.opacity = '0'; setTimeout(() => { loadingOverlay.style.display = 'none'; lobby.style.display='flex'; updateLevelSystemInLobby(); setTheme('default'); }, 1000); }, 500); } }, UPDATE_INTERVAL); }
-function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.transform = 'scale(0.9)'; for (let i = 0; i < PARTICLE_COUNT; i++) { createParticle(); } requestAnimationFrame(() => { splashLogo.style.transform = 'scale(1)'; }); setTimeout(() => { splashOverlay.style.opacity = '0'; splashLogo.style.transform = 'scale(1.2)'; setTimeout(() => { splashOverlay.style.display = 'none'; particleContainer.innerHTML = ''; lightStreak.style.opacity = 0; startLoadingScreen(); }, 1000); }, SPLASH_DURATION); }
+document.getElementById('createRoomBtn').onclick = async () => {
+    menuClickSound(); roomCode = generateRoomCode(); playerRole = "O"; 
+    
+    try {
+        if(!window.localStream) {
+            window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
+            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; 
+            document.getElementById('micBtn').style.display = 'block';
+            document.getElementById('camBtn').style.display = 'block';
+            document.getElementById('localVideo').srcObject = window.localStream;
+        }
+    } catch(e) { console.log("Media Denied/Error"); }
 
-function initializePlayerAuth() {
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const userDocRef = doc(db, "users", user.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                myUID = userDoc.data().gameUID;
-            } else {
-                let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
-                await setDoc(userDocRef, {
-                    gameUID: newGameUID,
-                    playerName: playerName,
-                    level: playerLevel,
-                    matchesWon: totalMatchesWon,
-                    exp: currentExp,
-                    createdAt: serverTimestamp()
-                });
-                myUID = newGameUID;
+    roomModalTitle.innerText = "CREATE ROOM"; roomCodeInput.style.display = "none"; roomCodeDisplay.style.display = "block"; roomCodeDisplay.innerText = roomCode; roomStatusText.innerHTML = "Share code. Waiting for friend..."; roomActionBtn.style.display = "none"; roomModal.style.display = "flex";
+    await setDoc(doc(db, "rooms", roomCode), { 
+        board: ["","","","","","","","",""], 
+        currentPlayer: "O", 
+        startingTurn: "O", 
+        status: "waiting",
+        createdAt: serverTimestamp() 
+    }); 
+    listenToRoom();
+};
+
+document.getElementById('joinRoomBtn').onclick = () => {
+    menuClickSound(); roomModalTitle.innerText = "JOIN ROOM"; roomCodeDisplay.style.display = "none"; roomCodeInput.style.display = "block"; roomCodeInput.value = ""; roomStatusText.innerHTML = "Enter 4-digit code to join"; roomActionBtn.style.display = "inline-block"; roomActionBtn.innerText = "JOIN"; roomModal.style.display = "flex";
+};
+
+roomActionBtn.onclick = async () => {
+    menuClickSound(); const code = roomCodeInput.value.trim(); if(code.length !== 4 && !code.includes("R")) { roomStatusText.innerHTML = "<span style='color:#ff0055;'>❌ Enter a 4-digit code!</span>"; return; }
+    roomActionBtn.innerText = "Joining..."; 
+    
+    try {
+        if(!window.localStream) {
+            window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            if (window.localStream.getAudioTracks().length > 0) window.localStream.getAudioTracks()[0].enabled = false;
+            if (window.localStream.getVideoTracks().length > 0) window.localStream.getVideoTracks()[0].enabled = false; 
+            document.getElementById('micBtn').style.display = 'block';
+            document.getElementById('camBtn').style.display = 'block';
+            document.getElementById('localVideo').srcObject = window.localStream;
+        }
+    } catch(e) { console.log("Media Denied/Error"); }
+
+    const docRef = doc(db, "rooms", code); const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().status === "waiting") {
+        roomCode = code; playerRole = "X"; await updateDoc(docRef, { status: "playing" }); listenToRoom();
+    } else {
+        roomStatusText.innerHTML = "<span style='color:#ff0055; text-shadow:0 0 10px #ff0055;'>❌ Room not found!</span>"; roomActionBtn.innerText = "JOIN";
+    }
+};
+
+document.getElementById('roomCancelBtn').onclick = async () => {
+    menuClickSound(); roomModal.style.display = "none"; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+    if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)); } roomCode = ""; playerRole = "";
+    document.getElementById('micBtn').style.display = 'none'; 
+    document.getElementById('camBtn').style.display = 'none'; 
+    if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;}
+};
+
+// ⭐ UPDATED LISTEN TO ROOM (Matchmaking timer cancel + Chat Receive) ⭐
+function listenToRoom() {
+    if (unsubscribeRoom) unsubscribeRoom();
+    unsubscribeRoom = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
+        if (!docSnap.exists() || docSnap.data().status === "disconnected") {
+            if (isOnline) { 
+                document.getElementById('disconnectModal').style.display = 'flex'; 
+                isOnline = false; 
+            } 
+            return;
+        }
+        const data = docSnap.data();
+        window.startingTurn = data.startingTurn || "O";
+        
+                if (data.status === "playing" && !isOnline) {
+            
+            // ⭐ NAYA LOGIC: Agar 3rd player galti se aa gaya, toh usko bahar nikal kar naya search karao
+            if (playerRole === "X" && data.joinedBy && data.joinedBy !== myUID) {
+                console.log("Room kisi aur ne le liya, retrying...");
+                if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+                roomCode = ""; playerRole = "";
+                // 1 second baad automatic dobara naya room dhundhega
+                setTimeout(() => { document.getElementById('randomMatchBtn').click(); }, 1000);
+                return;
             }
 
-            const myStatusRef = ref(rtdb, '/status/' + myUID);
-            onValue(ref(rtdb, '.info/connected'), (snap) => {
-                if (snap.val() === true) {
-                    onDisconnect(myStatusRef).set("offline").then(() => {
-                        updateMyPresence(gameDiv.style.display === 'flex' ? 'busy' : 'online');
-                    });
+            isOnline = true; 
+            roomModal.style.display = "none";
+            
+            // Matchmaking ka timer aur popup band karne ke liye
+            if (window.matchmakingInterval) clearInterval(window.matchmakingInterval);
+            document.getElementById('matchmakingModal').style.display = 'none';
+
+            let rCodeDisplay = roomCode.includes("R") ? "RANDOM MATCH" : roomCode;
+            startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + rCodeDisplay + '</span>');
+            startVoiceChat(playerRole === "O");
+        }
+
+        if (isOnline) {
+            let boardChanged = JSON.stringify(board) !== JSON.stringify(data.board); 
+            board = data.board; currentPlayer = data.currentPlayer; 
+            popup.style.display = 'none'; winningLine.style.display = 'none'; 
+            drawBoard(); updateScoreboard();
+            
+            if (boardChanged) { if (currentPlayer === playerRole) { aiMoveSound(); } else { tapSound(); } }
+            
+            const winner = checkWinner(); 
+            if (winner) { handleWin(winner); } 
+            else if (board.every(x=>x!=="")) { handleDraw(); }
+
+            // LIVE CHAT RECEIVE LOGIC
+            if (data.lastMessage && window.lastMsgTime !== data.lastMessage.time) {
+                window.lastMsgTime = data.lastMessage.time;
+                if (window.showChatBubble) {
+                    window.showChatBubble(data.lastMessage.text, data.lastMessage.sender);
                 }
-            });
-            listenForInvites(); 
-        } else {
-            signInAnonymously(auth).catch((error) => console.log("Auth Error:", error));
+            }
         }
     });
 }
 
-window.addEventListener('load', () => { loadGameData(); showSplash(); initializePlayerAuth(); });
-document.addEventListener('touchstart', resumeAudio, {passive:true}); document.addEventListener('click', resumeAudio, {passive:true});
+// ⭐ UPDATED START GAME (Chat Box show/hide) ⭐
+function startGame(selectedMode){
+  scoreO = 0; scoreX = 0; lobby.style.display='none'; gameDiv.style.display='flex'; gameDiv.className = 'game-board ' + currentTheme; 
+  if (isLevelUpMode) { modeTitle.innerHTML = 'LEVEL UP MODE'; } else { modeTitle.innerHTML = selectedMode; }
+  document.getElementById('resetModeScoreBtn').style.display = 'none'; updateLevelSystemInLobby(); 
+  isLevelUpMode = (selectedMode.includes("LEVEL UP MODE")); if (isLevelUpMode) levelUpMatchCount = 0; 
+  drawBoard(); updateScoreboard(); moon.style.display = 'none'; sun.style.display = 'none';
+  
+  updateMyPresence('busy');
 
-let deferredPrompt;
-const downloadAppBtn = document.getElementById('downloadAppBtn');
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      console.log('Service Worker Registered!', reg);
-    }).catch(err => console.log('SW Fail', err));
-  });
+  if (isOnline) {
+      document.getElementById('videoContainer').style.display = 'flex';
+      document.getElementById('chatContainer').style.display = 'flex'; 
+  } else {
+      document.getElementById('micBtn').style.display = 'none';
+      document.getElementById('camBtn').style.display = 'none';
+      document.getElementById('videoContainer').style.display = 'none';
+      document.getElementById('chatContainer').style.display = 'none'; 
+      resetGame(); 
+  } 
 }
 
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    downloadAppBtn.style.display = 'inline-block'; 
-});
-
-downloadAppBtn.addEventListener('click', async () => {
-    menuClickSound();
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            console.log('VIP PWA Installed!');
-            downloadAppBtn.style.display = 'none';
-        }
-        deferredPrompt = null;
-    }
-});
-
-window.addEventListener('beforeunload', () => {
-    if (isOnline && roomCode !== "") {
-        updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" });
-    }
-    updateMyPresence("offline");
-});
-
-// PROFILE & NAME EDIT LOGIC
 const nameDisplayContainer = document.getElementById('nameDisplayContainer');
 const nameEditContainer = document.getElementById('nameEditContainer');
 const profileNameDisplay = document.getElementById('profileNameDisplay');
@@ -1093,14 +1093,12 @@ document.getElementById('randomMatchBtn').onclick = async () => {
                     document.getElementById('micBtn').style.display = 'block'; document.getElementById('camBtn').style.display = 'block'; document.getElementById('localVideo').srcObject = window.localStream;
                 }
             } catch(e) {}
-            
-            // ⭐ ASLI SEAT LOCKING YAHAN HONI CHAHIYE ⭐
+                        // ⭐ NAYA LOGIC: Apna UID chipka do taaki 3rd player na ghus paye
             await updateDoc(doc(db, "rooms", roomCode), { 
-                status: "playing",
+                status: "playing", 
                 joinedBy: myUID 
-            }); 
+            });
             listenToRoom(); 
-            
         } else {
             roomCode = generateRoomCode() + "R"; playerRole = "O";
             try {
@@ -1171,6 +1169,94 @@ function setTheme(t, bgColor = '', textColor = '', customEmoji = '', isRainEnabl
 
 function startDaySky() { sun.style.display = 'block'; } function stopDaySky() { sun.style.display = 'none'; } const numberOfStars = 100; function startNightSky() { stopNightSky(); moon.style.display = 'block'; starContainer.style.display = 'block'; for (let i = 0; i < numberOfStars; i++) { createStar(true); } } function createStar(isInitial = false) { const star = document.createElement('div'); star.classList.add('star'); const size = Math.random() * 2 + 1; const duration = Math.random() * 100 + 150; let delay = Math.random() * -duration; const left = Math.random() * 100; const top = Math.random() * 100; star.style.width = `${size}px`; star.style.height = `${size}px`; star.style.left = `${left}vw`; star.style.top = `${top}vh`; star.style.animationDuration = `${duration}s`; star.style.animationDelay = `${delay}s`; star.style.opacity = Math.random() * 0.7 + 0.3; star.addEventListener('animationend', () => { star.remove(); if (document.body.classList.contains('dark')) { createStar(false); } }); starContainer.appendChild(star); } function stopNightSky() { moon.style.display = 'none'; starContainer.style.display = 'none'; starContainer.innerHTML = ''; } const numberOfDrops = 50; function startRain() { stopRain(); for (let i = 0; i < numberOfDrops; i++) { createDrop(true); } } function createDrop(isInitial = false) { const drop = document.createElement('div'); drop.classList.add('drop'); const left = Math.random() * 100; const duration = Math.random() * 5 + 5; let delay = Math.random() * -10; if (isInitial) { delay = Math.random() * -duration; } else { delay = 0; drop.style.bottom = '100%'; } drop.style.left = `${left}vw`; drop.style.animationDuration = `${duration}s`; drop.style.animationDelay = `${delay}s`; const size = Math.random() * 0.5 + 1; drop.style.transform = `scale(${size})`; drop.addEventListener('animationend', () => { drop.remove(); const isCustomRain = document.body.classList.contains('custom') && document.getElementById('enableCustomRain').checked; if (document.body.classList.contains('pink') || document.body.classList.contains('red') || document.body.classList.contains('yellow') || document.body.classList.contains('green') || isCustomRain) { createDrop(false); } }); rainContainer.appendChild(drop); } function stopRain() { rainContainer.innerHTML = ''; }
 
+function minimax(newBoard, player) { const human = 'O'; const ai = 'X'; const emptySpots = newBoard.map((v,i) => v === "" ? i : null).filter(x => x !== null); const winner = checkWinnerForMinimax(newBoard); if (winner === ai) return { score: 10 }; if (winner === human) return { score: -10 }; if (emptySpots.length === 0) return { score: 0 }; const moves = []; for (let i of emptySpots) { const move = {}; move.index = i; newBoard[i] = player; const result = minimax(newBoard, player === ai ? human : ai); move.score = result.score; newBoard[i] = ""; moves.push(move); } let bestScore; let bestMoves = []; if (player === ai) { bestScore = -Infinity; for (let i = 0; i < moves.length; i++) { if (moves[i].score > bestScore) { bestScore = moves[i].score; bestMoves = [moves[i]]; } else if (moves[i].score === bestScore) { bestMoves.push(moves[i]); } } } else { bestScore = Infinity; for (let i = 0; i < moves.length; i++) { if (moves[i].score < bestScore) { bestScore = moves[i].score; bestMoves = [moves[i]]; } else if (moves[i].score === bestScore) { bestMoves.push(moves[i]); } } } if (bestMoves.length > 1) { const randomIndex = Math.floor(Math.random() * bestMoves.length); return bestMoves[randomIndex]; } return bestMoves[0]; }
+function checkWinnerForMinimax(currentBoard){ const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,b,c] of winCombos){ if(currentBoard[a] && currentBoard[a]===currentBoard[b] && currentBoard[a]===currentBoard[c]){ return currentBoard[a]; } } return null; }
+function aiMove(){ let empty = board.map((v,i)=> v===""?i:null).filter(x=>x!==null); let move; if(aiLevel === 'ultrahard'){ const bestMove = minimax(board, 'X'); move = bestMove.index; } else if(aiLevel==='easy'){ move = empty[Math.floor(Math.random()*empty.length)]; } else{ for(let i of empty){ board[i]='X'; if(checkWinner()==='X'){ board[i]=''; move=i; break;} board[i]=''; } for(let i of empty){ board[i]='O'; if(checkWinner()==='O'){ board[i]=''; move=i; break;} board[i]=''; } if(move===undefined) move = empty[Math.floor(Math.random()*empty.length)]; } if (move !== undefined && board[move] === "") { makeMove(move); } else if (empty.length > 0 && move === undefined) { makeMove(empty[0]); } }
+function drawBoard(){ Array.from(boardDiv.querySelectorAll('.cell')).forEach(n=>n.remove()); board.forEach((val,i)=>{ const cell = document.createElement('div'); cell.className='cell'; cell.textContent = val; if (currentTheme !== 'custom') { if(val==='O'){ cell.style.color='#00ffff'; cell.style.animation='neonBlue 1s infinite alternate'; } else if(val==='X'){ cell.style.color='#ff0000'; cell.style.animation='neonRed 1s infinite alternate'; } else cell.style.animation='none'; } if(winningCombo.includes(i)) cell.classList.add('winningCell'); cell.onclick = ()=> handleCellClick(i); boardDiv.appendChild(cell); }); boardDiv.appendChild(winningLine); }
+function updateScoreboard(){ scoreboard.innerHTML = isOnline ? '<span style="color:#00ffff">O: ' + scoreO + '</span> &nbsp;|&nbsp; <span style="color:#ff0000">X: ' + scoreX + '</span><br><div style="font-size:16px; color:#ccc; text-shadow:none; margin-top:5px;">You are <b style="color:#fff; font-size:22px;">' + playerRole + '</b></div>' : (vsAI ? 'Player (O): '+scoreO+' | AI (X): '+scoreX : 'Player O: '+scoreO+' | Player X: '+scoreX); }
+function checkWinner(){ const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,b,c] of winCombos){ if(board[a] && board[a]===board[b] && board[a]===board[c]){ winningCombo=[a,b,c]; return board[a]; } } winningCombo=[]; return null; }
+function drawWinningLine(combo){ if(!combo||combo.length!==3) return; const cells=Array.from(boardDiv.querySelectorAll('.cell')); const first=cells[combo[0]], last=cells[combo[2]]; const boardRect=boardDiv.getBoundingClientRect(); const r1=first.getBoundingClientRect(), r2=last.getBoundingClientRect(); const x1=r1.left+r1.width/2-boardRect.left, y1=r1.top+r1.height/2-boardRect.top; const x2=r2.left+r2.width/2-boardRect.left, y2=r2.top+r2.height/2-boardRect.top; const dx=x2-x1, dy=y2-y1; const length=Math.sqrt(dx*dx+dy*dy); const angle=Math.atan2(dy,dx)*(180/Math.PI); const mx=(x1+x2)/2, my=(y1+y2)/2; winningLine.style.width=(length+20)+'px'; winningLine.style.height='10px'; winningLine.style.left=(mx-(length+20)/2)+'px'; winningLine.style.top=(my-5)+'px'; winningLine.style.transform=`rotate(${angle}deg)`; winningLine.style.display='block'; }
+function showPopup(winMsg, loseMsg){ popup.style.display='flex'; let contentHTML = `<div class="win-msg">${winMsg}</div>`; if (loseMsg && loseMsg !== "") { contentHTML += `<div class="lose-msg">${loseMsg}</div>`; } winnerText.innerHTML = contentHTML; }
+
+function createParticle() { const particle = document.createElement('div'); particle.classList.add('particle'); const size = Math.random() * 4 + 1; const duration = Math.random() * 4 + 3; const left = Math.random() * 100; const top = Math.random() * 100; const delay = Math.random() * -duration; particle.style.width = `${size}px`; particle.style.height = `${size}px`; particle.style.left = `${left}vw`; particle.style.top = `${top}vh`; particle.style.animationDuration = `${duration}s`; particle.style.animationDelay = `${delay}s`; particle.style.opacity = Math.random() * 0.5 + 0.3; particle.addEventListener('animationend', () => { particle.remove(); createParticle(); }); particleContainer.appendChild(particle); }
+function startLoadingScreen() { loadingOverlay.style.display = 'flex'; loadingOverlay.style.pointerEvents = 'auto'; requestAnimationFrame(() => { loadingOverlay.style.opacity = '1'; }); let currentProgress = 0; loadingBarFill.style.width = '0%'; loadingPercentage.textContent = '0%'; const interval = setInterval(() => { currentProgress += (UPDATE_INTERVAL / LOADING_DURATION) * 100; if (currentProgress >= 100) { currentProgress = 100; clearInterval(interval); } loadingBarFill.style.width = `${currentProgress}%`; loadingPercentage.textContent = `${Math.floor(currentProgress)}%`; if (currentProgress === 100) { setTimeout(() => { loadingOverlay.style.opacity = '0'; setTimeout(() => { loadingOverlay.style.display = 'none'; lobby.style.display='flex'; updateLevelSystemInLobby(); setTheme('default'); }, 1000); }, 500); } }, UPDATE_INTERVAL); }
+function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.transform = 'scale(0.9)'; for (let i = 0; i < PARTICLE_COUNT; i++) { createParticle(); } requestAnimationFrame(() => { splashLogo.style.transform = 'scale(1)'; }); setTimeout(() => { splashOverlay.style.opacity = '0'; splashLogo.style.transform = 'scale(1.2)'; setTimeout(() => { splashOverlay.style.display = 'none'; particleContainer.innerHTML = ''; lightStreak.style.opacity = 0; startLoadingScreen(); }, 1000); }, SPLASH_DURATION); }
+
+function initializePlayerAuth() {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                myUID = userDoc.data().gameUID;
+            } else {
+                let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
+                await setDoc(userDocRef, {
+                    gameUID: newGameUID,
+                    playerName: playerName,
+                    level: playerLevel,
+                    matchesWon: totalMatchesWon,
+                    exp: currentExp,
+                    createdAt: serverTimestamp()
+                });
+                myUID = newGameUID;
+            }
+
+            const myStatusRef = ref(rtdb, '/status/' + myUID);
+            onValue(ref(rtdb, '.info/connected'), (snap) => {
+                if (snap.val() === true) {
+                    onDisconnect(myStatusRef).set("offline").then(() => {
+                        updateMyPresence(gameDiv.style.display === 'flex' ? 'busy' : 'online');
+                    });
+                }
+            });
+            listenForInvites(); 
+        } else {
+            signInAnonymously(auth).catch((error) => console.log("Auth Error:", error));
+        }
+    });
+}
+
+window.addEventListener('load', () => { loadGameData(); showSplash(); initializePlayerAuth(); });
+document.addEventListener('touchstart', resumeAudio, {passive:true}); document.addEventListener('click', resumeAudio, {passive:true});
+
+let deferredPrompt;
+const downloadAppBtn = document.getElementById('downloadAppBtn');
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('Service Worker Registered!', reg);
+    }).catch(err => console.log('SW Fail', err));
+  });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    downloadAppBtn.style.display = 'inline-block'; 
+});
+
+downloadAppBtn.addEventListener('click', async () => {
+    menuClickSound();
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('VIP PWA Installed!');
+            downloadAppBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+    }
+});
+
+window.addEventListener('beforeunload', () => {
+    if (isOnline && roomCode !== "") {
+        updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" });
+    }
+    updateMyPresence("offline");
+});
+
 // ⭐ CHAT SYSTEM WITH COOLDOWN & ENTER KEY ⭐
 window.lastMsgTime = 0; 
 let lastChatSentTime = 0; 
@@ -1216,4 +1302,4 @@ document.getElementById('sendChatBtn').onclick = () => window.sendChat();
 
 </script>
 </body>
-</html>
+  </html>
