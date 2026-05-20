@@ -1288,11 +1288,13 @@ window.sendMatchInvite = async function(friendUID, friendName) {
             unsubInvite();
             if (playerRole === "O" && roomCode !== "") { deleteDoc(doc(db, "rooms", roomCode)); }
             roomCode = ""; playerRole = "";
-        } else if (data.status === "accepted") {
-            document.getElementById('waitingInviteModal').style.display = 'none';
-            isInviting = false;
-            unsubInvite();
-        }
+} else if (data.status === "accepted") {
+    document.getElementById('waitingInviteModal').style.display = 'none';
+    document.getElementById('friendsModal').style.display = 'none'; // ⭐ YE LINE ADD HUI HAI
+    isInviting = false;
+    unsubInvite();
+}
+
     });
 };
 
@@ -1529,4 +1531,4 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 </body>
-</html>
+  </html>
