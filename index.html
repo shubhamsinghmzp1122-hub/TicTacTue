@@ -13,6 +13,21 @@
   /* Basic Reset and Layout */
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif; touch-action: manipulation;}
   body{ background:#0a0a20; display:flex; align-items:center; justify-content:center; height:100vh; color:white; overflow:hidden; transition:background 0.5s, color 0.5s; width: 100vw; max-width: 100%; }
+
+  /* ⭐ CHAT CSS ⭐ */
+  .q-emoji { font-size: 24px; cursor: pointer; transition: 0.2s; user-select: none; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+  .q-emoji:hover { transform: scale(1.3); filter: drop-shadow(0 0 10px #fff); }
+  
+  .chat-bubble { background: rgba(0,0,0,0.85); color: #fff; padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 16px; border: 2px solid #00ffff; box-shadow: 0 0 15px #00ffff; animation: floatUp 3s ease-out forwards; max-width: 90%; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+  .chat-bubble.enemy { border-color: #ff00ff; box-shadow: 0 0 15px #ff00ff; color: #ff00ff; }
+  
+  @keyframes floatUp { 
+      0% { opacity: 0; transform: translateY(30px) scale(0.5); } 
+      15% { opacity: 1; transform: translateY(0) scale(1.1); } 
+      30% { transform: translateY(0) scale(1); } 
+      80% { opacity: 1; transform: translateY(-30px); } 
+      100% { opacity: 0; transform: translateY(-60px); } 
+  }
   
   /* ⭐ THEME FIX: DARK/LIGHT MODE CSS ⭐ */
   body.dark { background: #000000; color: #f0f0f0; } .lobby.dark { background: linear-gradient(145deg, #0a0a0a, #1a1a1a); color: #f0f0f0; } .lobby.dark h1 { text-shadow: 2px 2px 5px rgba(0,0,0,0.9), 0 0 10px #00ffff, 0 0 20px #00ffff !important; color: #fff; } .lobby.dark .btn { border-color: #00ffff; color: #00ffff; } .lobby.dark .btn:hover { background: #00ffff !important; color: #000 !important; box-shadow: 0 0 20px #00ffff; }
@@ -191,6 +206,22 @@
       <div style="position:relative;">
           <div style="position:absolute; bottom:-18px; width:100%; text-align:center; font-size:12px; font-weight:bold; color:#ff00ff; text-shadow:0 0 5px #ff00ff;">FRIEND</div>
           <video id="remoteVideo" autoplay playsinline style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; border: 2px solid #ff00ff; box-shadow: 0 0 15px #ff00ff; transform: scaleX(-1); background:#000;"></video>
+      </div>
+  </div>
+
+  <div id="chatDisplayArea" style="position:absolute; top:40%; left:50%; transform:translate(-50%, -50%); width:100%; pointer-events:none; z-index:200; display:flex; flex-direction:column; align-items:center; gap:10px;"></div>
+
+  <div id="chatContainer" style="display:none; position:absolute; bottom:15px; width:95%; max-width:400px; z-index:100; flex-direction:column; gap:8px;">
+      <div id="quickEmojis" style="display:flex; justify-content:space-around; background:rgba(0,0,0,0.7); padding:8px; border-radius:20px; border:1px solid #00ffff; box-shadow:0 0 10px rgba(0,255,255,0.3);">
+          <span class="q-emoji" onclick="sendChat('😂')">😂</span>
+          <span class="q-emoji" onclick="sendChat('😡')">😡</span>
+          <span class="q-emoji" onclick="sendChat('💀')">💀</span>
+          <span class="q-emoji" onclick="sendChat('😭')">😭</span>
+          <span class="q-emoji" onclick="sendChat('👏')">👏</span>
+      </div>
+      <div style="display:flex; gap:5px;">
+          <input type="text" id="chatInput" placeholder="Taunt here..." maxlength="30" style="flex:1; padding:8px 15px; border-radius:15px; border:2px solid #ff00ff; background:rgba(17,17,17,0.9); color:#fff; font-weight:bold; outline:none; box-shadow:inset 0 0 5px #ff00ff;">
+          <button id="sendChatBtn" class="btn" style="margin:0; padding:8px 20px; background:linear-gradient(90deg, #ff00ff, #00ffff) !important; color:#000 !important; border:none; border-radius:15px; box-shadow:0 0 10px #ff00ff;">Send</button>
       </div>
   </div>
 
@@ -692,6 +723,7 @@ document.getElementById('roomCancelBtn').onclick = async () => {
     if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;}
 };
 
+// ⭐ UPDATED LISTEN TO ROOM WITH CHAT RECEIVE ⭐
 function listenToRoom() {
     if (unsubscribeRoom) unsubscribeRoom();
     unsubscribeRoom = onSnapshot(doc(db, "rooms", roomCode), (docSnap) => {
@@ -704,19 +736,37 @@ function listenToRoom() {
         }
         const data = docSnap.data();
         window.startingTurn = data.startingTurn || "O";
+        
         if (data.status === "playing" && !isOnline) {
             isOnline = true; roomModal.style.display = "none";
             startGame('LIVE MATCH<br><span style="font-size:22px; color:#ff00ff; letter-spacing:3px; text-shadow: 0 0 15px #ff00ff;">ROOM: ' + roomCode + '</span>');
             startVoiceChat(playerRole === "O");
         }
+        
         if (isOnline) {
-            let boardChanged = JSON.stringify(board) !== JSON.stringify(data.board); board = data.board; currentPlayer = data.currentPlayer; popup.style.display = 'none'; winningLine.style.display = 'none'; drawBoard(); updateScoreboard();
+            let boardChanged = JSON.stringify(board) !== JSON.stringify(data.board); 
+            board = data.board; currentPlayer = data.currentPlayer; 
+            popup.style.display = 'none'; winningLine.style.display = 'none'; 
+            drawBoard(); updateScoreboard();
+            
             if (boardChanged) { if (currentPlayer === playerRole) { aiMoveSound(); } else { tapSound(); } }
-            const winner = checkWinner(); if (winner) { handleWin(winner); } else if (board.every(x=>x!=="")) { handleDraw(); }
+            
+            const winner = checkWinner(); 
+            if (winner) { handleWin(winner); } 
+            else if (board.every(x=>x!=="")) { handleDraw(); }
+
+            // ⭐ LIVE CHAT RECEIVE LOGIC ⭐
+            if (data.lastMessage && window.lastMsgTime !== data.lastMessage.time) {
+                window.lastMsgTime = data.lastMessage.time;
+                if (window.showChatBubble) {
+                    window.showChatBubble(data.lastMessage.text, data.lastMessage.sender);
+                }
+            }
         }
     });
 }
 
+// ⭐ UPDATED START GAME TO SHOW CHAT ⭐
 function startGame(selectedMode){
   scoreO = 0; scoreX = 0; lobby.style.display='none'; gameDiv.style.display='flex'; gameDiv.className = 'game-board ' + currentTheme; 
   if (isLevelUpMode) { modeTitle.innerHTML = 'LEVEL UP MODE'; } else { modeTitle.innerHTML = selectedMode; }
@@ -728,10 +778,12 @@ function startGame(selectedMode){
 
   if (isOnline) {
       document.getElementById('videoContainer').style.display = 'flex';
+      document.getElementById('chatContainer').style.display = 'flex'; // ⭐ CHAT BOX SHOW KAREGA
   } else {
       document.getElementById('micBtn').style.display = 'none';
       document.getElementById('camBtn').style.display = 'none';
       document.getElementById('videoContainer').style.display = 'none';
+      document.getElementById('chatContainer').style.display = 'none'; // ⭐ OFFLINE ME CHAT HIDE KAREGA
       resetGame(); 
   } 
 }
@@ -918,7 +970,8 @@ document.getElementById('searchPlayerBtn').onclick = async () => {
             const sIcon = document.getElementById('searchMainIcon');
             sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
 
-            // Ye theek kar diya maine idhar!
+            if(fromFriendList){ document.getElementById('friendsModal').style.display = 'none'; }
+            
             document.getElementById('searchedProfileModal').style.display = 'flex';
         }
     } catch (error) { showError("<span style='color: #ff0055;'>❌ Server Error!</span>"); console.log(error); }
@@ -1013,24 +1066,24 @@ window.loadMyFriends = async function() {
         let html = "";
         const friendIDs = snapshot.docs.map(docSnap => docSnap.id);
 
-friendIDs.forEach(fid => {
-    html += `
-    <div id="friendBox_${fid}" style="order: 1; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: order 0.3s, background 0.3s;">
-        
-        <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fid}', true)">
-            <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">
-                <span id="fName_${fid}">LOADING...</span>
-            </div>
-            <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold; display:flex; align-items:center; gap:6px;">
-                Lv. <span id="fLevel_${fid}">-</span>
-                <span id="fStatusDot_${fid}" style="width:10px; height:10px; border-radius:50%; background:#555; display:inline-block; transition: 0.3s;"></span>
-            </div>
-        </div>
+        friendIDs.forEach(fid => {
+            html += `
+            <div id="friendBox_${fid}" style="order: 1; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 10px rgba(0,255,255,0.2); transition: order 0.3s, background 0.3s;">
+                
+                <div style="text-align: left; cursor: pointer; flex: 1;" onclick="viewPlayerCard('${fid}', true)">
+                    <div style="color:#00ffff; font-weight:bold; font-size:16px; text-transform:uppercase; text-shadow:0 0 5px #00ffff;">
+                        <span id="fName_${fid}">LOADING...</span>
+                    </div>
+                    <div style="color:#aaa; font-size:12px; letter-spacing:1px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+                        Lv. <span id="fLevel_${fid}">-</span>
+                        <span id="fStatusDot_${fid}" style="width:10px; height:10px; border-radius:50%; background:#555; display:inline-block; transition: 0.3s;"></span>
+                    </div>
+                </div>
 
-        <button id="fInviteBtn_${fid}" class="btn" style="display:none; margin:0 0 0 10px; padding:5px 12px; font-size:13px; background:#00ffff !important; color:#000 !important; border:none; border-radius:5px; font-weight: bold; box-shadow:0 0 8px #00ffff; cursor: pointer;" onclick="event.stopPropagation(); sendMatchInvite('${fid}', document.getElementById('fName_${fid}').innerText)">➕ PLAY</button>
-        
-    </div>`;
-});
+                <button id="fInviteBtn_${fid}" class="btn" style="display:none; margin:0 0 0 10px; padding:5px 12px; font-size:13px; background:#00ffff !important; color:#000 !important; border:none; border-radius:5px; font-weight: bold; box-shadow:0 0 8px #00ffff; cursor: pointer;" onclick="event.stopPropagation(); sendMatchInvite('${fid}', document.getElementById('fName_${fid}').innerText)">➕ PLAY</button>
+                
+            </div>`;
+        });
 
         friendBox.innerHTML = html;
 
@@ -1292,13 +1345,12 @@ window.sendMatchInvite = async function(friendUID, friendName) {
             unsubInvite();
             if (playerRole === "O" && roomCode !== "") { deleteDoc(doc(db, "rooms", roomCode)); }
             roomCode = ""; playerRole = "";
-} else if (data.status === "accepted") {
-    document.getElementById('waitingInviteModal').style.display = 'none';
-    document.getElementById('friendsModal').style.display = 'none'; // ⭐ YE LINE ADD HUI HAI
-    isInviting = false;
-    unsubInvite();
-}
-
+        } else if (data.status === "accepted") {
+            document.getElementById('waitingInviteModal').style.display = 'none';
+            document.getElementById('friendsModal').style.display = 'none'; 
+            isInviting = false;
+            unsubInvite();
+        }
     });
 };
 
@@ -1511,7 +1563,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
     downloadAppBtn.style.display = 'inline-block'; 
 });
 
-//edited 
 downloadAppBtn.addEventListener('click', async () => {
     menuClickSound();
     if (deferredPrompt) {
@@ -1532,6 +1583,48 @@ window.addEventListener('beforeunload', () => {
     }
     updateMyPresence("offline");
 });
+
+// ⭐ NEW CHAT BUBBLE & SEND CHAT LOGIC ⭐
+window.showChatBubble = function(text, senderRole) {
+    if(senderRole !== playerRole) tapSound(); // Dost ka message aaye to notification sound
+
+    const area = document.getElementById('chatDisplayArea');
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+
+    if (senderRole !== playerRole) {
+        bubble.classList.add('enemy');
+    }
+
+    bubble.innerText = (senderRole === playerRole ? "YOU: " : "FRIEND: ") + text;
+    area.appendChild(bubble);
+
+    // 3 second baad bubble apne aap delete
+    setTimeout(() => { bubble.remove(); }, 3000);
+};
+
+window.lastMsgTime = 0; // Pichla message check karne ke liye
+
+window.sendChat = async function(msgText) {
+    if (!isOnline || roomCode === "") return;
+    const msg = msgText || document.getElementById('chatInput').value.trim();
+    if (msg === "") return;
+
+    document.getElementById('chatInput').value = ""; // Input clear karo
+    menuClickSound(); // Button click sound
+
+    try {
+        await updateDoc(doc(db, "rooms", roomCode), {
+            lastMessage: {
+                text: msg,
+                sender: playerRole,
+                time: Date.now()
+            }
+        });
+    } catch(e) { console.log("Chat Error:", e); }
+};
+
+document.getElementById('sendChatBtn').onclick = () => window.sendChat();
 
 </script>
 </body>
