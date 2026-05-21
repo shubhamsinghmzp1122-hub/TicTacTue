@@ -594,6 +594,52 @@ const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION 
 let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = false; let aiLevel = "easy"; let winningCombo = []; let scoreO = 0; let scoreX = 0; let currentTheme = 'default';
 let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
 
+// ⭐ EXP & STREAK CONFIGURATION ⭐
+let currentWinStreak = 0; // Lagataar jeet track karne ke liye
+
+window.calculateAndGainEXP = function(matchResult) {
+    let baseEXP = 0;
+    
+    if (matchResult === "win") {
+        currentWinStreak++; // Win streak badhao
+        
+        // 1. Dynamic EXP based on Mode (Plan 1)
+        if (isOnline) {
+            baseEXP = 20; // Online player ko sabse zyada reward
+        } else if (vsAI) {
+            if (aiLevel === "easy") baseEXP = 5;
+            else if (aiLevel === "medium") baseEXP = 8;
+            else if (aiLevel === "hard") baseEXP = 12;
+            else if (aiLevel === "ultrahard") baseEXP = 15;
+        } else {
+            baseEXP = 5; // Local multiplayer win
+        }
+        
+        // 2. Win Streak Bonus (Plan 3)
+        if (currentWinStreak >= 3) {
+            baseEXP += 10; // 3 ya usse zyada ki streak par special bonus
+            showToast(`🔥 WIN STREAK X${currentWinStreak}! +10 BONUS EXP`);
+        } else if (currentWinStreak === 2) {
+            baseEXP += 5; // 2 ki streak par chhota bonus
+            showToast("🔥 Streak Started! +5 BONUS EXP");
+        } else {
+            showToast(`🏆 WON! +${baseEXP} EXP`);
+        }
+        
+    } else if (matchResult === "draw") {
+        currentWinStreak = 0; // Streak toot gayi
+        baseEXP = 5; // Draw ka reward (Plan 2)
+        showToast(`🤝 DRAW! +${baseEXP} EXP`);
+    } else if (matchResult === "lose") {
+        currentWinStreak = 0; // Streak toot gayi
+        baseEXP = 2; // Haarne par bhi motivation reward (Plan 2)
+        showToast(`😭 LOST! +${baseEXP} EXP`);
+    }
+    
+    // Asli EXP gain karwao aur check karo level up hua ya nahi
+    gainExperience(baseEXP);
+};
+
 function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
 
 function saveGameData() { 
@@ -626,37 +672,42 @@ async function handleCellClick(i) {
     makeMove(i); 
 }
 
-function makeMove(i){
-  if(board[i]!=="" || checkWinner()) return;
-  if(currentPlayer === 'O') tapSound(); else aiMoveSound(); 
-  board[i] = currentPlayer; drawBoard(); const winner = checkWinner();
-  if(winner){ handleWin(winner); return; }
-  if(board.every(x=>x!=="")){ handleDraw(); return; }
-  currentPlayer = (currentPlayer==='O')?'X':'O';
-  if(vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove,350); }
-}
-
 function handleWin(winner) {
     if(winner==='O') scoreO++; else scoreX++; totalMatchesWon++; 
-    if (winner === 'O' && isLevelUpMode) gainExperience(1); 
-    if (isOnline && winner === playerRole) gainExperience(1);
     drawWinningLine(winningCombo); 
     if(winner === 'O') winOSound(); else winXSound();
+    
     let winMessage = ''; let loseMessage = '';
+    
     if (isOnline) {
-        if (winner === playerRole) { winMessage = 'YOU WON! 🎉'; loseMessage = 'OPPONENT LOST'; } 
-        else { winMessage = 'YOU LOST! 😭'; loseMessage = 'OPPONENT WON'; }
+        if (winner === playerRole) { 
+            winMessage = 'YOU WON! 🎉'; loseMessage = 'OPPONENT LOST'; 
+            window.calculateAndGainEXP("win"); 
+        } else { 
+            winMessage = 'YOU LOST! 😭'; loseMessage = 'OPPONENT WON'; 
+            window.calculateAndGainEXP("lose"); 
+        }
     } else if (vsAI) {
-        if (winner === 'O') { winMessage = 'YOU WINNER 🎉'; loseMessage = 'AI LOSER'; } 
-        else { winMessage = 'AI WINNER 🎉'; loseMessage = 'YOU LOSER'; }
+        if (winner === 'O') { 
+            winMessage = 'YOU WINNER 🎉'; loseMessage = 'AI LOSER'; 
+            window.calculateAndGainEXP("win"); 
+        } else { 
+            winMessage = 'AI WINNER 🎉'; loseMessage = 'YOU LOSER'; 
+            window.calculateAndGainEXP("lose"); 
+        }
     } else {
         if (winner === 'O') { winMessage = 'Player O WINNER 🎉'; loseMessage = 'Player X LOSER'; } 
         else { winMessage = 'Player X WINNER 🎉'; loseMessage = 'Player O LOSER'; }
+        window.calculateAndGainEXP("win"); 
     }
     showPopup(winMessage, loseMessage); 
 }
 
-function handleDraw() { drawSound(); setTimeout(()=> showPopup("DRAW!", ""),400); }
+function handleDraw() { 
+    drawSound(); 
+    window.calculateAndGainEXP("draw"); // ⭐ NAYA SYSTEM
+    setTimeout(() => { showPopup("DRAW!", ""); }, 400); 
+}
 
 window.resetGame = async function(){
   tapSound();
