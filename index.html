@@ -592,7 +592,6 @@ function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24);
 const lobby = document.getElementById('lobby'); const difficultyDiv = document.getElementById('difficulty'); const boardDiv = document.getElementById('board'); const gameDiv = document.getElementById('game'); const popup = document.getElementById('popup'); const winnerText = document.getElementById('winnerText'); const modeTitle = document.getElementById('modeTitle'); const winningLine = document.getElementById('winning-line'); const scoreboard = document.getElementById('scoreboard'); const backLobbyBtn = document.getElementById('backLobbyBtn'); const rainContainer = document.getElementById('rain-container'); const moon = document.getElementById('moon'); const sun = document.getElementById('sun'); const starContainer = document.getElementById('star-container'); const loadingOverlay = document.getElementById('loading-overlay'); const loadingBarFill = document.getElementById('loading-bar-fill'); const loadingPercentage = document.getElementById('loading-percentage'); const levelContainer = document.getElementById('level-system-container'); const levelInfoText = document.getElementById('level-info-text'); const levelProgressFill = document.getElementById('level-progress-fill'); const splashOverlay = document.getElementById('splash-overlay'); const splashLogo = document.querySelector('.splash-logo'); const particleContainer = document.getElementById('particle-container'); const lightStreak = document.querySelector('.light-streak');
 const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION = 5000; const UPDATE_INTERVAL = 50; 
 let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = false; let aiLevel = "easy"; let winningCombo = []; let scoreO = 0; let scoreX = 0; let currentTheme = 'default';
-let winStreak = 0; // Player ki lagataar jeet track karne ke liye
 let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
 
 function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
@@ -637,42 +636,69 @@ function makeMove(i){
   if(vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove,350); }
 }
 
-function handleWin(winner) {
-    if(winner === 'O') scoreO++; else scoreX++; 
-    totalMatchesWon++; 
-    
-    // ⭐ NEW HYBRID EXP LOGIC START ⭐
-    let expEarned = 0;
-    let isPlayerWin = false;
-    let isPlayerLose = false;
+// ⭐ NAYA XP SYSTEM LOGIC ⭐
+function awardXP(outcome) {
+    let earnedXP = 0;
 
-    // Check karo player jeeta hai ya haara
     if (isOnline) {
-        if (winner === playerRole) isPlayerWin = true; else isPlayerLose = true;
+        // Any Online Mode (Create, Join, Random)
+        if (outcome === 'win') earnedXP = 12;
+        else if (outcome === 'draw') earnedXP = 6;
+        else if (outcome === 'lose') earnedXP = 2;
+    } else if (isLevelUpMode) {
+        // Level Up Mode
+        if (outcome === 'win') earnedXP = 8;
+        else if (outcome === 'draw') earnedXP = 5;
+        else if (outcome === 'lose') earnedXP = 2;
     } else if (vsAI) {
-        if (winner === 'O') isPlayerWin = true; else isPlayerLose = true;
+        // Single Player AI Modes
+        if (aiLevel === 'easy') {
+            if (outcome === 'win') earnedXP = 3;
+            else if (outcome === 'draw') earnedXP = 2;
+            else if (outcome === 'lose') earnedXP = 1;
+        } else if (aiLevel === 'medium') {
+            if (outcome === 'win') earnedXP = 5;
+            else if (outcome === 'draw') earnedXP = 3;
+            else if (outcome === 'lose') earnedXP = 1;
+        } else if (aiLevel === 'hard') {
+            // Added logic for Hard mode
+            if (outcome === 'win') earnedXP = 6;
+            else if (outcome === 'draw') earnedXP = 4;
+            else if (outcome === 'lose') earnedXP = 2;
+        } else if (aiLevel === 'ultrahard') {
+            if (outcome === 'win') {
+                // Secret Easter Egg: +1 Full Level Up
+                earnedXP = expToNextLevel; 
+            }
+            else if (outcome === 'draw') earnedXP = 5;
+            else if (outcome === 'lose') earnedXP = 1;
+        }
+    } else {
+        // Local Multiplayer (0 XP to prevent cheating)
+        earnedXP = 0; 
     }
 
-    if (isPlayerWin) {
-        winStreak++; // Streak badhao
-        expEarned = 10; // Base Win EXP
-
-        // 1. Difficulty Bonus (Dynamic EXP)
-        if (isOnline) expEarned += 10; // Online win (+20 total)
-        else if (vsAI && (aiLevel === 'hard' || aiLevel === 'ultrahard')) expEarned += 5; // Hard AI win (+15 total)
-        
-        // 2. Streak Bonus
-        if (winStreak === 2) expEarned += 5; // 2nd win lagataar
-        else if (winStreak >= 3) expEarned += 15; // 3+ win lagataar (+25 total bas base aur streak se)
-        
-    } else if (isPlayerLose) {
-        winStreak = 0; // Haarne par streak toot gayi
-        expEarned = 2; // Haarne ka participation reward
+    // Agar XP 0 se zyada hai, toh add karo aur toast dikhao
+    if (earnedXP > 0) {
+        gainExperience(earnedXP);
+        if (outcome === 'win') showToast(`🎉 +${earnedXP} XP Earned!`);
+        else if (outcome === 'draw') showToast(`🤝 +${earnedXP} XP for Trying!`);
+        else showToast(`😢 +${earnedXP} XP (Try Again)`);
     }
+}
 
-    // EXP Add karo aur save karo
-    if (expEarned > 0) gainExperience(expEarned);
-    // ⭐ NEW HYBRID EXP LOGIC END ⭐
+function handleWin(winner) {
+    if(winner==='O') scoreO++; else scoreX++; totalMatchesWon++; 
+
+    // --- NAYA XP TRIGGER ---
+    let outcome = "lose"; 
+    if (isOnline) {
+        if (winner === playerRole) outcome = "win";
+    } else if (vsAI) {
+        if (winner === 'O') outcome = "win"; // Player humesha 'O' hota hai offline me
+    }
+    awardXP(outcome);
+    // ----------------------
 
     drawWinningLine(winningCombo); 
     if(winner === 'O') winOSound(); else winXSound();
@@ -691,15 +717,13 @@ function handleWin(winner) {
     showPopup(winMessage, loseMessage); 
 }
 
-function handleDraw() {
-    // ⭐ DRAW EXP LOGIC ⭐
-    if (isOnline || vsAI) { // Sirf Online ya AI mode me EXP milega
-        winStreak = 0; // Draw par streak reset
-        gainExperience(5); // Draw ka participation reward
-    }
+function handleDraw() { 
+    // --- NAYA XP TRIGGER ---
+    awardXP("draw");
+    // -----------------------
     
     drawSound(); 
-    setTimeout(()=> showPopup("DRAW!", ""), 400); 
+    setTimeout(()=> showPopup("DRAW!", ""),400); 
 }
 
 window.resetGame = async function(){
@@ -1346,4 +1370,4 @@ document.getElementById('sendChatBtn').onclick = () => window.sendChat();
 
 </script>
 </body>
-              </html>
+      </html>
