@@ -150,6 +150,17 @@
 <div class="rain-container" id="rain-container"></div><div class="moon" id="moon"></div><div class="sun" id="sun"></div> <div class="star-container" id="star-container"></div>
 
 <div class="lobby default" id="lobby" style="display:none;">
+    
+    <div id="lobbyBatteryDisplay" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); border: 2px solid #00ffff; color: #fff; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 900; z-index: 100; display: flex; align-items: center; gap: 6px; font-family: 'Poppins', sans-serif; box-shadow: 0 0 10px rgba(0,255,255,0.2);">
+      <svg id="batterySvg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);">
+          <rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect>
+          <line x1="22" y1="11" x2="22" y2="13"></line>
+          <rect x="4" y="9" width="12" height="6" fill="currentColor" stroke="none" id="batteryFill" style="transition: width 0.3s ease-in-out;"></rect>
+      </svg>
+      <span id="batteryText">--%</span>
+      <span id="chargingIcon" style="display: none; color: #ffcc00; filter: drop-shadow(0 0 3px #ffcc00); font-size: 16px;">⚡</span>
+  </div>
+
   <button id="settingBtn">⚙️ Theme</button>
   <div id="themeOptions">
     <button class="theme-btn">Default</button><button class="theme-btn">Dark</button><button class="theme-btn">Light</button><button class="theme-btn">Red</button><button class="theme-btn">Yellow</button><button class="theme-btn">Green</button><button class="theme-btn">Love Mode 🩷</button>
@@ -1935,6 +1946,89 @@ setInterval(() => {
     }
 }, 1500);
 
+// ⭐ SMART BATTERY MANAGEMENT SYSTEM (DYNAMIC BAR + SOUNDS) ⭐
+let hasNotified15 = false;
+let hasNotified5 = false;
+let hasNotified95 = false;
+
+if ('getBattery' in navigator) {
+    navigator.getBattery().then(battery => {
+        function updateBatteryUI() {
+            const level = Math.floor(battery.level * 100);
+            const isCharging = battery.charging;
+
+            const batteryText = document.getElementById('batteryText');
+            const chargingIcon = document.getElementById('chargingIcon');
+            const batteryBox = document.getElementById('lobbyBatteryDisplay');
+            const batteryFill = document.getElementById('batteryFill'); // SVG ka andar wala danda
+
+            if (batteryText) batteryText.innerText = level + "%";
+            if (chargingIcon) chargingIcon.style.display = isCharging ? "inline" : "none";
+
+            // 🔥 MASTER MAGIC: Battery ke dande ko real-time fill/empty karna (Max width 12 hoti hai)
+            if (batteryFill) {
+                const fillWidth = (level / 100) * 12;
+                batteryFill.setAttribute('width', fillWidth);
+            }
+
+            // Level ke hisaab se border aur battery dono ka rang badalna
+            if (batteryBox) {
+                if (level <= 15) {
+                    batteryBox.style.borderColor = "#ff0055"; // Red Alert
+                    batteryBox.style.color = "#ff0055";
+                    batteryBox.style.boxShadow = "0 0 10px rgba(255,0,85,0.5)";
+                } else if (level <= 30) {
+                    batteryBox.style.borderColor = "#ffcc00"; // Yellow Warning
+                    batteryBox.style.color = "#ffcc00";
+                    batteryBox.style.boxShadow = "0 0 10px rgba(255,204,0,0.4)";
+                } else {
+                    batteryBox.style.borderColor = "#00ffff"; // Cyan Normal
+                    batteryBox.style.color = "#fff";
+                    batteryBox.style.boxShadow = "0 0 10px rgba(0,255,255,0.2)";
+                }
+            }
+
+            // 🛑 PROFESSIONAL NOTIFICATION THRESHOLDS LOGIC
+            if (level <= 5) {
+                if (!hasNotified5) {
+                    beep(350, 0.12); setTimeout(() => beep(300, 0.15), 180);
+                    window.showToast("⚠️ Critical Battery Status: Please connect a power source immediately.");
+                    hasNotified5 = true;
+                }
+                hasNotified15 = true; 
+                hasNotified95 = false;
+            } 
+            else if (level <= 15) {
+                if (!hasNotified15) {
+                    beep(420, 0.15); 
+                    window.showToast("🪫 Low Battery Alert: Consider connecting a charger soon.");
+                    hasNotified15 = true;
+                }
+                hasNotified5 = false;
+                hasNotified95 = false;
+            } 
+            else if (level >= 95) {
+                if (!hasNotified95 && isCharging) {
+                    beep(600, 0.1); setTimeout(() => beep(800, 0.12), 120);
+                    window.showToast("🔋 Battery Sufficiently Charged: You may disconnect the charger.");
+                    hasNotified95 = true;
+                }
+                hasNotified15 = false;
+                hasNotified5 = false;
+            } 
+            else {
+                hasNotified15 = false;
+                hasNotified5 = false;
+                hasNotified95 = false;
+            }
+        }
+
+        updateBatteryUI();
+        battery.addEventListener('levelchange', updateBatteryUI);
+        battery.addEventListener('chargingchange', updateBatteryUI);
+    });
+}
+
 </script>
 </body>
-  </html>
+                                                  </html>k
