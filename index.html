@@ -134,6 +134,13 @@
 </head>
 <body class="default">
 
+<div id="liveThemeVideoContainer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; display: none; background: #000; overflow: hidden;">
+    <video id="bgVideoPlayer1" autoplay loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100vw; height: 100vh; object-fit: cover; transform: translate(-50%, -50%); opacity: 1; transition: opacity 1.5s ease-in-out;"></video>
+    <video id="bgVideoPlayer2" autoplay loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100vw; height: 100vh; object-fit: cover; transform: translate(-50%, -50%); opacity: 0; transition: opacity 1.5s ease-in-out;"></video>
+    
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.65); z-index: 2;"></div>
+</div>
+
 <div id="splash-overlay"><div class="particle-container" id="particle-container"></div><div class="light-streak"></div><div class="splash-logo">S x A</div></div>
 <div id="loading-overlay" style="display:none;"><h2>L O A D I N G</h2><div class="neon-text-separator">---------------------&nbsp;&nbsp;&nbsp;L O A D I N G</div><div class="loading-bar-container"><div class="loading-bar-fill" id="loading-bar-fill"></div></div><div class="loading-percentage" id="loading-percentage">0%</div></div>
 <div class="rain-container" id="rain-container"></div><div class="moon" id="moon"></div><div class="sun" id="sun"></div> <div class="star-container" id="star-container"></div>
@@ -143,6 +150,8 @@
   <div id="themeOptions">
     <button class="theme-btn">Default</button><button class="theme-btn">Dark</button><button class="theme-btn">Light</button><button class="theme-btn">Red</button><button class="theme-btn">Yellow</button><button class="theme-btn">Green</button><button class="theme-btn">Love Mode 🩷</button>
     <button id="customToggleBtn">✨ Custom Color & Rain 🎨</button>
+    <button id="liveThemeTriggerBtn" class="theme-btn" style="background: linear-gradient(90deg, #ff00ff, #00ffff) !important; color: #000 !important; font-weight: 900; margin-top: 15px !important; border: 2px solid #fff !important; box-shadow: 0 0 15px #00ffff; text-transform: uppercase; letter-spacing: 2px; animation: customBtnPulse 1.5s infinite alternate; width: 100%;">✨ LIVE BG (VIP)</button>
+
     <div id="customPickerContainer" style="display:none; flex-direction:column; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #00ffff;">
         <label class="custom-label">BG Color: <input type="color" id="customBgColor" value="#1a1a2e" style="width:30px; height:30px; padding:0; border:none; border-radius:5px; cursor:pointer;"></label>
         <label class="custom-label">Text Color: <input type="color" id="customTextColor" value="#00ffcc" style="width:30px; height:30px; padding:0; border:none; border-radius:5px; cursor:pointer;"></label>
@@ -419,6 +428,55 @@
 <div id="toastNotification" style="position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); border: 2px solid #ff00ff; box-shadow: 0 0 15px #ff00ff; color: #fff; padding: 12px 25px; border-radius: 25px; font-weight: bold; font-size: 14px; z-index: 9999; transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); text-align: center; white-space: nowrap; pointer-events: none;">
     Player is busy!
 </div>
+<style>
+    /* Ye special class setTheme() ke black magic se buttons ko bachayegi */
+    .live-btn {
+        border-radius: 10px; cursor: pointer; transition: 0.3s; font-weight: 900; 
+        font-size: 14px; padding: 8px 10px; text-align: center; text-transform: uppercase;
+        border: 2px solid transparent; font-family: 'Poppins', sans-serif;
+    }
+    .live-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
+</style>
+
+<div id="liveThemeModal" class="room-modal" style="z-index: 7000;">
+    <div class="room-box" style="border-color: #00ffff; box-shadow: 0 0 25px #00ffff; width: 340px; max-width: 95vw; background: linear-gradient(145deg, #111, #222);">
+        <h2 style="color: #00ffff; text-shadow: 0 0 15px #00ffff; letter-spacing: 2px;">LIVE WEATHER</h2>
+        <p style="color: #fff; margin: 10px 0 20px; font-size: 14px; font-weight: bold;">
+            Download 52 HD Weather & Time Backgrounds for the Ultimate AAA Experience! (Size: ~145 MB)
+        </p>
+
+        <div style="display: flex; justify-content: space-between; color: #ff00ff; font-weight: bold; margin-bottom: 5px; font-size: 14px;">
+            <span id="packStatusText">Ready to Download</span>
+            <span id="packPercentText">0%</span>
+        </div>
+
+        <div style="width: 100%; height: 15px; background: #333; border-radius: 10px; margin-bottom: 20px; overflow: hidden; border: 2px solid #00ffff; box-shadow: inset 0 0 5px rgba(0,255,255,0.2);">
+            <div id="packProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #00ffff, #ff00ff); box-shadow: 0 0 10px #00ffff; transition: width 0.3s ease;"></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+            <div style="display: flex; gap: 10px; justify-content: center; width: 100%;">
+                <button id="startDownloadPackBtn" class="live-btn" style="flex: 1; background: #00ffff; color: #000; box-shadow: 0 0 15px #00ffff;">⬇️ DOWNLOAD</button>
+                <button id="pauseDownloadPackBtn" class="live-btn" style="flex: 1; background: #ff8c00; color: #000; box-shadow: 0 0 15px #ff8c00; display: none;">⏸️ PAUSE</button>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center; width: 100%;">
+                <button id="resetDownloadPackBtn" class="live-btn" style="flex: 1; background: #ff0055; color: #fff; box-shadow: 0 0 15px #ff0055; display: none;">❌ RESET</button>
+                <button class="live-btn" onclick="document.getElementById('liveThemeModal').style.display='none';" style="flex: 1; background: rgba(0,0,0,0.5); border-color:#888; color:#888;">CLOSE</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="resetDownloadConfirmModal" class="room-modal" style="z-index: 7500;">
+    <div class="room-box" style="border-color: #ff0055; box-shadow: 0 0 20px #ff0055; max-width: 320px;">
+        <h2 style="color: #ff0055; text-shadow: 0 0 15px #ff0055;">WARNING</h2>
+        <p style="color: #fff; margin: 15px 0 25px; font-size: 16px;">Kya sach mein download data clear karke <b style="color:#00ffff;">0%</b> karna hai bhai?</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button class="live-btn" id="confirmResetDownloadBtn" style="background: #ff0055; color: #fff; box-shadow: 0 0 10px #ff0055; padding: 8px 15px;">YES, CLEAR IT</button>
+            <button class="live-btn" onclick="document.getElementById('resetDownloadConfirmModal').style.display='none';" style="background: rgba(0,0,0,0.5); color: #aaa; border-color: #555; padding: 8px 15px;">CANCEL</button>
+        </div>
+    </div>
+</div>
 
 <script type="module">
 
@@ -452,6 +510,344 @@ let pc = null, localStream = null;
 
 const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 window.pc = pc; window.localStream = localStream;
+
+// ⭐=========================================⭐
+// ⭐ LIVE THEME VIDEO DATABASE (PHASE 1) ⭐
+// ⭐=========================================⭐
+const BASE_VIDEO_URL = "https://cdn.jsdelivr.net/gh/shubhamsinghmzp1122-hub/TicTacTue@main/";
+
+const liveWeatherVideos = {
+    sunny: { morning: "sunny_morning.mp4", afternoon: "sunny_afternoon.mp4", evening: "sunny_evening.mp4", night: "sunny_night.mp4" },
+    rainy: { morning: "rainy_morning.mp4", afternoon: "rainy_afternoon.mp4", evening: "rainy_evening.mp4", night: "rainy_night.mp4" },
+    cloudy: { morning: "cloudy_morning.mp4", afternoon: "cloudy_afternoon.mp4", evening: "cloudy_evening.mp4", night: "cloudy_night.mp4" },
+    windy: { morning: "windy_morning.mp4", afternoon: "windy_afternoon.mp4", evening: "windy_evening.mp4", night: "windy_night.mp4" },
+    snowy: { morning: "snowy_morning.mp4", afternoon: "snowy_afternoon.mp4", evening: "snowy_evening.mp4", night: "snowy_night.mp4" },
+    foggy: { morning: "foggy_morning.mp4", afternoon: "foggy_afternoon.mp4", evening: "foggy_evening.mp4", night: "foggy_night.mp4" },
+    stormy: { morning: "stormy_morning.mp4", afternoon: "stormy_afternoon.mp4", evening: "stormy_evening.mp4", night: "stormy_night.mp4" },
+    lightning: { morning: "lightning_morning.mp4", afternoon: "lightning_afternoon.mp4", evening: "lightning_evening.mp4", night: "lightning_night.mp4" },
+    partly_cloudy: { morning: "partly_cloudy_morning.mp4", afternoon: "partly_cloudy_afternoon.mp4", evening: "partly_cloudy_evening.mp4", night: "partly_cloudy_night.mp4" },
+    frosty: { morning: "frosty_morning.mp4", afternoon: "frosty_afternoon.mp4", evening: "frosty_evening.mp4", night: "frosty_night.mp4" },
+    tornado: { morning: "tornado_morning.mp4", afternoon: "tornado_afternoon.mp4", evening: "tornado_evening.mp4", night: "tornado_night.mp4" },
+    hot: { morning: "hot_morning.mp4", afternoon: "hot_afternoon.mp4", evening: "hot_evening.mp4", night: "hot_night.mp4" },
+    cold: { morning: "cold_morning.mp4", afternoon: "cold_afternoon.mp4", evening: "cold_evening.mp4", night: "cold_night.mp4" }
+};
+
+let isLiveThemeActive = false; // Ye check karega ki theme ON hai ya OFF
+
+// ⭐=====================================================⭐
+// ⭐ ADVANCED LIVE THEME DOWNLOAD CONTROLLER (FIXED) ⭐
+// ⭐=====================================================⭐
+const CACHE_NAME = 'live-theme-videos-v1';
+
+let downloadQueue = [];
+let isDownloadPaused = false;
+let currentDownloadIndex = 0;
+let totalFilesCount = 52;
+
+// 1. Queue Builder
+function buildDownloadQueue() {
+    downloadQueue = [];
+    for (let weather in liveWeatherVideos) {
+        for (let time in liveWeatherVideos[weather]) {
+            downloadQueue.push(BASE_VIDEO_URL + liveWeatherVideos[weather][time]);
+        }
+    }
+    totalFilesCount = downloadQueue.length;
+}
+
+// 2. Initial State Load (App Open)
+async function initDownloadState() {
+    buildDownloadQueue();
+    const savedIndex = localStorage.getItem('liveTheme_downloadIndex');
+    const savedPercent = localStorage.getItem('liveTheme_downloadPercent');
+    const isCompleted = localStorage.getItem('liveTheme_downloadComplete');
+
+    const btn = document.getElementById('startDownloadPackBtn');
+    const resetBtn = document.getElementById('resetDownloadPackBtn');
+    const progressBar = document.getElementById('packProgressBar');
+    const percentText = document.getElementById('packPercentText');
+    const statusText = document.getElementById('packStatusText');
+
+    if (isCompleted === 'true') {
+        progressBar.style.width = "100%";
+        percentText.innerText = "100%";
+        statusText.innerText = "Pack Installed Successfully! 🚀";
+        statusText.style.color = "#00ff4d";
+        btn.innerText = "✅ APPLY LIVE THEME";
+        btn.style.background = "#00ff4d";
+        btn.style.color = "#000";
+        btn.onclick = () => activateLiveTheme();
+        resetBtn.style.display = 'block';
+        return;
+    }
+
+    if (savedIndex && parseInt(savedIndex) > 0) {
+        currentDownloadIndex = parseInt(savedIndex);
+        let pct = savedPercent || "0%";
+        progressBar.style.width = pct;
+        percentText.innerText = pct;
+        statusText.innerText = `Paused at ${currentDownloadIndex}/${totalFilesCount}`;
+        btn.innerText = "▶️ RESUME";
+        resetBtn.style.display = 'block';
+    }
+}
+
+// 3. Main Download Loop
+async function startLiveThemeDownload() {
+    if (!navigator.onLine) {
+        window.showToast("Internet connection nahi hai bhai! 🌐");
+        return;
+    }
+
+    isDownloadPaused = false;
+    if (downloadQueue.length === 0) buildDownloadQueue();
+
+    const btn = document.getElementById('startDownloadPackBtn');
+    const pauseBtn = document.getElementById('pauseDownloadPackBtn');
+    const resetBtn = document.getElementById('resetDownloadPackBtn');
+    const progressBar = document.getElementById('packProgressBar');
+    const percentText = document.getElementById('packPercentText');
+    const statusText = document.getElementById('packStatusText');
+
+    // UI INSTANT UPDATE: Hide Download/Resume, Show Pause
+    btn.style.display = 'none';
+    pauseBtn.style.display = 'block';
+    pauseBtn.innerText = "⏸️ PAUSE";
+    resetBtn.style.display = 'block';
+
+    try {
+        const cache = await caches.open(CACHE_NAME);
+
+        while (currentDownloadIndex < totalFilesCount) {
+            // Agar Pause dabaya hai toh turant loop break karo
+            if (isDownloadPaused) {
+                statusText.innerText = `Paused: ${currentDownloadIndex}/${totalFilesCount}`;
+                return; // UI pehle hi pause button ne update kar diya hai
+            }
+
+            if (!navigator.onLine) {
+                isDownloadPaused = true;
+                window.showToast("Net band ho gaya! Pausing...");
+                statusText.innerText = `Connection Lost! Paused.`;
+                pauseBtn.style.display = 'none';
+                btn.style.display = 'block';
+                btn.innerText = "▶️ RESUME";
+                return;
+            }
+
+            const url = downloadQueue[currentDownloadIndex];
+            statusText.innerText = `Downloading Background ${currentDownloadIndex + 1} of ${totalFilesCount}...`;
+            statusText.style.color = "#00ffff";
+
+            const matched = await cache.match(url);
+            if (!matched) {
+                await cache.add(url);
+            }
+
+            // Dhyan rahe, await ke baad agar user ne pause dabaya hai, toh UI disturb na ho
+            if (isDownloadPaused) return; 
+
+            currentDownloadIndex++;
+            let percent = Math.floor((currentDownloadIndex / totalFilesCount) * 100) + "%";
+            progressBar.style.width = percent;
+            percentText.innerText = percent;
+            
+            localStorage.setItem('liveTheme_downloadIndex', currentDownloadIndex);
+            localStorage.setItem('liveTheme_downloadPercent', percent);
+        }
+
+        // Loop finished!
+        localStorage.setItem('liveTheme_downloadComplete', 'true');
+        statusText.innerText = "Pack Installed Successfully! 🚀";
+        statusText.style.color = "#00ff4d";
+        pauseBtn.style.display = 'none';
+        btn.style.display = 'block';
+        btn.innerText = "✅ APPLY LIVE THEME";
+        btn.style.background = "#00ff4d";
+        btn.style.color = "#000";
+        btn.onclick = () => activateLiveTheme();
+
+    } catch (error) {
+        console.error("Download Error:", error);
+        if (!isDownloadPaused) {
+            statusText.innerText = "Download interrupted! Click Resume.";
+            statusText.style.color = "#ff0055";
+            pauseBtn.style.display = 'none';
+            btn.style.display = 'block';
+            btn.innerText = "▶️ RESUME";
+        }
+    }
+}
+
+// 4. INSTANT PAUSE BUTTON LOGIC
+document.getElementById('pauseDownloadPackBtn').onclick = () => {
+    settingClickSound();
+    isDownloadPaused = true; // Is se background loop ruk jayega
+    
+    // UI Ko bina wait kiye INSTANT badal do!
+    document.getElementById('pauseDownloadPackBtn').style.display = 'none';
+    const startBtn = document.getElementById('startDownloadPackBtn');
+    startBtn.style.display = 'block';
+    startBtn.innerText = "▶️ RESUME";
+    document.getElementById('packStatusText').innerText = "Pausing..."; 
+};
+
+// 5. CANCEL / RESET BUTTON LOGIC
+document.getElementById('resetDownloadPackBtn').onclick = () => {
+    menuClickSound();
+    document.getElementById('resetDownloadConfirmModal').style.display = 'flex';
+};
+
+document.getElementById('confirmResetDownloadBtn').onclick = async () => {
+    menuClickSound();
+    document.getElementById('resetDownloadConfirmModal').style.display = 'none';
+    
+    isDownloadPaused = true;
+    currentDownloadIndex = 0;
+    
+    // Purana data saaf karna
+    await caches.delete(CACHE_NAME);
+    localStorage.removeItem('liveTheme_downloadIndex');
+    localStorage.removeItem('liveTheme_downloadPercent');
+    localStorage.removeItem('liveTheme_downloadComplete');
+
+    // UI reset 0%
+    document.getElementById('packProgressBar').style.width = "0%";
+    document.getElementById('packPercentText').innerText = "0%";
+    document.getElementById('packStatusText').innerText = "Ready to Download";
+    document.getElementById('packStatusText').style.color = "#fff";
+    
+    const btn = document.getElementById('startDownloadPackBtn');
+    btn.style.display = 'block';
+    btn.innerText = "⬇️ DOWNLOAD";
+    btn.style.background = "#00ffff"; 
+    btn.style.color = "#000";
+    btn.onclick = () => startLiveThemeDownload();
+    
+    document.getElementById('pauseDownloadPackBtn').style.display = 'none';
+    document.getElementById('resetDownloadPackBtn').style.display = 'none';
+};
+
+// Bind Start Button
+document.getElementById('startDownloadPackBtn').onclick = () => startLiveThemeDownload();
+
+// Initialize on Load
+setTimeout(() => { initDownloadState(); }, 2000);
+
+// ⭐=====================================================⭐
+// ⭐ PHASE 3 & 4: WEATHER BRAIN & CROSS-FADE DIRECTOR  ⭐
+// ⭐=====================================================⭐
+let activeVideoPlayer = 1; 
+
+// 1. WMO Code Mapping (API ke numbers ko apne folder names me badalna)
+function mapWeatherCode(code) {
+    if (code === 0) return 'sunny';
+    if (code === 1 || code === 2) return 'partly_cloudy';
+    if (code === 3) return 'cloudy';
+    if (code === 45 || code === 48) return 'foggy';
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rainy';
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snowy';
+    if (code >= 95 && code <= 99) return 'stormy';
+    return 'cloudy'; // Agar API confuse ho jaye toh fallback
+}
+
+// 2. Time Detection (Phone ki ghadi se bina internet ke)
+function getTimeOfDay() {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 20) return 'evening';
+    return 'night';
+}
+
+// 3. The Seamless Cross-Fade Video Director 🎬
+async function playWeatherVideo(weather, time) {
+    // Agar future mein kisi specific combo ki video missing hui toh galti se crash na ho
+    if(!liveWeatherVideos[weather] || !liveWeatherVideos[weather][time]) {
+        weather = 'cloudy'; // fallback
+    }
+    
+    const videoFileName = liveWeatherVideos[weather][time];
+    const videoUrl = BASE_VIDEO_URL + videoFileName;
+    
+    const player1 = document.getElementById('bgVideoPlayer1');
+    const player2 = document.getElementById('bgVideoPlayer2');
+    
+    // Decide karte hain ki kaunsa player next video play karega
+    const nextPlayer = (activeVideoPlayer === 1) ? player2 : player1;
+    const currentPlayer = (activeVideoPlayer === 1) ? player1 : player2;
+
+    try {
+        // Cache memory se video nikalna (Zero Buffering)
+        const cache = await caches.open(CACHE_NAME);
+        const cachedRes = await cache.match(videoUrl);
+        
+        if (cachedRes) {
+            const blob = await cachedRes.blob();
+            nextPlayer.src = URL.createObjectURL(blob);
+        } else {
+            nextPlayer.src = videoUrl; // Agar memory me na mile toh internet se
+        }
+
+        // Play aur Cross-Fade Magic
+        nextPlayer.play().then(() => {
+            nextPlayer.style.opacity = 1;   // Nayi video Fade-IN
+            currentPlayer.style.opacity = 0; // Purani video Fade-OUT
+            activeVideoPlayer = (activeVideoPlayer === 1) ? 2 : 1; // Tracker Swap
+        }).catch(e => console.log("AutoPlay blocked, waiting for interaction..."));
+
+    } catch(err) { console.log("Video Play Error:", err); }
+}
+
+// 4. THE MASTER TRIGGER (Ye button dabane par chalega)
+window.activateLiveTheme = function() {
+    menuClickSound();
+    document.getElementById('liveThemeModal').style.display = 'none';
+    isLiveThemeActive = true;
+    
+    // UI ke solid backgrounds hata kar transparent karna taaki peeche ki video dikhe
+    document.body.style.background = 'transparent';
+    document.getElementById('lobby').style.background = 'transparent';
+    document.getElementById('game').style.background = 'transparent';
+    document.getElementById('liveThemeVideoContainer').style.display = 'block';
+    
+    window.showToast("Detecting local weather... 🌍");
+
+    // Location Permission & Weather Fetching
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            try {
+                // Free Open-Meteo API Call
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                const data = await res.json();
+                
+                const wmoCode = data.current_weather.weathercode;
+                const weatherCondition = mapWeatherCode(wmoCode);
+                const timeCondition = getTimeOfDay();
+                
+                console.log(`Detected Weather: ${weatherCondition} | Time: ${timeCondition}`);
+                playWeatherVideo(weatherCondition, timeCondition);
+                window.showToast(`Live BG: ${weatherCondition.toUpperCase()} ${timeCondition.toUpperCase()} 🎬`);
+
+            } catch(error) {
+                console.log("Weather API failed, using default.");
+                playWeatherVideo('cloudy', getTimeOfDay());
+            }
+        }, (error) => {
+            // Agar user location 'Block' kar de
+            window.showToast("Location denied. Default weather applied. ☁️");
+            playWeatherVideo('cloudy', getTimeOfDay());
+        });
+    } else {
+        playWeatherVideo('cloudy', getTimeOfDay()); // Agar phone me GPS na ho
+    }
+};
+
+// 5. Lobby Return Refresh Hook (Mausam update karne ke liye)
+// Isko hum apne backLobbyBtn.onclick mein check karenge aage chal kar.
 
 // ⭐ UPDATE PRESENCE HELPER ⭐
 window.updateMyPresence = function(state) {
@@ -1219,6 +1615,13 @@ const settingBtn = document.getElementById('settingBtn'); const themeOptions = d
 settingBtn.onclick = ()=> { settingClickSound(); themeOptions.style.display = themeOptions.style.display==='flex'?'none':'flex'; }
 document.querySelectorAll('#themeOptions .theme-btn').forEach(btn => { btn.onclick = () => { settingClickSound(); const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0]; setTheme(themeName); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; }; });
 document.getElementById('customToggleBtn').onclick = () => { settingClickSound(); const container = document.getElementById('customPickerContainer'); container.style.display = container.style.display === 'flex' ? 'none' : 'flex'; };
+// ⭐ OPEN LIVE THEME MODAL ⭐
+document.getElementById('liveThemeTriggerBtn').onclick = () => { 
+    settingClickSound(); 
+    document.getElementById('liveThemeModal').style.display = 'flex'; 
+    document.getElementById('themeOptions').style.display = 'none'; // Background wala theme menu hide karne ke liye
+};
+
 document.getElementById('applyCustomBtn').onclick = () => { settingClickSound(); const bgColor = document.getElementById('customBgColor').value; const textColor = document.getElementById('customTextColor').value; const customEmoji = document.getElementById('customRainEmoji').value || '✨'; const isRainEnabled = document.getElementById('enableCustomRain').checked; const isNeonEnabled = document.getElementById('enableCustomNeon').checked; setTheme('custom', bgColor, textColor, customEmoji, isRainEnabled, isNeonEnabled); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; };
 let customStyleTag = document.getElementById('customThemeStyle'); if (!customStyleTag) { customStyleTag = document.createElement('style'); customStyleTag.id = 'customThemeStyle'; document.head.appendChild(customStyleTag); }
 
@@ -1370,4 +1773,4 @@ document.getElementById('sendChatBtn').onclick = () => window.sendChat();
 
 </script>
 </body>
-      </html>
+</html>
