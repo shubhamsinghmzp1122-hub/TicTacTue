@@ -1665,7 +1665,13 @@ backLobbyBtn.onclick = async ()=>{
   scoreO = 0; scoreX = 0; isLevelUpMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
   updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
   if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
+  
+  // ⭐ NAYA ADDITION 1: LOBBY RETURN REFRESH ⭐
+  if (isLiveThemeActive) {
+      window.activateLiveTheme();
+  }
 };
+
 
 const settingBtn = document.getElementById('settingBtn'); const themeOptions = document.getElementById('themeOptions');
 settingBtn.onclick = ()=> { settingClickSound(); themeOptions.style.display = themeOptions.style.display==='flex'?'none':'flex'; }
@@ -1831,6 +1837,37 @@ const chatInputBox = document.getElementById('chatInput');
 if(chatInputBox) { chatInputBox.addEventListener("keypress", function(event) { if (event.key === "Enter") { event.preventDefault(); window.sendChat(); } }); }
 document.getElementById('sendChatBtn').onclick = () => window.sendChat();
 
+// ⭐ NAYA ADDITION 2: SILENT AUTO-WEATHER REFRESHER (Har 15 Minute Mein) ⭐
+setInterval(() => {
+    if (isLiveThemeActive) {
+        console.log("Background Check: Time & Weather update ho raha hai...");
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                try {
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                    const data = await res.json();
+                    
+                    const wmoCode = data.current_weather.weathercode;
+                    const weatherCondition = mapWeatherCode(wmoCode); 
+                    const timeCondition = getTimeOfDay(); 
+                    
+                    // Chup-chaap nayi video chala do bina kisi Toast ya Popup ke
+                    playWeatherVideo(weatherCondition, timeCondition);
+                } catch(error) {
+                    playWeatherVideo('cloudy', getTimeOfDay());
+                }
+            }, (error) => {
+                playWeatherVideo('cloudy', getTimeOfDay());
+            });
+        } else {
+            playWeatherVideo('cloudy', getTimeOfDay());
+        }
+    }
+}, 15 * 60 * 1000); // 15 Minute (900,000 milliseconds)
+
 </script>
 </body>
-  </html>
+      </html>
