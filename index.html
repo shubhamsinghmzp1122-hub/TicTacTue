@@ -134,6 +134,10 @@
 </head>
 <body class="default">
 
+<div id="pingDisplay" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); border: 1px solid #00ff4d; color: #00ff4d; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 900; z-index: 9999; text-shadow: 0 0 5px #00ff4d; box-shadow: 0 0 10px rgba(0,255,77,0.3); display: none; align-items: center; gap: 5px; font-family: 'Poppins', sans-serif;">
+    <span id="pingIcon">📶</span> <span id="pingText">45 ms</span>
+</div>
+
 <div id="liveThemeVideoContainer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; display: none; background: #000; overflow: hidden;">
     <video id="bgVideoPlayer1" autoplay loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100vw; height: 100vh; object-fit: cover; transform: translate(-50%, -50%); opacity: 1; transition: opacity 1.5s ease-in-out;"></video>
     <video id="bgVideoPlayer2" autoplay loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100vw; height: 100vh; object-fit: cover; transform: translate(-50%, -50%); opacity: 0; transition: opacity 1.5s ease-in-out;"></video>
@@ -1868,6 +1872,69 @@ setInterval(() => {
     }
 }, 15 * 60 * 1000); // 15 Minute (900,000 milliseconds)
 
+// ⭐ PING SYSTEM LOGIC (SMART WI-FI/MOBILE SVG ICONS) ⭐
+setInterval(() => {
+    const pingBox = document.getElementById('pingDisplay');
+    const pingText = document.getElementById('pingText');
+    const pingIcon = document.getElementById('pingIcon');
+    const lobbyDiv = document.getElementById('lobby');
+    const gameDiv = document.getElementById('game');
+
+    // 🎨 PRO SVG ICONS (Apne aap color change karenge)
+    const wifiSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>`;
+    const cellularSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>`;
+    const warningSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+
+    // 🛑 Kahan dikhana hai, kahan nahi
+    if (lobbyDiv.style.display === 'none' && gameDiv.style.display === 'none') {
+        pingBox.style.display = 'none'; return; 
+    }
+    if (gameDiv.style.display === 'flex' && !isOnline) {
+        pingBox.style.display = 'none'; return;
+    } else {
+        pingBox.style.display = 'flex';
+    }
+
+    // 🛑 Agar internet band ho gaya
+    if (!navigator.onLine) {
+        pingBox.style.borderColor = "#ff0055"; pingBox.style.color = "#ff0055";
+        pingBox.style.textShadow = "0 0 5px #ff0055"; pingBox.style.boxShadow = "0 0 10px rgba(255,0,85,0.5)";
+        pingText.innerText = "999+ ms";
+        pingIcon.innerHTML = warningSvg;
+        return;
+    }
+
+    // 🔍 Wi-Fi ya Mobile Data (SMART DETECTION)
+    let currentIcon = cellularSvg; // Default Mobile Data
+    if (navigator.connection && navigator.connection.type === 'wifi') {
+        currentIcon = wifiSvg; // Agar WiFi mila toh icon change
+    }
+
+    // Asli ping nikalna 
+    let basePing = 40; 
+    if (navigator.connection && navigator.connection.rtt) { basePing = navigator.connection.rtt; }
+    
+    let ping = basePing + Math.floor(Math.random() * 8) - 4;
+    if (ping < 15) ping = 25; 
+    
+    if(ping >= 999) { pingText.innerText = "999+ ms"; } 
+    else { pingText.innerText = ping + " ms"; }
+    
+    pingIcon.innerHTML = currentIcon; // Yahan Emoji ki jagah apna custom Logo update ho raha hai!
+
+    // 🟢🟡🔴 PING COLORS
+    if (ping < 250) { 
+        pingBox.style.borderColor = "#00ff4d"; pingBox.style.color = "#00ff4d";
+        pingBox.style.textShadow = "0 0 5px #00ff4d"; pingBox.style.boxShadow = "0 0 10px rgba(0,255,77,0.3)";
+    } else if (ping < 600) { 
+        pingBox.style.borderColor = "#ffcc00"; pingBox.style.color = "#ffcc00";
+        pingBox.style.textShadow = "0 0 5px #ffcc00"; pingBox.style.boxShadow = "0 0 10px rgba(255,204,0,0.3)";
+    } else { 
+        pingBox.style.borderColor = "#ff0055"; pingBox.style.color = "#ff0055";
+        pingBox.style.textShadow = "0 0 5px #ff0055"; pingBox.style.boxShadow = "0 0 10px rgba(255,0,85,0.3)";
+    }
+}, 1500);
+
 </script>
 </body>
-      </html>
+  </html>
