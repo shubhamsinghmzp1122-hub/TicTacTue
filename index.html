@@ -799,13 +799,19 @@ async function playWeatherVideo(weather, time) {
     } catch(err) { console.log("Video Play Error:", err); }
 }
 
-// 4. THE MASTER TRIGGER (Ye button dabane par chalega)
+// 4. THE MASTER TRIGGER
 window.activateLiveTheme = function() {
     menuClickSound();
     document.getElementById('liveThemeModal').style.display = 'none';
+    
+    // 🛑 FIX: Live Theme start hone se pehle baaki theme ki baarish/rang hata do
+    setTheme('default');
+    
     isLiveThemeActive = true;
     
-    // UI ke solid backgrounds hata kar transparent karna taaki peeche ki video dikhe
+    // 🛑 FIX: Button ka naam update kar diya taaki apply hat jaye
+    document.getElementById('startDownloadPackBtn').innerText = "✅ LIVE THEME ACTIVE";
+    
     document.body.style.background = 'transparent';
     document.getElementById('lobby').style.background = 'transparent';
     document.getElementById('game').style.background = 'transparent';
@@ -813,36 +819,29 @@ window.activateLiveTheme = function() {
     
     window.showToast("Detecting local weather... 🌍");
 
-    // Location Permission & Weather Fetching
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            
             try {
-                // Free Open-Meteo API Call
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
                 const data = await res.json();
                 
                 const wmoCode = data.current_weather.weathercode;
-                const weatherCondition = mapWeatherCode(wmoCode);
-                const timeCondition = getTimeOfDay();
+                const weatherCondition = mapWeatherCode(wmoCode); // Map Code
+                const timeCondition = getTimeOfDay(); // Map Time
                 
-                console.log(`Detected Weather: ${weatherCondition} | Time: ${timeCondition}`);
                 playWeatherVideo(weatherCondition, timeCondition);
                 window.showToast(`Live BG: ${weatherCondition.toUpperCase()} ${timeCondition.toUpperCase()} 🎬`);
-
             } catch(error) {
-                console.log("Weather API failed, using default.");
                 playWeatherVideo('cloudy', getTimeOfDay());
             }
         }, (error) => {
-            // Agar user location 'Block' kar de
             window.showToast("Location denied. Default weather applied. ☁️");
             playWeatherVideo('cloudy', getTimeOfDay());
         });
     } else {
-        playWeatherVideo('cloudy', getTimeOfDay()); // Agar phone me GPS na ho
+        playWeatherVideo('cloudy', getTimeOfDay());
     }
 };
 
@@ -1439,9 +1438,66 @@ window.loadMyFriends = async function() {
         });
     } catch(e) { friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px; order: 0;'>Error loading ❌</p>"; console.log("Friend Fetch Error: ", e); }
 };
-
+// ⭐ FRIEND LIST SE PLAYER CARD OPEN KARNE KA FUNCTION (FIXED) ⭐
 let isCardOpenedFromFriendList = false; 
-window.viewPlayerCard = async (uid, fromFriendList = false) => { /* Exists above */ };
+window.viewPlayerCard = async (uid, fromFriendList = false) => {
+    menuClickSound();
+    try {
+        // 🔥 ASLI FIX YAHAN HAI: Firebase mein ab sahi ID se dost ko dhoondhega
+        const q = query(collection(db, "users"), where("gameUID", "==", uid)); 
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const pData = querySnapshot.docs[0].data();
+            let pLevel = pData.level || 1;
+            
+            document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST"; 
+            document.getElementById('searchUidDisplay').innerText = pData.gameUID; 
+            document.getElementById('searchLevelDisplay').innerText = pLevel; 
+            document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
+            currentSearchedUID = pData.gameUID; 
+            
+            const reqBtn = document.getElementById('sendRequestBtn'); 
+            const rmvBtn = document.getElementById('removeFriendBtnCard');
+            
+            if (fromFriendList) {
+                reqBtn.style.display = 'none'; 
+                rmvBtn.style.display = 'block'; 
+                rmvBtn.onclick = () => showRemoveConfirm(currentSearchedUID, pData.playerName || "GUEST");
+                isCardOpenedFromFriendList = true;
+            } else {
+                isCardOpenedFromFriendList = false;
+                reqBtn.innerText = "➕ SEND REQUEST"; 
+                reqBtn.style.display = 'block'; 
+                rmvBtn.style.display = 'none'; 
+            }
+
+            // Badge Update Logic
+            let rName="", rColor="", rSvg="";
+            if (pLevel < 10) { rName="NOVICE"; rColor="#a0a0a0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 20) { rName="FIGHTER"; rColor="#cd7f32"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 30) { rName="WARRIOR"; rColor="#c0c0c0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="25" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 40) { rName="ELITE"; rColor="#ffd700"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,50 50,75 25,50" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 50) { rName="MASTER"; rColor="#00ffff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><path d="M50 5 L85 25 L85 75 L50 95 L15 75 L15 25 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,25 70,40 60,65 40,65 30,40" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 60) { rName="GRANDMASTER"; rColor="#ff00ff"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,5 65,35 95,40 70,60 80,90 50,75 20,90 30,60 5,40 35,35" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 58,40 75,45 60,55 65,70 50,60 35,70 40,55 25,45 42,40" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 70) { rName="EPIC"; rColor="#ff0055"; rSvg=`<svg width="85" height="85" viewBox="0 0 100 100"><path d="M10 20 L50 5 L90 20 L90 60 L50 95 L10 60 Z" fill="none" stroke="${rColor}" stroke-width="8"/><path d="M30 35 L50 20 L70 35 L70 55 L50 70 L30 55 Z" fill="${rColor}"/></svg>`; }
+            else if (pLevel < 80) { rName="MYTHIC"; rColor="#8a2be2"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><polygon points="50,5 95,30 75,90 25,90 5,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,25 75,45 65,75 35,75 25,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#fff"/></svg>`; }
+            else if (pLevel < 90) { rName="LEGEND"; rColor="#ff4500"; rSvg=`<svg width="90" height="90" viewBox="0 0 100 100"><path d="M50 0 L100 40 L75 100 L25 100 L0 40 Z" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 80,50 65,85 35,85 20,50" fill="${rColor}"/><polygon points="50,40 60,55 50,70 40,55" fill="#fff"/></svg>`; }
+            else if (pLevel < 100) { rName="SUPREME"; rColor="#ffffff"; rSvg=`<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
+            else { rName="IMMORTAL"; rColor="#ff2a2a"; rSvg=`<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
+
+            const sBadge = document.getElementById('searchBadgeDisplay'); sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
+            const sIcon = document.getElementById('searchMainIcon'); sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
+            
+            // Sab data set hone ke baad modal khol do
+            document.getElementById('friendsModal').style.display = 'none'; // Background me friend list band karo
+            document.getElementById('searchedProfileModal').style.display = 'flex';
+        } else {
+            console.log("User nahi mila database mein!");
+        }
+    } catch(e) { console.log(e); }
+};
+
 let uidToRemove = "";
 window.showRemoveConfirm = (uid, friendName) => { menuClickSound(); uidToRemove = uid; document.getElementById('confirmFriendName').innerText = friendName; document.getElementById('customConfirmModal').style.display = 'flex'; };
 document.getElementById('confirmYesBtn').onclick = async () => {
@@ -1626,6 +1682,10 @@ document.getElementById('applyCustomBtn').onclick = () => { settingClickSound();
 let customStyleTag = document.getElementById('customThemeStyle'); if (!customStyleTag) { customStyleTag = document.createElement('style'); customStyleTag.id = 'customThemeStyle'; document.head.appendChild(customStyleTag); }
 
 function setTheme(t, bgColor = '', textColor = '', customEmoji = '', isRainEnabled = false, isNeonEnabled = false){
+  // 🛑 FIX: Jab naya theme select ho, toh Live Theme Video hide kar do!
+  document.getElementById('liveThemeVideoContainer').style.display = 'none';
+  isLiveThemeActive = false;
+
   currentTheme = t; document.body.className = t; lobby.className = 'lobby ' + t; gameDiv.className = 'game-board ' + t; 
   if (t === 'custom') {
       let customShadow = isNeonEnabled ? `2px 2px 5px rgba(0,0,0,0.9), 0 0 15px ${textColor}` : `2px 2px 5px rgba(0,0,0,0.9)`; let neonBox = isNeonEnabled ? `0 0 10px ${textColor}` : `none`; let hoverGlow = isNeonEnabled ? `0 0 20px ${textColor}` : `none`; let heavyGlow = isNeonEnabled ? `0 0 15px ${textColor}` : `none`;
@@ -1773,4 +1833,4 @@ document.getElementById('sendChatBtn').onclick = () => window.sendChat();
 
 </script>
 </body>
-              </html>
+  </html>
