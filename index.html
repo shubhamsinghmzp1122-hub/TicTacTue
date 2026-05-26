@@ -167,6 +167,9 @@
     <button id="customToggleBtn">✨ Custom Color & Rain 🎨</button>
     <button id="liveThemeTriggerBtn" class="theme-btn" style="background: linear-gradient(90deg, #ff00ff, #00ffff) !important; color: #000 !important; font-weight: 900; margin-top: 15px !important; border: 2px solid #fff !important; box-shadow: 0 0 15px #00ffff; text-transform: uppercase; letter-spacing: 2px; animation: customBtnPulse 1.5s infinite alternate; width: 100%;">✨ LIVE BG (VIP)</button>
 
+    <button id="personalThemeBtn" class="theme-btn" style="background: linear-gradient(90deg, #ff8c00, #ff0080) !important; color: #fff !important; font-weight: bold; margin-top: 10px; width: 100%; box-shadow: 0 0 10px #ff8c00;">✨ PERSONAL THEME</button>
+    <input type="file" id="personalThemeInput" accept="image/*, video/mp4, video/webm" style="display:none;">
+
     <div id="customPickerContainer" style="display:none; flex-direction:column; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #00ffff;">
         <label class="custom-label">BG Color: <input type="color" id="customBgColor" value="#1a1a2e" style="width:30px; height:30px; padding:0; border:none; border-radius:5px; cursor:pointer;"></label>
         <label class="custom-label">Text Color: <input type="color" id="customTextColor" value="#00ffcc" style="width:30px; height:30px; padding:0; border:none; border-radius:5px; cursor:pointer;"></label>
@@ -1702,10 +1705,133 @@ document.getElementById('liveThemeTriggerBtn').onclick = () => {
 document.getElementById('applyCustomBtn').onclick = () => { settingClickSound(); const bgColor = document.getElementById('customBgColor').value; const textColor = document.getElementById('customTextColor').value; const customEmoji = document.getElementById('customRainEmoji').value || '✨'; const isRainEnabled = document.getElementById('enableCustomRain').checked; const isNeonEnabled = document.getElementById('enableCustomNeon').checked; setTheme('custom', bgColor, textColor, customEmoji, isRainEnabled, isNeonEnabled); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; };
 let customStyleTag = document.getElementById('customThemeStyle'); if (!customStyleTag) { customStyleTag = document.createElement('style'); customStyleTag.id = 'customThemeStyle'; document.head.appendChild(customStyleTag); }
 
+// ⭐ PERSONAL THEME LOGIC (PHOTO / VIDEO PROCESSOR) ⭐
+window.personalThemeBlobUrl = null;
+
+document.getElementById('personalThemeBtn').onclick = () => {
+    settingClickSound();
+    document.getElementById('personalThemeInput').click(); 
+};
+
+document.getElementById('personalThemeInput').onchange = (e) => {
+    const files = e.target.files;
+    if (files.length === 0) return;
+    const file = files[0]; // Sirf 1 file chahiye
+
+    // 🛑 Size limit check (Max 30MB) - Game crash hone se bachayega
+    const maxSizeInBytes = 30 * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
+        window.showToast("❌ File size bahut badi hai! 30MB se kam rakho bhai.");
+        document.getElementById('personalThemeInput').value = '';
+        return;
+    }
+
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+
+    if (!isImage && !isVideo) {
+        window.showToast("❌ Sirf Photo ya Video allow hai bhai!");
+        document.getElementById('personalThemeInput').value = '';
+        return;
+    }
+
+    window.showToast(`✅ Loading Personal Theme...`);
+    document.getElementById('themeOptions').style.display = 'none';
+    
+    applyPersonalTheme(file, isImage, isVideo);
+    document.getElementById('personalThemeInput').value = '';
+};
+
+function applyPersonalTheme(file, isImage, isVideo) {
+    setTheme('personal'); // Purana sab kuch clear karne ke liye
+    
+    document.getElementById('lobby').style.background = 'transparent';
+    document.getElementById('game').style.background = 'transparent';
+
+    if (window.personalThemeBlobUrl) {
+        URL.revokeObjectURL(window.personalThemeBlobUrl);
+    }
+    window.personalThemeBlobUrl = URL.createObjectURL(file);
+
+    if (isImage) {
+        // 🖼️ PHOTO LOGIC (Bina Loop)
+        document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), url('${window.personalThemeBlobUrl}')`;
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundPosition = "center";
+        document.body.style.backgroundAttachment = "fixed";
+        document.body.style.transition = "background-image 0.5s ease-in-out";
+    } else if (isVideo) {
+        // 🎞️ VIDEO LOGIC (Auto Loop, Muted, 75% Dark Overlay)
+        document.body.style.backgroundImage = "none"; 
+        
+        let videoContainer = document.getElementById('personalVideoContainer');
+        if (!videoContainer) {
+            // Javascript se naya player banana
+            videoContainer = document.createElement('div');
+            videoContainer.id = 'personalVideoContainer';
+            videoContainer.style.position = 'fixed';
+            videoContainer.style.top = '0';
+            videoContainer.style.left = '0';
+            videoContainer.style.width = '100vw';
+            videoContainer.style.height = '100vh';
+            videoContainer.style.zIndex = '-1'; // Sabse peeche
+            videoContainer.style.background = '#000';
+            
+            const videoEl = document.createElement('video');
+            videoEl.id = 'personalVideoPlayer';
+            videoEl.autoplay = true;
+            videoEl.loop = true;
+            videoEl.muted = true; // Aawaz hamesha band
+            videoEl.playsInline = true;
+            videoEl.style.width = '100%';
+            videoEl.style.height = '100%';
+            videoEl.style.objectFit = 'cover';
+            
+            const darkOverlay = document.createElement('div');
+            darkOverlay.style.position = 'absolute';
+            darkOverlay.style.top = '0';
+            darkOverlay.style.left = '0';
+            darkOverlay.style.width = '100%';
+            darkOverlay.style.height = '100%';
+            darkOverlay.style.background = 'rgba(0,0,0,0.75)'; // 75% Kala Sheesha
+            
+            videoContainer.appendChild(videoEl);
+            videoContainer.appendChild(darkOverlay);
+            document.body.appendChild(videoContainer);
+        }
+        
+        document.getElementById('personalVideoContainer').style.display = 'block';
+        const player = document.getElementById('personalVideoPlayer');
+        player.src = window.personalThemeBlobUrl;
+        player.play().catch(e => console.log("Video auto-play blocked"));
+    }
+}
+
 function setTheme(t, bgColor = '', textColor = '', customEmoji = '', isRainEnabled = false, isNeonEnabled = false){
   // 🛑 FIX: Jab naya theme select ho, toh Live Theme Video hide kar do!
   document.getElementById('liveThemeVideoContainer').style.display = 'none';
   isLiveThemeActive = false;
+
+  // 🛑 FIX: Agar koi aur theme laga, toh Personal Theme (Photo/Video) ko clear kar do
+  if (t !== 'personal') {
+      if (window.personalThemeBlobUrl) {
+          URL.revokeObjectURL(window.personalThemeBlobUrl);
+          window.personalThemeBlobUrl = null;
+      }
+      document.body.style.backgroundImage = "none";
+      
+      // Video chal rahi ho toh band karna
+      const pvContainer = document.getElementById('personalVideoContainer');
+      if (pvContainer) {
+          const pPlayer = document.getElementById('personalVideoPlayer');
+          if (pPlayer) { pPlayer.pause(); pPlayer.src = ""; }
+          pvContainer.style.display = 'none';
+      }
+
+      // Lobby aur Game ke background ko wapas theek karna
+      document.getElementById('lobby').style.background = ""; 
+      document.getElementById('game').style.background = "";
+  }
 
   currentTheme = t; document.body.className = t; lobby.className = 'lobby ' + t; gameDiv.className = 'game-board ' + t; 
   if (t === 'custom') {
