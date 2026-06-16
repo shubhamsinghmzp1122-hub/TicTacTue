@@ -78,6 +78,8 @@
   <button class="btn" id="levelUpMode">LEVEL UP MODE</button> 
   <button class="btn" id="multi">LOCAL MULTI PLAYER</button>
 
+  <button class="btn" id="ultimateMultiBtn" style="background: linear-gradient(90deg, #ff0055, #8a2be2) !important; box-shadow: 0 0 15px #ff0055;">✨ ULTIMATE LOCAL</button>
+
   <div id="liveOnlineText" style="margin: 15px 0 5px; font-size: 14px; letter-spacing: 2px;">⚡ LIVE ONLINE ⚡</div>
 
   <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
@@ -137,11 +139,17 @@
   <button id="backLobbyBtn">BACK TO LOBBY</button>
   <h1 id="modeTitle"></h1>
   <button id="resetModeScoreBtn">RESET ALL PROGRESS</button>
+  
   <div class="scoreboard" id="scoreboard"></div>
   <div class="board" id="board"><div class="winning-line" id="winning-line"></div></div>
+  <div class="ultimate-board" id="ultimateBoard" style="display:none;">
+    <div class="winning-line" id="ultimate-winning-line"></div>
+</div>
+
 </div>
 
 <div class="popup" id="popup">
+
   <div id="winnerText"></div>
   <button id="playAgainBtn" onclick="resetGame()">Play Again</button>
 </div>
@@ -378,4 +386,4 @@
 
 <script type="module" src="game.js"></script>
 </body>
-  </html>
+</html>
