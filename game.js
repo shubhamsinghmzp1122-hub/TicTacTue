@@ -505,6 +505,10 @@ function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24);
 const lobby = document.getElementById('lobby'); const difficultyDiv = document.getElementById('difficulty'); const boardDiv = document.getElementById('board'); const gameDiv = document.getElementById('game'); const popup = document.getElementById('popup'); const winnerText = document.getElementById('winnerText'); const modeTitle = document.getElementById('modeTitle'); const winningLine = document.getElementById('winning-line'); const scoreboard = document.getElementById('scoreboard'); const backLobbyBtn = document.getElementById('backLobbyBtn'); const rainContainer = document.getElementById('rain-container'); const moon = document.getElementById('moon'); const sun = document.getElementById('sun'); const starContainer = document.getElementById('star-container'); const loadingOverlay = document.getElementById('loading-overlay'); const loadingBarFill = document.getElementById('loading-bar-fill'); const loadingPercentage = document.getElementById('loading-percentage'); const levelContainer = document.getElementById('level-system-container'); const levelInfoText = document.getElementById('level-info-text'); const levelProgressFill = document.getElementById('level-progress-fill'); const splashOverlay = document.getElementById('splash-overlay'); const splashLogo = document.querySelector('.splash-logo'); const particleContainer = document.getElementById('particle-container'); const lightStreak = document.querySelector('.light-streak');
 const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION = 5000; const UPDATE_INTERVAL = 50; 
 let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = false; let aiLevel = "easy"; let winningCombo = []; let scoreO = 0; let scoreX = 0; let currentTheme = 'default';
+
+let isUltimateMode = false; let ultimateStartingTurn = 'O'; 
+let ultimateActiveBoardIndex = -1; let largeBoardState = []; let smallBoardsState = [];
+
 let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
 
 function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
@@ -641,6 +645,14 @@ function handleDraw() {
 
 window.resetGame = async function(){
   tapSound();
+    if (isUltimateMode) {
+      popup.style.display='none'; 
+      ultimateStartingTurn = (ultimateStartingTurn === 'O') ? 'X' : 'O'; // Turn palti
+      initUltimateGame(true);
+      updateScoreboard();
+      return; 
+  }
+
   if (isOnline) {
       popup.style.display='none';
       let nextStarter = window.startingTurn === 'O' ? 'X' : 'O';
@@ -781,7 +793,20 @@ function startGame(selectedMode){
   if (isLevelUpMode) { modeTitle.innerHTML = 'LEVEL UP MODE'; } else { modeTitle.innerHTML = selectedMode; }
   document.getElementById('resetModeScoreBtn').style.display = 'none'; updateLevelSystemInLobby(); 
   isLevelUpMode = (selectedMode.includes("LEVEL UP MODE")); if (isLevelUpMode) levelUpMatchCount = 0; 
-  drawBoard(); updateScoreboard(); moon.style.display = 'none'; sun.style.display = 'none';
+    
+        if (isUltimateMode) {
+      document.getElementById('board').style.display = 'none';
+      document.getElementById('ultimateBoard').style.display = 'grid';
+      ultimateStartingTurn = 'X'; // Ye game reset hone se pehle 'X' banega, taaki palti hoke 'O' se start ho
+  } else {
+
+          document.getElementById('ultimateBoard').style.display = 'none';
+      document.getElementById('board').style.display = 'grid';
+      drawBoard();
+  }
+  updateScoreboard(); 
+  moon.style.display = 'none'; 
+  sun.style.display = 'none';
   
   updateMyPresence('busy');
 
@@ -831,6 +856,11 @@ document.getElementById('profileBtn').onclick = () => {
     const badgeDisplay = document.getElementById('profileBadgeDisplay'); badgeDisplay.innerHTML = rName; badgeDisplay.style.color = rColor; badgeDisplay.style.textShadow = `0 0 15px ${rColor}`;
     const mainIcon = document.getElementById('profileMainIcon'); mainIcon.innerHTML = rSvg; mainIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
     document.getElementById('profileModal').style.display = 'flex';
+};
+
+document.getElementById("ultimateMultiBtn").onclick = ()=>{ 
+    menuClickSound(); vsAI = false; isLevelUpMode = false; isUltimateMode = true; 
+    startGame('ULTIMATE LOCAL MATCH'); 
 };
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
@@ -1180,7 +1210,8 @@ backLobbyBtn.onclick = async ()=>{
       document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
       document.getElementById('videoContainer').style.display='none'; document.getElementById('localVideo').srcObject = null; document.getElementById('remoteVideo').srcObject = null;
   }
-  scoreO = 0; scoreX = 0; isLevelUpMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
+    scoreO = 0; scoreX = 0; isLevelUpMode = false; isUltimateMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; document.getElementById('ultimateBoard').style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
+    
   updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
   if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
   
@@ -1653,4 +1684,151 @@ if ('getBattery' in navigator) {
         battery.addEventListener('levelchange', updateBatteryUI);
         battery.addEventListener('chargingchange', updateBatteryUI);
     });
+}
+
+// ⭐ ULTIMATE TIC-TAC-TOE JAVASCRIPT LOGIC ⭐
+function initUltimateGame(isReset = false) {
+    if(!isReset) ultimateStartingTurn = 'O'; 
+    currentPlayer = ultimateStartingTurn;
+    ultimateActiveBoardIndex = -1;
+    largeBoardState = Array(9).fill('');
+    smallBoardsState = Array(9).fill(null).map(() => Array(9).fill(''));
+    
+    // Purani line chhupane ke liye
+    const ultLine = document.getElementById('ultimate-winning-line');
+    if(ultLine) ultLine.style.display = 'none';
+    
+    renderUltimateBoard();
+}
+function renderUltimateBoard() {
+    const mainBoard = document.getElementById('ultimateBoard');
+    // 👇 YAHAN CHANGE HAI - Pura khali karne ki jagah line ko wapas zinda kar rahe hain!
+    mainBoard.innerHTML = '<div class="winning-line" id="ultimate-winning-line" style="display:none;"></div>';
+    
+    for (let l = 0; l < 9; l++) {
+
+        const largeCell = document.createElement('div');
+        largeCell.className = `large-cell ${largeBoardState[l] === '' && (ultimateActiveBoardIndex === -1 || ultimateActiveBoardIndex === l) ? 'active-target' : ''}`;
+        if(largeBoardState[l] === 'O') largeCell.classList.add('won-o');
+        else if(largeBoardState[l] === 'X') largeCell.classList.add('won-x');
+        else if(largeBoardState[l] === 'draw') largeCell.classList.add('won-draw');
+        largeCell.id = `large-${l}`;
+
+        const smallBoard = document.createElement('div');
+        smallBoard.className = 'small-board';
+
+        for (let s = 0; s < 9; s++) {
+            const smallCell = document.createElement('div');
+            smallCell.className = 'small-cell';
+            if(smallBoardsState[l][s] !== '') {
+                smallCell.textContent = smallBoardsState[l][s];
+                smallCell.classList.add(smallBoardsState[l][s] === 'O' ? 'player-o' : 'player-x');
+                
+                // Theme Logic Applier
+                if(currentTheme !== 'custom') {
+                    smallCell.style.color = smallBoardsState[l][s] === 'O' ? '#00ffff' : '#ff00ff';
+                    smallCell.style.textShadow = smallBoardsState[l][s] === 'O' ? '0 0 5px #00ffff' : '0 0 5px #ff00ff';
+                }
+            }
+            smallCell.onclick = () => handleUltimateMove(l, s);
+            smallBoard.appendChild(smallCell);
+        }
+        largeCell.appendChild(smallBoard);
+        mainBoard.appendChild(largeCell);
+    }
+}
+
+function handleUltimateMove(largeIdx, smallIdx) {
+    if(checkSectionWinner(largeBoardState, 'O') || checkSectionWinner(largeBoardState, 'X')) return; 
+    if (ultimateActiveBoardIndex !== -1 && largeIdx !== ultimateActiveBoardIndex) return; 
+    if (largeBoardState[largeIdx] !== '') return; 
+    if (smallBoardsState[largeIdx][smallIdx] !== '') return; 
+
+    // Play Sound
+    if(currentPlayer === 'O') tapSound(); else aiMoveSound();
+
+    smallBoardsState[largeIdx][smallIdx] = currentPlayer;
+    
+    // Check agar Chota Board Jeet Gaya
+    if (checkSectionWinner(smallBoardsState[largeIdx], currentPlayer)) {
+        largeBoardState[largeIdx] = currentPlayer;
+        if(currentPlayer === 'O') winOSound(); else winXSound();
+        
+        // Check agar Pura Bada Game Jeet Gaya
+        const winCombo = getUltimateWinningCombo(largeBoardState, currentPlayer);
+        if (winCombo) {
+            renderUltimateBoard();
+            drawUltimateWinningLine(winCombo); // ⚡ LINE DRAW HOGI ⚡
+            setTimeout(() => {
+                handleWin(currentPlayer); 
+            }, 600); // Popup aane se pehle 0.6 sec ka delay taaki line dikhe
+            return;
+        }
+    } else if (smallBoardsState[largeIdx].every(cell => cell !== '')) {
+
+        largeBoardState[largeIdx] = 'draw';
+    }
+
+    // Check agar Game Draw Ho Gaya
+    if (largeBoardState.every(cell => cell !== '') && !checkSectionWinner(largeBoardState, 'O') && !checkSectionWinner(largeBoardState, 'X')) {
+        renderUltimateBoard();
+        handleDraw(); // Real draw popup
+        return;
+    }
+
+    // Agla Target Board Set Karo
+    if (largeBoardState[smallIdx] !== '') {
+        ultimateActiveBoardIndex = -1; // FREE MOVE (Neon Glow on all remaining)
+    } else {
+        ultimateActiveBoardIndex = smallIdx; // Lock target
+    }
+
+    // Turn Palti karo
+    currentPlayer = (currentPlayer === 'O') ? 'X' : 'O';
+    renderUltimateBoard();
+    updateScoreboard();
+}
+
+function checkSectionWinner(boardArr, player) {
+    const winCombos = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return winCombos.some(([a, b, c]) => boardArr[a] === player && boardArr[b] === player && boardArr[c] === player);
+}
+
+// Ye check karega ki kaun si line match hui
+function getUltimateWinningCombo(boardArr, player) {
+    const winCombos = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for (let combo of winCombos) {
+        if (boardArr[combo[0]] === player && boardArr[combo[1]] === player && boardArr[combo[2]] === player) return combo;
+    }
+    return null;
+}
+
+// Ye BADE board par Neon Line draw karega
+function drawUltimateWinningLine(combo) {
+    if(!combo || combo.length !== 3) return;
+    const ultBoard = document.getElementById('ultimateBoard');
+    let line = document.getElementById('ultimate-winning-line');
+    
+    const cells = Array.from(ultBoard.querySelectorAll('.large-cell'));
+    const first = cells[combo[0]], last = cells[combo[2]];
+    const boardRect = ultBoard.getBoundingClientRect();
+    const r1 = first.getBoundingClientRect(), r2 = last.getBoundingClientRect();
+    
+    const x1 = r1.left + r1.width/2 - boardRect.left, y1 = r1.top + r1.height/2 - boardRect.top;
+    const x2 = r2.left + r2.width/2 - boardRect.left, y2 = r2.top + r2.height/2 - boardRect.top;
+    const dx = x2 - x1, dy = y2 - y1;
+    const length = Math.sqrt(dx*dx + dy*dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    
+    line.style.width = (length + 40) + 'px';
+    line.style.height = '12px';
+    line.style.left = (mx - (length + 40)/2) + 'px';
+    line.style.top = (my - 6) + 'px';
+    line.style.transform = `rotate(${angle}deg)`;
+    line.style.display = 'block';
+    line.style.zIndex = '25';
+    // O aur X ke hisaab se line ka color aur glow badlega
+    line.style.boxShadow = currentPlayer === 'O' ? '0 0 20px #00ffff, 0 0 40px #00ffff' : '0 0 20px #ff00ff, 0 0 40px #ff00ff';
+    line.style.background = currentPlayer === 'O' ? '#00ffff' : '#ff00ff';
 }
