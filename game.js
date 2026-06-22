@@ -509,7 +509,16 @@ let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = fa
 let isUltimateMode = false; let ultimateStartingTurn = 'O'; 
 let ultimateActiveBoardIndex = -1; let largeBoardState = []; let smallBoardsState = [];
 
-let isLevelUpMode = false; let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
+let isLevelUpMode = false;
+let isBlitzMode = false;
+let blitzTimeLeft = 3000;
+let blitzInterval = null;
+const BLITZ_MAX = 3000;
+let lastForcedIndex = -1;
+let offlineStartingTurn = 'O';
+let isFirstMatch = true;
+
+let levelUpMatchCount = 0; let playerLevel = 1; let currentExp = 0; let expToNextLevel = 10; let totalMatchesWon = 0; const BASE_EXP_REQ = 10; let playerName = "GUEST";
 
 function loadGameData() { const data = localStorage.getItem('tictactoe_player_data'); if (data) { const loadedData = JSON.parse(data); playerLevel = loadedData.level || 1; currentExp = loadedData.exp || 0; totalMatchesWon = loadedData.matchesWon || 0; playerName = loadedData.name || "GUEST"; calculateNextLevelRequirement(); } else { saveGameData(); } updateLevelDisplay(); }
 
@@ -530,7 +539,7 @@ function updateLevelDisplay() { if (levelInfoText) { levelInfoText.textContent =
 function updateLevelSystemInLobby() { if (lobby.style.display === 'flex') { levelContainer.style.display = 'block'; updateLevelDisplay(); } else { levelContainer.style.display = 'none'; } }
 document.getElementById('resetModeScoreBtn').onclick = () => { if(confirm("Are you sure you want to reset ALL Player Progress?")) { localStorage.removeItem('tictactoe_player_data'); playerLevel = 1; currentExp = 0; totalMatchesWon = 0; loadGameData(); alert("Player Progress reset!"); menuClickSound(); } };
 
-async function handleCellClick(i) {
+async function handleCellClick(i, e) {
     if (board[i] !== "" || checkWinner()) return;
     if (vsAI && currentPlayer === 'X') return; 
 
@@ -540,16 +549,31 @@ async function handleCellClick(i) {
         if(playerRole === 'O') tapSound(); else aiMoveSound();
         await updateDoc(doc(db, "rooms", roomCode), { board: newBoard, currentPlayer: nextPlayer }); return; 
     }
-    makeMove(i); 
+    lastForcedIndex = -1; // Normal click par forced move ka color reset
+    makeMove(i, e); 
 }
 
-function makeMove(i){
+function makeMove(i, e){
   if(board[i]!=="" || checkWinner()) return;
   if(currentPlayer === 'O') tapSound(); else aiMoveSound(); 
-  board[i] = currentPlayer; drawBoard(); const winner = checkWinner();
-  if(winner){ handleWin(winner); return; }
-  if(board.every(x=>x!=="")){ handleDraw(); return; }
+  board[i] = currentPlayer; 
+  drawBoard(); // Dabba ban gaya
+  
+  // 👇 YAHAN SE ASALI AAG LAGEGI 👇
+  const allCells = document.querySelectorAll('#board .cell');
+  if(allCells[i]) {
+      window.triggerRealGameEffect(allCells[i], currentPlayer, e);
+  }
+  // 👆 AAG LAG GAYI 👆
+
+  const winner = checkWinner();
+
+  if(winner){ window.stopBlitzTimer(); handleWin(winner); return; }
+  if(board.every(x=>x!=="")){ window.stopBlitzTimer(); handleDraw(); return; }
   currentPlayer = (currentPlayer==='O')?'X':'O';
+  
+  if (isBlitzMode) window.startBlitzTimer(); // 🔥 Har turn badalne par 3s ka timer restart
+  
   if(vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove,350); }
 }
 
@@ -659,8 +683,24 @@ window.resetGame = async function(){
       await updateDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: nextStarter, startingTurn: nextStarter }); return; 
   }
   popup.style.display='none'; winningLine.style.display='none'; board=["","","","","","","","",""]; winningCombo=[];
-  if (isLevelUpMode) { levelUpMatchCount++; if (levelUpMatchCount % 2 !== 0) { currentPlayer = "O"; aiLevel = "hard"; } else { currentPlayer = "X"; aiLevel = "ultrahard"; } } else if (vsAI && aiLevel === 'ultrahard') { currentPlayer = "X"; } else { currentPlayer = "O"; }
-  drawBoard(); updateScoreboard(); if (vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove, 350); }
+  if (isLevelUpMode) { levelUpMatchCount++; if (levelUpMatchCount % 2 !== 0) { currentPlayer = "O"; aiLevel = "hard"; } else { currentPlayer = "X"; aiLevel = "ultrahard"; } 
+  } else if (vsAI && aiLevel === 'ultrahard') { 
+      currentPlayer = "X"; 
+  } else { 
+      // 🔥 Agar lobby se naya naya mode shuru hua hai toh 'O' se start hoga
+      if (isFirstMatch) {
+          offlineStartingTurn = 'O';
+          isFirstMatch = false; // Agle rounds ke liye flag off
+      } else {
+          // Baaki ke matches mein turn palti marega
+          offlineStartingTurn = (offlineStartingTurn === 'O') ? 'X' : 'O'; 
+      }
+      currentPlayer = offlineStartingTurn; 
+  }
+
+  drawBoard(); updateScoreboard(); 
+  if (isBlitzMode) window.startBlitzTimer();
+  if (vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove, 350); }
 }
 
 const roomModal = document.getElementById('roomModal'); const roomCodeInput = document.getElementById('roomCodeInput'); const roomCodeDisplay = document.getElementById('roomCodeDisplay'); const roomStatusText = document.getElementById('roomStatusText'); const roomActionBtn = document.getElementById('roomActionBtn'); const roomModalTitle = document.getElementById('roomModalTitle');
@@ -797,13 +837,27 @@ function startGame(selectedMode){
         if (isUltimateMode) {
       document.getElementById('board').style.display = 'none';
       document.getElementById('ultimateBoard').style.display = 'grid';
-      ultimateStartingTurn = 'X'; // Ye game reset hone se pehle 'X' banega, taaki palti hoke 'O' se start ho
+      ultimateStartingTurn = 'X';
+      offlineStartingTurn = 'X'; // Taaki pehla match 'O' se chalu ho aur fir palti mare
+      // Ye game reset hone se pehle 'X' banega, taaki palti hoke 'O' se start ho
   } else {
 
           document.getElementById('ultimateBoard').style.display = 'none';
       document.getElementById('board').style.display = 'grid';
       drawBoard();
   }
+  
+  isFirstMatch = true; // Lobby se aate hi pehla match reset karega
+
+    // ⭐ BLITZ MODE UI & ENGINE CONTROL ⭐
+  if (isBlitzMode) {
+      document.getElementById('blitzTimerContainer').style.display = 'flex';
+      window.startBlitzTimer();
+  } else {
+      document.getElementById('blitzTimerContainer').style.display = 'none';
+      window.stopBlitzTimer();
+  }
+
   updateScoreboard(); 
   moon.style.display = 'none'; 
   sun.style.display = 'none';
@@ -866,7 +920,11 @@ document.getElementById("ultimateMultiBtn").onclick = ()=>{
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
 document.querySelectorAll('.diff').forEach(btn=>{ btn.onclick = ()=>{ menuClickSound(); aiLevel = btn.dataset.level; vsAI = true; let modeText = (aiLevel === 'ultrahard') ? `AI (ULTRA HARD +)` : 'AI ('+aiLevel.toUpperCase()+')'; startGame(modeText); }; });
 document.getElementById("levelUpMode").onclick = ()=>{ menuClickSound(); vsAI = true; isLevelUpMode = true; startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); };
-document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; startGame('Player O vs Player X'); };
+
+document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; isUltimateMode = false; isBlitzMode = false; startGame('Player O vs Player X'); };
+
+// Naya Blitz Button ka Event
+document.getElementById("blitzBtn").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; isUltimateMode = false; isBlitzMode = true; startGame('⏳ BLITZ MODE (3s)'); };
 
 document.getElementById('searchPlayerBtn').onclick = async () => {
     menuClickSound(); const searchInput = document.getElementById('searchUidInput'); const searchUid = searchInput.value.trim(); const resultText = document.getElementById('searchResultText');
@@ -1199,6 +1257,19 @@ document.getElementById('cancelMatchmakingBtn').onclick = async () => {
 
 backLobbyBtn.onclick = async ()=>{
   menuClickSound(); 
+  isBlitzMode = false;
+window.stopBlitzTimer();
+
+  // 🌟 FIX: LOBBY ME AATE HI GLOBAL CANVAS CLEAR KARO 🌟
+  const gCanvas = document.getElementById('globalFxCanvas');
+  if(gCanvas) {
+      const gCtx = gCanvas.getContext('2d');
+      gCtx.clearRect(0,0,gCanvas.width, gCanvas.height);
+      gCanvas.style.display = 'none';
+  }
+  const gFluid = document.getElementById('globalFluidWrapper');
+  if(gFluid) gFluid.style.display = 'none';
+
   if (isOnline) { 
       try { await updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {}
       isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
@@ -1215,22 +1286,107 @@ backLobbyBtn.onclick = async ()=>{
   updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
   if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
   
-  // ⭐ NAYA ADDITION 1: LOBBY RETURN REFRESH ⭐
-  if (isLiveThemeActive) {
-      window.activateLiveTheme();
-  }
-};
-
-
+      // ⭐ NAYA ADDITION 1: LOBBY RETURN REFRESH ⭐
+      if (isLiveThemeActive) {
+          window.activateLiveTheme();
+      }
+    };
+    
 const settingBtn = document.getElementById('settingBtn'); const themeOptions = document.getElementById('themeOptions');
 settingBtn.onclick = ()=> { settingClickSound(); themeOptions.style.display = themeOptions.style.display==='flex'?'none':'flex'; }
 document.querySelectorAll('#themeOptions .theme-btn').forEach(btn => { btn.onclick = () => { settingClickSound(); const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0]; setTheme(themeName); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; }; });
 document.getElementById('customToggleBtn').onclick = () => { settingClickSound(); const container = document.getElementById('customPickerContainer'); container.style.display = container.style.display === 'flex' ? 'none' : 'flex'; };
-// ⭐ OPEN LIVE THEME MODAL ⭐
+
+    // ⭐ OPEN LIVE THEME MODAL ⭐
 document.getElementById('liveThemeTriggerBtn').onclick = () => { 
     settingClickSound(); 
     document.getElementById('liveThemeModal').style.display = 'flex'; 
     document.getElementById('themeOptions').style.display = 'none'; // Background wala theme menu hide karne ke liye
+};
+
+// ⭐ OPEN FULL PAGE CLICK EFFECTS ⭐
+document.getElementById('clickEffectBtn').onclick = () => { 
+    settingClickSound(); 
+    document.getElementById('clickEffectPage').style.display = 'flex'; 
+    document.getElementById('themeOptions').style.display = 'none'; 
+    document.getElementById('pingDisplay').style.display = 'none';
+
+    // 🌟 FIX: PREVIEW CANVAS WAPAS SET KARO TESTING KE LIYE 🌟
+    fxCanvas = document.getElementById('fxCanvasLayer');
+    fxCtx = fxCanvas.getContext('2d');
+    fluidWrapper = document.getElementById('fluidWrapper');
+    fluidCanvas = document.getElementById('fluidCanvasLayer');
+    fluidCtx = fluidCanvas.getContext('2d');
+
+    // 👇 NAYA FIX: ENGINE KO WAPAS TESTING BOARD PAR LAO 👇
+    fxCanvas = document.getElementById('fxCanvasLayer');
+    fxCtx = fxCanvas.getContext('2d');
+    fluidWrapper = document.getElementById('fluidWrapper');
+    fluidCanvas = document.getElementById('fluidCanvasLayer');
+    fluidCtx = fluidCanvas.getContext('2d');
+    if (activeSelection.startsWith('spacetime')) { initSpacetimeMeshLocked(); }
+};
+
+// 👇 NAYA LOGIC: Remove Effects Button ke liye 👇
+document.getElementById('removeClickEffectBtn').onclick = () => {
+    menuClickSound();
+    
+    // 1. Storage se effect uda do
+    localStorage.removeItem('selected_fx');
+    activeSelection = '';
+    
+    // 2. Jo effect select tha, usse highlight hata do
+    document.querySelectorAll('.fx-btn').forEach(b => b.classList.remove('selected'));
+    
+    // 3. Testing arena aur container chhupa do
+    const previewContainer = document.getElementById('inline-preview-container');
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // 4. Asli Game board ka canvas aur CSS clear kar do
+    const gCanvas = document.getElementById('globalFxCanvas');
+    if(gCanvas) {
+        const gCtx = gCanvas.getContext('2d');
+        gCtx.clearRect(0,0,gCanvas.width, gCanvas.height);
+        gCanvas.style.display = 'none';
+    }
+    const gFluid = document.getElementById('globalFluidWrapper');
+    if(gFluid) gFluid.style.display = 'none';
+
+    const mainBoard = document.getElementById('board');
+    if(mainBoard) mainBoard.classList.remove('board-canvas-wrapper', 'holo-mode', 'quantum-mode');
+
+    // 5. Testing board saaf kar do
+    if (typeof clearPreviewArena === 'function') clearPreviewArena();
+
+    // 6. User ko confirmation toast dikhao
+    if (typeof window.showToast === 'function') {
+        window.showToast("🚫 All Click Effects Removed!");
+    }
+};
+// 👆 YAHAN TAK 👆
+
+// ⭐ CLOSE FULL PAGE CLICK EFFECTS AUR REFRESH ARENA ⭐
+document.getElementById('closeClickEffectPageBtn').onclick = () => {
+    menuClickSound(); // Close hone par sound effect
+    document.getElementById('clickEffectPage').style.display = 'none';
+    
+    // NAYA LOGIC: X dabaate hi sab kuch wapas default reset ho jayega
+    document.querySelectorAll('.fx-category').forEach(c => {
+        c.classList.remove('active'); 
+        if (c.querySelector('.fx-content')) {
+            c.querySelector('.fx-content').style.maxHeight = null;
+        }
+    });
+    
+    const previewContainer = document.getElementById('inline-preview-container');
+    if (previewContainer) {
+        previewContainer.style.display = 'none';
+    }
+    
+    // Board aur canvas ko saaf karne ka function call
+    if (typeof clearPreviewArena === 'function') {
+        clearPreviewArena();
+    }
 };
 
 document.getElementById('applyCustomBtn').onclick = () => { settingClickSound(); const bgColor = document.getElementById('customBgColor').value; const textColor = document.getElementById('customTextColor').value; const customEmoji = document.getElementById('customRainEmoji').value || '✨'; const isRainEnabled = document.getElementById('enableCustomRain').checked; const isNeonEnabled = document.getElementById('enableCustomNeon').checked; setTheme('custom', bgColor, textColor, customEmoji, isRainEnabled, isNeonEnabled); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; };
@@ -1381,7 +1537,40 @@ function startDaySky() { sun.style.display = 'block'; } function stopDaySky() { 
 function minimax(newBoard, player) { const human = 'O'; const ai = 'X'; const emptySpots = newBoard.map((v,i) => v === "" ? i : null).filter(x => x !== null); const winner = checkWinnerForMinimax(newBoard); if (winner === ai) return { score: 10 }; if (winner === human) return { score: -10 }; if (emptySpots.length === 0) return { score: 0 }; const moves = []; for (let i of emptySpots) { const move = {}; move.index = i; newBoard[i] = player; const result = minimax(newBoard, player === ai ? human : ai); move.score = result.score; newBoard[i] = ""; moves.push(move); } let bestScore; let bestMoves = []; if (player === ai) { bestScore = -Infinity; for (let i = 0; i < moves.length; i++) { if (moves[i].score > bestScore) { bestScore = moves[i].score; bestMoves = [moves[i]]; } else if (moves[i].score === bestScore) { bestMoves.push(moves[i]); } } } else { bestScore = Infinity; for (let i = 0; i < moves.length; i++) { if (moves[i].score < bestScore) { bestScore = moves[i].score; bestMoves = [moves[i]]; } else if (moves[i].score === bestScore) { bestMoves.push(moves[i]); } } } if (bestMoves.length > 1) { const randomIndex = Math.floor(Math.random() * bestMoves.length); return bestMoves[randomIndex]; } return bestMoves[0]; }
 function checkWinnerForMinimax(currentBoard){ const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,b,c] of winCombos){ if(currentBoard[a] && currentBoard[a]===currentBoard[b] && currentBoard[a]===currentBoard[c]){ return currentBoard[a]; } } return null; }
 function aiMove(){ let empty = board.map((v,i)=> v===""?i:null).filter(x=>x!==null); let move; if(aiLevel === 'ultrahard'){ const bestMove = minimax(board, 'X'); move = bestMove.index; } else if(aiLevel==='easy'){ move = empty[Math.floor(Math.random()*empty.length)]; } else{ for(let i of empty){ board[i]='X'; if(checkWinner()==='X'){ board[i]=''; move=i; break;} board[i]=''; } for(let i of empty){ board[i]='O'; if(checkWinner()==='O'){ board[i]=''; move=i; break;} board[i]=''; } if(move===undefined) move = empty[Math.floor(Math.random()*empty.length)]; } if (move !== undefined && board[move] === "") { makeMove(move); } else if (empty.length > 0 && move === undefined) { makeMove(empty[0]); } }
-function drawBoard(){ Array.from(boardDiv.querySelectorAll('.cell')).forEach(n=>n.remove()); board.forEach((val,i)=>{ const cell = document.createElement('div'); cell.className='cell'; cell.textContent = val; if (currentTheme !== 'custom') { if(val==='O'){ cell.style.color='#00ffff'; cell.style.animation='neonBlue 1s infinite alternate'; } else if(val==='X'){ cell.style.color='#ff0000'; cell.style.animation='neonRed 1s infinite alternate'; } else cell.style.animation='none'; } if(winningCombo.includes(i)) cell.classList.add('winningCell'); cell.onclick = ()=> handleCellClick(i); boardDiv.appendChild(cell); }); boardDiv.appendChild(winningLine); }
+
+function drawBoard(){ 
+  Array.from(boardDiv.querySelectorAll('.cell')).forEach(n=>n.remove()); 
+  
+      board.forEach((val,i)=>{ 
+    const cell = document.createElement('div'); 
+    cell.className='cell'; 
+    // 👇 VFX UPGRADE: Asali dabbon mein CSS effects ka engine daal diya
+    cell.innerHTML = `
+        <div class="shine"></div>
+        <div class="shine-rainbow"></div>
+        <span class="cell-text">${val}</span>
+    `;
+    
+    if (currentTheme !== 'custom') { 
+
+        if(val==='O'){ cell.style.color='#00ffff'; cell.style.animation='neonBlue 1s infinite alternate'; } 
+      else if(val==='X'){ cell.style.color='#ff0000'; cell.style.animation='neonRed 1s infinite alternate'; } 
+      else cell.style.animation='none'; 
+    } 
+    if(winningCombo.includes(i)) cell.classList.add('winningCell'); 
+    
+    // ⭐ BLITZ LOGIC: Penalty Move chamkane ke liye
+    if(i === lastForcedIndex) {
+      cell.classList.add("forced-move");
+      setTimeout(() => { cell.classList.remove("forced-move"); lastForcedIndex = -1; }, 500);
+    }
+
+    cell.onclick = (e) => handleCellClick(i, e);
+boardDiv.appendChild(cell); 
+  }); 
+  boardDiv.appendChild(winningLine); 
+}
+
 function updateScoreboard(){ scoreboard.innerHTML = isOnline ? '<span style="color:#00ffff">O: ' + scoreO + '</span> &nbsp;|&nbsp; <span style="color:#ff0000">X: ' + scoreX + '</span><br><div style="font-size:16px; color:#ccc; text-shadow:none; margin-top:5px;">You are <b style="color:#fff; font-size:22px;">' + playerRole + '</b></div>' : (vsAI ? 'Player (O): '+scoreO+' | AI (X): '+scoreX : 'Player O: '+scoreO+' | Player X: '+scoreX); }
 function checkWinner(){ const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,b,c] of winCombos){ if(board[a] && board[a]===board[b] && board[a]===board[c]){ winningCombo=[a,b,c]; return board[a]; } } winningCombo=[]; return null; }
 function drawWinningLine(combo){ if(!combo||combo.length!==3) return; const cells=Array.from(boardDiv.querySelectorAll('.cell')); const first=cells[combo[0]], last=cells[combo[2]]; const boardRect=boardDiv.getBoundingClientRect(); const r1=first.getBoundingClientRect(), r2=last.getBoundingClientRect(); const x1=r1.left+r1.width/2-boardRect.left, y1=r1.top+r1.height/2-boardRect.top; const x2=r2.left+r2.width/2-boardRect.left, y2=r2.top+r2.height/2-boardRect.top; const dx=x2-x1, dy=y2-y1; const length=Math.sqrt(dx*dx+dy*dy); const angle=Math.atan2(dy,dx)*(180/Math.PI); const mx=(x1+x2)/2, my=(y1+y2)/2; winningLine.style.width=(length+20)+'px'; winningLine.style.height='10px'; winningLine.style.left=(mx-(length+20)/2)+'px'; winningLine.style.top=(my-5)+'px'; winningLine.style.transform=`rotate(${angle}deg)`; winningLine.style.display='block'; }
@@ -1553,10 +1742,17 @@ setInterval(() => {
     const cellularSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>`;
     const warningSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
-    // 🛑 Kahan dikhana hai, kahan nahi
+        // 🛑 Kahan dikhana hai, kahan nahi
+    const fxPage = document.getElementById('clickEffectPage');
+    // Naya logic: Agar page 'none' nahi hai, matlab khula hai, toh ping uda do!
+    if (fxPage && fxPage.style.display !== 'none') {
+        pingBox.style.display = 'none'; return; 
+    }
+
     if (lobbyDiv.style.display === 'none' && gameDiv.style.display === 'none') {
         pingBox.style.display = 'none'; return; 
     }
+
     if (gameDiv.style.display === 'flex' && !isOnline) {
         pingBox.style.display = 'none'; return;
     } else {
@@ -1832,3 +2028,1145 @@ function drawUltimateWinningLine(combo) {
     line.style.boxShadow = currentPlayer === 'O' ? '0 0 20px #00ffff, 0 0 40px #00ffff' : '0 0 20px #ff00ff, 0 0 40px #ff00ff';
     line.style.background = currentPlayer === 'O' ? '#00ffff' : '#ff00ff';
 }
+// ⭐=========================================⭐
+// ⭐      THE CORE BLITZ TIMER ENGINE        ⭐
+// ⭐=========================================⭐
+window.startBlitzTimer = function() {
+    window.stopBlitzTimer();
+    blitzTimeLeft = BLITZ_MAX;
+    document.body.classList.remove("panic-mode");
+    updateBlitzUI();
+    blitzInterval = setInterval(() => {
+        if (popup.style.display === 'flex' || checkWinner() || !isBlitzMode) { window.stopBlitzTimer(); return; } 
+        blitzTimeLeft -= 50;
+        updateBlitzUI();
+        if (blitzTimeLeft <= 0) {
+            window.stopBlitzTimer();
+            forceBlitzMove();
+        }
+    }, 50);
+}
+
+window.stopBlitzTimer = function() {
+    clearInterval(blitzInterval);
+    document.body.classList.remove("panic-mode");
+}
+
+function updateBlitzUI() {
+    const bar = document.getElementById("blitzTimerBar");
+    const txt = document.getElementById("blitzTimeText");
+    if(!bar || !txt) return;
+    let pct = (blitzTimeLeft / BLITZ_MAX) * 100;
+    bar.style.width = pct + "%";
+    txt.innerText = (blitzTimeLeft / 1000).toFixed(1) + "s";
+
+    if (blitzTimeLeft > 1500) {
+        bar.style.background = "#00ff4d"; bar.style.boxShadow = "0 0 10px #00ff4d"; txt.style.color = "#00ff4d";
+        document.body.classList.remove("panic-mode");
+    } else if (blitzTimeLeft > 500) {
+        bar.style.background = "#ffcc00"; bar.style.boxShadow = "0 0 10px #ffcc00"; txt.style.color = "#ffcc00";
+    } else {
+        bar.style.background = "#ff0055"; bar.style.boxShadow = "0 0 15px #ff0055"; txt.style.color = "#ff0055";
+        document.body.classList.add("panic-mode"); // 🚨 Trigger screen shake inside 0.5 seconds
+    }
+}
+
+function forceBlitzMove() {
+    if (!isBlitzMode || popup.style.display === 'flex') return;
+    let emptySpots = board.map((v, i) => v === "" ? i : null).filter(x => x !== null);
+    if (emptySpots.length > 0) {
+        let randomIdx = emptySpots[Math.floor(Math.random() * emptySpots.length)];
+        window.showToast("⏳ TOO SLOW! Random Move!");
+        lastForcedIndex = randomIdx;
+        makeMove(randomIdx);
+    }
+}
+
+    // --- 🎮 MASTER 44-FX DATABASE MAPS 🎮 ---
+    const fxLibrary = [
+        { id: 'spacetime', icon: '🌌', name: 'Spacetime Fabric', levels: ['Gravity Singularity (Pull)', 'Supernova Blast (Push)', 'Cyber Resonance (Waves)', 'Magnetic Vortex (Twist)'] },
+        { id: 'cyberslash', icon: '⚔️', name: 'Cyber Slash Engine', levels: ['Energy Katana (Slice)', 'Double Cross X (Twin Cut)', 'Circular Saber (Orbit)', 'Dimension Split (Plasma)'] },
+        { id: 'hud', icon: '📡', name: 'Cyberpunk HUD', levels: ['Target Lock (Rotating Rings)', 'Matrix Rain (Local Binary Code)', 'Tech Scanner (Data Reading)', 'Telemetry Stream (Floating Bits)'] },
+        { id: 'fluid', icon: '🧪', name: 'Organic Fluid', levels: ['Mercury Splash (Liquid Metal)', 'Ferrofluid Spikes (Magnetic)', 'Radioactive Slime (Sticky Drip)', 'Lava Fusion (Merging Blobs)'] },
+        { id: 'harmonics', icon: '🎸', name: 'Laser Harmonics', levels: ['Guitar Pluck (Edge Anchors)', 'Laser Spiderweb (Cell Interlinks)', 'Axis Cross Ray (Full Screen Ripple)', 'Geometric Polygon Echo (Rotating Shells)'] },
+        { id: 'growth', icon: '🌿', name: 'Generative Growth', levels: ['Snowflake Lattice (Level 1)', 'Cyber Ivy (Level 2)', 'Sacred Spiro (Level 3)', 'Fractal Lightning (Level 4)'] },
+        // 💎 ENGINE 7: 3D HOLO CARDS 💎
+        { id: 'holo', icon: '💎', name: 'Holographic 3D Cards', levels: ['Classic Holo Foil (Silver)', 'Cosmic Super-Pop (Depth)', 'Iridescent Rainbow (Rare)', 'Cyber Edge Scan (Radar)'] },
+        // 🦾 ENGINE 8: HARDWARE DOM GLITCH 🦾
+        { id: 'domglitch', icon: '🦾', name: 'Hardware DOM Glitch', levels: ['Holographic Ghost Echo (Afterimage Waves)', 'Cyber Glitch Slice (Matrix Screen Tear)', 'Quantum Quadrant Blast (Corner Bullets)', 'Vector Frame Pulse (Expanding Grid Glow)'] },
+        // 💥 ENGINE 9: ANIME IMPACT ENGINE 💥
+        { id: 'impact', icon: '💥', name: 'Anime Impact Engine', levels: ['Manga Speed Lines (Radial Focus)', 'Kinetic Comic Burst (Sharp Star Mesh)', 'Chrono Screen Split (Plasma Slash)', 'Sub-Pixel Glitch Scan (Instant Grid Tear)'] },
+        // 🚀 ENGINE 10: QUANTUM DIMENSIONAL MATRIX ENGINE 🚀
+        { id: 'quantum', icon: '🚀', name: 'Quantum Matrix Fold', levels: ['Paradigm 1: Dimensional Matrix Fold (Board Warp)', 'Paradigm 2: Neural Wurm Synapse (Fluid Beams)', 'Paradigm 3: Voxel Infrastructure (Inward Forge)', 'Paradigm 4: Event Horizon Nova (Shockwave)'] }
+    ];
+
+    const container = document.getElementById('fxContainer');
+    const portablePreview = document.getElementById('inline-preview-container');
+    const previewBoard = document.getElementById('previewBoard');
+    
+        // Normal Canvas
+    let fxCanvas = document.getElementById('fxCanvasLayer');
+    let fxCtx = fxCanvas.getContext('2d');
+    
+    // Fluid Canvas (Engine 4)
+    let fluidWrapper = document.getElementById('fluidWrapper');
+    let fluidCanvas = document.getElementById('fluidCanvasLayer');
+    let fluidCtx = fluidCanvas.getContext('2d');
+
+    let activeSelection = localStorage.getItem('selected_fx') || '';
+    let dummyBoardState = Array(9).fill('');
+    let currentSignTracker = 'O';
+
+    if (activeSelection.startsWith('spacetime')) { fxCanvas.style.zIndex = '15'; } 
+    else { fxCanvas.style.zIndex = '30'; }
+
+    // ==========================================================
+    // ⭐ ENGINES 1 TO 6: MASTER LOGIC CLASSES (UNTOUCHED) ⭐
+    // ==========================================================
+    let activeForces = [];
+    let meshGrid = []; 
+    let gridCols = 0; let gridRows = 0;
+    const GRID_SPACING = 15; 
+    let activeGridColor = "rgba(0, 255, 255, 0.2)"; 
+
+        function initSpacetimeMeshLocked() {
+        meshGrid = [];
+        activeForces = []; 
+        let startX, endX, startY, endY;
+
+        if (fxCanvas.id === 'globalFxCanvas') {
+            // Asli Game Board ka size nikalo
+            let activeBoard = document.getElementById('board');
+            if (activeBoard.style.display === 'none') activeBoard = document.getElementById('ultimateBoard');
+            const boardRect = activeBoard.getBoundingClientRect();
+            
+            const padding = 35; // Board se thoda bahar nikalne ke liye
+            startX = boardRect.left - padding;
+            endX = boardRect.right + padding;
+            startY = boardRect.top - padding;
+            endY = boardRect.bottom + padding;
+        } else {
+            // Testing Board ka limit
+            const padding = 20; 
+            startX = padding; endX = fxCanvas.width - padding;
+            startY = padding; endY = fxCanvas.height - padding;
+        }
+
+        gridCols = Math.ceil((endX - startX) / GRID_SPACING);
+        gridRows = Math.ceil((endY - startY) / GRID_SPACING);
+        for(let r = 0; r < gridRows; r++) {
+            for(let c = 0; c < gridCols; c++) {
+                let x = startX + c * GRID_SPACING;
+                let y = startY + r * GRID_SPACING;
+                meshGrid.push({ ox: x, oy: y, x: x, y: y, vx: 0, vy: 0 });
+            }
+        }
+    }
+
+    initSpacetimeMeshLocked();
+
+    class PhysicsForce {
+        constructor(x, y, type) {
+            this.x = x; this.y = y; this.type = type;
+            this.alpha = 1;
+            this.power = type === 'resonance' ? 0 : 60; 
+            this.radius = type === 'resonance' ? 10 : 160; 
+        }
+        update() {
+            if (this.type === 'resonance') { this.radius += 5; this.alpha -= 0.03; } 
+            else { this.power *= 0.90; this.alpha -= 0.03; }
+        }
+    }
+
+    let activeSlashes = []; let activeSparks = [];
+    class BladeSlash {
+        constructor(startX, startY, endX, endY, color, width = 4) {
+            this.sx = startX; this.sy = startY; this.ex = endX; this.ey = endY;
+            this.color = color; this.alpha = 1; this.width = width; this.decay = 0.05; 
+        }
+        update() { this.alpha -= this.decay; if(this.width > 0.5) this.width -= 0.15; }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha;
+            fxCtx.strokeStyle = "#ffffff"; fxCtx.lineWidth = this.width; fxCtx.lineCap = "round";
+            fxCtx.beginPath(); fxCtx.moveTo(this.sx, this.sy); fxCtx.lineTo(this.ex, this.ey); fxCtx.stroke();
+            fxCtx.strokeStyle = this.color; fxCtx.lineWidth = this.width * 2.5;
+            fxCtx.beginPath(); fxCtx.moveTo(this.sx, this.sy); fxCtx.lineTo(this.ex, this.ey); fxCtx.stroke();
+            fxCtx.restore();
+        }
+    }
+
+    class EmberSpark {
+        constructor(x, y, color, angle = null) {
+            this.x = x; this.y = y; this.color = color; this.alpha = 1;
+            this.size = Math.random() * 2 + 1; this.decay = Math.random() * 0.03 + 0.02;
+            const moveAngle = angle !== null ? angle + (Math.random() * 0.6 - 0.3) : Math.random() * Math.PI * 2;
+            const speed = Math.random() * 4 + 2;
+            this.vx = Math.cos(moveAngle) * speed; this.vy = Math.sin(moveAngle) * speed;
+            this.gravity = 0.05; 
+        }
+        update() { this.x += this.vx; this.y += this.vy; this.vy += this.gravity; this.alpha -= this.decay; }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha;
+            fxCtx.fillStyle = this.color; fxCtx.fillRect(this.x, this.y, this.size, this.size);
+            fxCtx.restore();
+        }
+    }
+
+    let activeHudElements = [];
+    class HudTarget {
+        constructor(x, y, color) {
+            this.cx = x; this.cy = y; this.color = color; this.alpha = 1;
+            this.radius = 35; this.angle = 0;
+            this.speed = 0.08; this.decay = 0.04;
+        }
+        update() { this.angle += this.speed; this.alpha -= this.decay; }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha;
+            fxCtx.strokeStyle = this.color; fxCtx.lineWidth = 2;
+            fxCtx.beginPath(); fxCtx.arc(this.cx, this.cy, this.radius, this.angle, this.angle + Math.PI/2); fxCtx.stroke();
+            fxCtx.beginPath(); fxCtx.arc(this.cx, this.cy, this.radius, this.angle + Math.PI, this.angle + 3*Math.PI/2); fxCtx.stroke();
+            fxCtx.fillStyle = this.color; fxCtx.fillRect(this.cx - 2, this.cy - 2, 4, 4);
+            fxCtx.restore();
+        }
+    }
+
+    class MatrixRain {
+        constructor(rect, color) {
+            this.rect = rect; this.color = color; this.alpha = 1; this.decay = 0.025;
+            this.streams = [];
+            for(let i=0; i<4; i++) {
+                this.streams.push({
+                    x: rect.left + 8 + i * 18, y: rect.top + Math.random() * 15,
+                    speed: Math.random() * 3 + 2, char: Math.random() < 0.5 ? "0" : "1"
+                });
+            }
+        }
+        update() {
+            this.alpha -= this.decay;
+            this.streams.forEach(s => { s.y += s.speed; if(Math.random() < 0.2) s.char = Math.random() < 0.5 ? "0" : "1"; });
+        }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha; fxCtx.fillStyle = this.color; fxCtx.font = "bold 14px monospace";
+            this.streams.forEach(s => { if(s.y < this.rect.bottom) { fxCtx.fillText(s.char, s.x, s.y); } });
+            fxCtx.restore();
+        }
+    }
+
+    class TechScanner {
+        constructor(rect, color) {
+            this.rect = rect; this.color = color; this.alpha = 1;
+            this.y = rect.top; this.dir = 1; this.speed = 6; this.life = 0;
+        }
+        update() {
+            this.y += this.speed * this.dir;
+            if(this.y >= this.rect.bottom - 4) this.dir = -1; 
+            this.life++;
+            if(this.life > 25) this.alpha -= 0.1; 
+        }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha; fxCtx.fillStyle = this.color;
+            fxCtx.fillRect(this.rect.left + 4, this.y, this.rect.width - 8, 3);
+            fxCtx.fillStyle = this.color === '#00ffff' ? 'rgba(0,255,255,0.04)' : 'rgba(255,0,255,0.04)';
+            fxCtx.fillRect(this.rect.left + 4, this.rect.top + 4, this.rect.width - 8, this.rect.height - 8);
+            fxCtx.restore();
+        }
+    }
+
+    class TelemetryData {
+        constructor(x, y, color) {
+            this.x = x + (Math.random() * 40 - 20); this.y = y + (Math.random() * 20 - 10);
+            this.color = color; this.alpha = 1;
+            this.vy = -(Math.random() * 1.5 + 1); this.decay = 0.03;
+            const hexCodes = ["0x3E", "SYS_OK", "LN_TRC", "BIT_1", "0x99", "DATA_LK"];
+            this.text = hexCodes[Math.floor(Math.random() * hexCodes.length)];
+        }
+        update() { this.y += this.vy; this.alpha -= this.decay; }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha; fxCtx.fillStyle = this.color; fxCtx.font = "bold 11px Courier New";
+            fxCtx.fillText(this.text, this.x, this.y); fxCtx.restore();
+        }
+    }
+
+    let liquidDrops = [];
+    class LiquidBlob {
+        constructor(x, y, color, type) {
+            this.x = x; this.y = y; this.color = color; this.type = type; this.alpha = 1;
+            this.radius = Math.random() * 10 + 12; this.decay = 0.02;
+            const angle = Math.random() * Math.PI * 2;
+            if (type === 'mercury') {
+                const speed = Math.random() * 6 + 4;
+                this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed; this.gravity = 0.15; 
+            }
+            else if (type === 'ferro') {
+                const speed = Math.random() * 9 + 5; 
+                this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed;
+                this.gravity = 0; this.decay = 0.04;
+            }
+            else if (type === 'slime') {
+                this.vx = Math.random() * 2 - 1; this.vy = Math.random() * 2 + 1; 
+                this.gravity = 0.2; this.radius = Math.random() * 15 + 15; this.decay = 0.015;
+            }
+            else if (type === 'fusion') {
+                const speed = Math.random() * 3 + 1;
+                this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed;
+                this.gravity = 0; this.radius = Math.random() * 20 + 20; this.decay = 0.01;
+            }
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            if (this.gravity) this.vy += this.gravity;
+            if (this.type === 'slime' || this.type === 'fusion') { this.vx *= 0.96; this.vy *= 0.96; }
+            if (this.radius > 2) this.radius -= 0.3; else this.alpha = 0;
+        }
+        draw() {
+            if (this.radius <= 1) return;
+            fluidCtx.save(); fluidCtx.fillStyle = this.color;
+            fluidCtx.beginPath(); fluidCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); fluidCtx.fill();
+            fluidCtx.restore();
+        }
+    }
+
+    let activeWaves = [];
+    class GuitarString {
+        constructor(p1, p2, color) {
+            this.p1 = p1; this.p2 = p2; this.color = color; this.alpha = 1;
+            this.amplitude = Math.random() * 25 + 15; this.frequency = Math.random() * 0.4 + 0.3;
+            this.timePhase = 0; this.decay = 0.03; 
+        }
+        update() { this.timePhase += this.frequency; this.amplitude *= 0.93; this.alpha -= this.decay; }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha; fxCtx.strokeStyle = this.color; fxCtx.lineWidth = 2.5;
+            fxCtx.beginPath(); fxCtx.moveTo(this.p1.x, this.p1.y);
+            let midX = (this.p1.x + this.p2.x) / 2; let midY = (this.p1.y + this.p2.y) / 2;
+            let dx = this.p2.x - this.p1.x; let dy = this.p2.y - this.p1.y;
+            let len = Math.sqrt(dx*dx + dy*dy); let nx = -dy / len; let ny = dx / len; 
+            let ctrlX = midX + nx * Math.sin(this.timePhase) * this.amplitude;
+            let ctrlY = midY + ny * Math.sin(this.timePhase) * this.amplitude;
+            fxCtx.quadraticCurveTo(ctrlX, ctrlY, this.p2.x, this.p2.y);
+            fxCtx.stroke(); fxCtx.restore();
+        }
+    }
+
+    class GeometricShell {
+        constructor(x, y, color) {
+            this.cx = x; this.cy = y; this.color = color; this.alpha = 1;
+            this.size = 2; this.growth = 4.5; this.angle = Math.random() * Math.PI;
+            this.rotSpeed = 0.04; this.sides = Math.random() < 0.5 ? 3 : 4; 
+        }
+        update() { this.size += this.growth; this.angle += this.rotSpeed; this.alpha -= 0.025; }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha; fxCtx.strokeStyle = this.color; fxCtx.lineWidth = 2;
+            fxCtx.beginPath();
+            for(let i=0; i<=this.sides; i++) {
+                let a = this.angle + (i / this.sides) * Math.PI * 2;
+                let px = this.cx + Math.cos(a) * this.size; let py = this.cy + Math.sin(a) * this.size;
+                if(i === 0) fxCtx.moveTo(px, py); else fxCtx.lineTo(px, py);
+            }
+            fxCtx.stroke(); fxCtx.restore();
+        }
+    }
+
+    let growingBranches = [];
+    class GrowthSegment {
+        constructor(x, y, angle, length, depth, maxDepth, color, type) {
+            this.sx = x; this.sy = y; this.angle = angle; this.maxLength = length; this.currentLength = 0;
+            this.depth = depth; this.maxDepth = maxDepth; this.color = color; this.type = type;
+            this.speed = type === 'lightning' ? length : length * 0.15; 
+            this.isDone = false; this.alpha = 1; this.hasBranched = false;
+            this.ex = this.sx + Math.cos(this.angle) * this.maxLength;
+            this.ey = this.sy + Math.sin(this.angle) * this.maxLength;
+        }
+        update() {
+            if (!this.isDone) {
+                this.currentLength += this.speed;
+                if (this.currentLength >= this.maxLength) { this.currentLength = this.maxLength; this.isDone = true; }
+            } else { this.alpha -= 0.02; }
+        }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha; fxCtx.strokeStyle = this.color;
+            fxCtx.lineWidth = Math.max(1, this.maxDepth - this.depth + 1) * 0.7; fxCtx.lineCap = "round";
+            fxCtx.beginPath(); fxCtx.moveTo(this.sx, this.sy);
+            let cx = this.sx + Math.cos(this.angle) * this.currentLength;
+            let cy = this.sy + Math.sin(this.angle) * this.currentLength;
+            fxCtx.lineTo(cx, cy); fxCtx.stroke();
+            if (this.isDone && (this.type === 'crystal' || this.type === 'mandala')) {
+                fxCtx.fillStyle = "#fff"; fxCtx.beginPath(); fxCtx.arc(this.ex, this.ey, 1.2, 0, Math.PI*2); fxCtx.fill();
+            }
+            fxCtx.restore();
+        }
+    }
+
+    // 💥 ENGINE 9: ANIME IMPACT ENGINE VARIABLES 💥
+    let animeActive = false;
+    let animeTimer = 0;
+    let animeMaxDuration = 12;
+    let animeX = 0, animeY = 0, animeColor = "#00ffff";
+
+    // 🚀 ENGINE 10: QUANTUM DIMENSIONAL MATRIX VARIABLES 🚀
+    let quantumElements = [];
+
+    class NeuralWurmPath {
+        constructor(sx, sy, tx, ty, color) {
+            this.sx = sx; this.sy = sy; this.tx = tx; this.ty = ty;
+            this.color = color; this.alpha = 1;
+            this.progress = 0; this.speed = 0.04;
+            this.ctrlX = (this.sx + this.tx)/2 + (Math.random() * 120 - 60);
+            this.ctrlY = (this.sy + this.ty)/2 + (Math.random() * 120 - 60);
+        }
+        update() {
+            if(this.progress < 1) this.progress += this.speed;
+            else this.alpha -= 0.03;
+        }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha;
+            fxCtx.strokeStyle = this.color; fxCtx.lineWidth = 2.5; fxCtx.lineCap = "round";
+            fxCtx.beginPath();
+            fxCtx.moveTo(this.sx, this.sy);
+            let t = Math.min(1, this.progress);
+            let cx = (1-t)*(1-t)*this.sx + 2*(1-t)*t*this.ctrlX + t*t*this.tx;
+            let cy = (1-t)*(1-t)*this.sy + 2*(1-t)*t*this.ctrlY + t*t*this.ty;
+            fxCtx.quadraticCurveTo(this.sx + (this.ctrlX - this.sx)*t, this.sy + (this.ctrlY - this.sy)*t, cx, cy);
+            fxCtx.stroke(); fxCtx.restore();
+        }
+    }
+
+    class VoxelInfrastructure {
+        constructor(tx, ty, color) {
+            this.tx = tx; this.ty = ty; this.color = color; this.alpha = 0.1;
+            this.size = Math.random() * 4 + 3;
+            this.progress = 0; this.speed = Math.random() * 0.04 + 0.03;
+            this.x = this.tx + (Math.random() * 40 - 20);
+            this.y = -20; 
+        }
+        update() {
+            this.progress += this.speed;
+            if(this.alpha < 1 && this.progress < 0.8) this.alpha += 0.08;
+            let t = this.progress;
+            let ease = t * t * (3 - 2 * t);
+            this.y = this.y + (this.ty - this.y) * ease;
+            if(this.progress >= 1) this.alpha -= 0.1;
+        }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha;
+            fxCtx.fillStyle = this.color;
+            fxCtx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+            fxCtx.restore();
+        }
+    }
+
+    class HorizonWave {
+        constructor(cx, cy, color) {
+            this.cx = cx; this.cy = cy; this.color = color; this.alpha = 1;
+            this.radius = 5; this.growth = 6;
+        }
+        update() { this.radius += this.growth; this.alpha -= 0.025; }
+        draw() {
+            fxCtx.save(); fxCtx.globalAlpha = this.alpha;
+            fxCtx.strokeStyle = this.color; fxCtx.lineWidth = 3;
+            fxCtx.beginPath(); fxCtx.arc(this.cx, this.cy, this.radius, 0, Math.PI*2); fxCtx.stroke();
+            fxCtx.setLineDash([6, 12]);
+            fxCtx.beginPath(); fxCtx.arc(this.cx, this.cy, this.radius * 0.8, 0, Math.PI*2); fxCtx.stroke();
+            fxCtx.restore();
+        }
+    }
+
+    // ==========================================================
+    // ⭐ CENTRAL ANIMATION LOOP ⭐
+    // ==========================================================
+    function MasterVFXEngineLoop() {
+        fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+        fxCtx.globalCompositeOperation = "lighter"; 
+        fluidCtx.clearRect(0, 0, fluidCanvas.width, fluidCanvas.height);
+        fluidCtx.globalCompositeOperation = "source-over";
+
+        if (activeSelection.startsWith('spacetime')) {
+            fxCtx.strokeStyle = activeGridColor; fxCtx.lineWidth = 1;
+            meshGrid.forEach(p => {
+                p.vx += (p.ox - p.x) * 0.20; p.vy += (p.oy - p.y) * 0.20;
+                activeForces.forEach(f => {
+                    let dx = f.x - p.x; let dy = f.y - p.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy); if (dist < 1) dist = 1;
+                    if (f.type === 'singularity' && dist < f.radius) {
+                        let pull = (f.radius - dist) * (f.power * 0.008);
+                        p.vx += (dx / dist) * pull; p.vy += (dy / dist) * pull;
+                    } 
+                    else if (f.type === 'supernova' && dist < f.radius) {
+                        let push = (f.radius - dist) * (f.power * 0.012);
+                        p.vx -= (dx / dist) * push; p.vy -= (dy / dist) * push;
+                    }
+                    else if (f.type === 'resonance') {
+                        let waveFront = Math.abs(dist - f.radius);
+                        if (waveFront < 25) {
+                            let tf = (25 - waveFront) * f.alpha;
+                            let waveD = Math.sin((dist - f.radius) * 0.2) * tf * 0.8;
+                            p.vx += (dx / dist) * waveD; p.vy += (dy / dist) * waveD;
+                        }
+                    }
+                    else if (f.type === 'vortex' && dist < f.radius) {
+                        let twist = (f.radius - dist) * (f.power * 0.01);
+                        p.vx += (-dy / dist) * twist; p.vy += (dx / dist) * twist;
+                    }
+                });
+                p.vx *= 0.65; p.vy *= 0.65; p.x += p.vx; p.y += p.vy;
+            });
+
+            for(let r = 0; r < gridRows; r++) {
+                fxCtx.beginPath();
+                for(let c = 0; c < gridCols; c++) {
+                    let n = meshGrid[r * gridCols + c]; if(!n) continue;
+                    if(c === 0) fxCtx.moveTo(n.x, n.y); else fxCtx.lineTo(n.x, n.y);
+                }
+                fxCtx.stroke();
+            }
+            for(let c = 0; c < gridCols; c++) {
+                fxCtx.beginPath();
+                for(let r = 0; r < gridRows; r++) {
+                    let n = meshGrid[r * gridCols + c]; if(!n) continue;
+                    if(r === 0) fxCtx.moveTo(n.x, n.y); else fxCtx.lineTo(n.x, n.y);
+                }
+                fxCtx.stroke();
+            }
+            activeForces = activeForces.filter(f => { f.update(); return f.alpha > 0; });
+        } 
+        else if (activeSelection.startsWith('cyberslash')) {
+            activeSlashes = activeSlashes.filter(slash => { if (slash.alpha <= 0) return false; slash.update(); slash.draw(); return true; });
+            activeSparks = activeSparks.filter(spark => { if (spark.alpha <= 0) return false; spark.update(); spark.draw(); return true; });
+        }
+        else if (activeSelection.startsWith('hud')) {
+            activeHudElements = activeHudElements.filter(el => { if (el.alpha <= 0) return false; el.update(); el.draw(); return true; });
+        }
+        else if (activeSelection.startsWith('fluid')) {
+            liquidDrops = liquidDrops.filter(blob => { if (blob.alpha <= 0) return false; blob.update(); blob.draw(); return true; });
+        }
+        else if (activeSelection.startsWith('harmonics')) {
+            activeWaves = activeWaves.filter(wave => { if (wave.alpha <= 0) return false; wave.update(); wave.draw(); return true; });
+        }
+        else if (activeSelection.startsWith('growth')) {
+            let nextGeneration = [];
+            growingBranches.forEach(seg => {
+                seg.update(); seg.draw();
+                if (seg.isDone && !seg.hasBranched && seg.depth < seg.maxDepth) {
+                    seg.hasBranched = true;
+                    if (seg.type === 'ivy') {
+                        nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, seg.angle - 0.4, seg.maxLength * 0.75, seg.depth + 1, seg.maxDepth, seg.color, seg.type));
+                        nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, seg.angle + 0.4, seg.maxLength * 0.75, seg.depth + 1, seg.maxDepth, seg.color, seg.type));
+                    }
+                    else if (seg.type === 'crystal') {
+                        nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, seg.angle - Math.PI/3, seg.maxLength * 0.6, seg.depth + 1, seg.maxDepth, seg.color, seg.type));
+                        nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, seg.angle + Math.PI/3, seg.maxLength * 0.6, seg.depth + 1, seg.maxDepth, seg.color, seg.type));
+                        if (Math.random() < 0.4) { nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, seg.angle, seg.maxLength * 0.6, seg.depth + 1, seg.maxDepth, seg.color, seg.type)); }
+                    }
+                    else if (seg.type === 'mandala') {
+                        nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, seg.angle - 0.5, seg.maxLength * 0.82, seg.depth + 1, seg.maxDepth, seg.color, seg.type));
+                        nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, seg.angle + 0.5, seg.maxLength * 0.82, seg.depth + 1, seg.maxDepth, seg.color, seg.type));
+                    }
+                    else if (seg.type === 'lightning') {
+                        let branchesCount = Math.random() < 0.3 ? 3 : 2;
+                        for (let k = 0; k < branchesCount; k++) {
+                            let randAngle = seg.angle + (Math.random() * 1.0 - 0.5);
+                            nextGeneration.push(new GrowthSegment(seg.ex, seg.ey, randAngle, seg.maxLength * (Math.random() * 0.3 + 0.5), seg.depth + 1, seg.maxDepth, seg.color, seg.type));
+                        }
+                    }
+                }
+            });
+            if (nextGeneration.length > 0) growingBranches = growingBranches.concat(nextGeneration);
+            growingBranches = growingBranches.filter(seg => seg.alpha > 0);
+        }
+        // 💥 ENGINE 9: ANIME IMPACT DRAW LOOP RENDERING 💥
+        else if (activeSelection.startsWith('impact')) {
+            if (animeActive) {
+                animeTimer--;
+                let progress = (animeMaxDuration - animeTimer) / animeMaxDuration;
+                let lvlMode = activeSelection.split('-')[1];
+
+                fxCtx.save();
+                
+                if (lvlMode === '0') {
+                    fxCtx.strokeStyle = animeColor;
+                    fxCtx.globalAlpha = 1 - progress;
+                    let lineCount = 45;
+                    let outerRadius = Math.max(fxCanvas.width, fxCanvas.height);
+                    for (let i = 0; i < lineCount; i++) {
+                        let angle = (i / lineCount) * Math.PI * 2 + Math.random() * 0.1;
+                        let startDist = outerRadius;
+                        let endDist = 80 + (1 - progress) * 200 + Math.random() * 60;
+                        let sx = animeX + Math.cos(angle) * startDist;
+                        let sy = animeY + Math.sin(angle) * startDist;
+                        let ex = animeX + Math.cos(angle) * endDist;
+                        let ey = animeY + Math.sin(angle) * endDist;
+                        fxCtx.beginPath(); fxCtx.lineWidth = Math.random() * 2 + 1;
+                        fxCtx.moveTo(sx, sy); fxCtx.lineTo(ex, ey); fxCtx.stroke();
+                    }
+                } 
+                else if (lvlMode === '1') {
+                    fxCtx.fillStyle = animeColor;
+                    fxCtx.globalAlpha = 1 - progress;
+                    fxCtx.beginPath();
+                    let spikes = 12;
+                    let outerR = progress * 110;
+                    let innerR = progress * 40;
+                    for (let i = 0; i < spikes * 2; i++) {
+                        let angle = (i / (spikes * 2)) * Math.PI * 2;
+                        let r = (i % 2 === 0) ? outerR : innerR;
+                        let px = animeX + Math.cos(angle) * r;
+                        let py = animeY + Math.sin(angle) * r;
+                        if (i === 0) fxCtx.moveTo(px, py); else fxCtx.lineTo(px, py);
+                    }
+                    fxCtx.closePath(); fxCtx.fill();
+                }
+                else if (lvlMode === '2') {
+                    fxCtx.strokeStyle = "#ffffff"; fxCtx.lineWidth = (1 - progress) * 12;
+                    fxCtx.shadowBlur = 20; fxCtx.shadowColor = animeColor;
+                    fxCtx.beginPath();
+                    fxCtx.moveTo(0, animeY); fxCtx.lineTo(fxCanvas.width, animeY);
+                    fxCtx.stroke();
+                    if (animeTimer === animeMaxDuration - 1) {
+                        fxCtx.globalAlpha = 0.15; fxCtx.fillStyle = "#ffffff";
+                        fxCtx.fillRect(0, 0, fxCanvas.width, fxCanvas.height);
+                    }
+                }
+                else if (lvlMode === '3') {
+                    fxCtx.fillStyle = animeColor;
+                    fxCtx.globalAlpha = (1 - progress) * 0.8;
+                    let barsCount = 5;
+                    for (let i = 0; i < barsCount; i++) {
+                        let barW = Math.random() * 140 + 60;
+                        let barH = Math.random() * 8 + 4;
+                        let bx = animeX - barW / 2 + (Math.random() * 60 - 30);
+                        let by = animeY + (i * 15 - 35);
+                        fxCtx.fillRect(bx, by, barW, barH);
+                    }
+                }
+
+                fxCtx.restore();
+                if (animeTimer <= 0) { animeActive = false; }
+            }
+        }
+        // 🚀 ENGINE 10: QUANTUM MATRIX RENDERING LOOP 🚀
+        else if (activeSelection.startsWith('quantum')) {
+            quantumElements = quantumElements.filter(el => {
+                if (el.alpha <= 0) return false;
+                el.update(); el.draw();
+                return true;
+            });
+        }
+
+        requestAnimationFrame(MasterVFXEngineLoop);
+    }
+    MasterVFXEngineLoop();
+
+function triggerHoloMatrixTilt(e, cell, sign) {
+    if (!e) return; 
+    const rect = cell.getBoundingClientRect();
+    
+    const x = e.clientX - rect.left; 
+    const y = e.clientY - rect.top; 
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    let mode = 'classic';
+    if (activeSelection.endsWith('1')) mode = 'superpop';
+    if (activeSelection.endsWith('2')) mode = 'rainbow';
+    if (activeSelection.endsWith('3')) mode = 'cyberedge';
+    
+    let maxTilt = mode === 'superpop' ? 36 : 22;
+    let textDepth = mode === 'superpop' ? 'translateZ(55px) scale(1.05)' : 'translateZ(32px) scale(0.95)';
+    
+    const tiltX = ((centerY - y) / centerY) * maxTilt;
+    const tiltY = ((x - centerX) / centerX) * maxTilt;
+
+    const activeShine = mode === 'rainbow' ? cell.querySelector('.shine-rainbow') : cell.querySelector('.shine');
+    const inactiveShine = mode === 'rainbow' ? cell.querySelector('.shine') : cell.querySelector('.shine-rainbow');
+
+    if(inactiveShine) inactiveShine.style.opacity = "0";
+
+    // ⭐ FIX 1: Browser ko batana ki naya element animate karna hai (Reflow Trick)
+    void cell.offsetWidth;
+
+    if(activeShine) {
+        activeShine.style.opacity = "1";
+        activeShine.style.backgroundPosition = `${(x / rect.width) * 100}% ${(y / rect.height) * 100}%`;
+    }
+
+    const textLayer = cell.querySelector('.cell-text');
+    if(textLayer) textLayer.style.transform = textDepth;
+
+    cell.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateZ(12px) scale(1.06)`;
+    
+    if(mode === 'cyberedge') {
+        cell.style.borderColor = sign === 'O' ? '#ff00ff' : '#00ffff'; 
+        cell.style.boxShadow = sign === 'O' ? '0 15px 30px rgba(255,0,255,0.3)' : '0 15px 30px rgba(0,255,255,0.3)';
+    } else {
+        cell.style.borderColor = sign === 'O' ? '#00ffff' : '#ff00ff';
+        cell.style.boxShadow = '0 20px 40px rgba(0,0,0,0.6)';
+    }
+
+    setTimeout(() => {
+        cell.style.transform = `rotateX(0deg) rotateY(0deg) translateZ(0px) scale(1)`;
+        
+        // ⭐ FIX 2: CSS clear karna taaki Main Game Board ka default glow wapas aa sake
+        if (cell.classList.contains('cell')) {
+            cell.style.borderColor = ''; 
+            cell.style.boxShadow = '';
+        } else {
+            cell.style.borderColor = '#1a1a3a'; 
+            cell.style.boxShadow = '0 5px 15px rgba(0,0,0,0.5)';
+        }
+        
+        if(activeShine) activeShine.style.opacity = "0";
+        if(textLayer) textLayer.style.transform = 'translateZ(30px) scale(0.9)'; 
+    }, 400);
+}
+
+    // ==========================================================
+// 🎴 SMART INTERACTIVE ENGINE (REAL GAME + TESTING ARENA) 🎴
+// ==========================================================
+function triggerEffectLogic(cell, sign, e, targetBoard = previewBoard) {
+    const cellRect = cell.getBoundingClientRect();
+    const canvasRect = fxCanvas.getBoundingClientRect();
+    const centerX = (cellRect.left + cellRect.width / 2) - canvasRect.left;
+    const centerY = (cellRect.top + cellRect.height / 2) - canvasRect.top;
+    const burstColor = sign === "O" ? "#00ffff" : "#ff00ff";
+
+    // SMART RADAR: Pata karo ki asali board hai ya testing board
+    const activeBoard = cell.closest('#board') || document.getElementById('previewBoard');
+
+    if (activeSelection.startsWith('spacetime')) {
+        activeGridColor = sign === "O" ? "rgba(0, 255, 255, 0.45)" : "rgba(255, 0, 255, 0.45)";
+        let type = 'singularity';
+        if (activeSelection.endsWith('1')) type = 'supernova';
+        else if (activeSelection.endsWith('2')) type = 'resonance';
+        else if (activeSelection.endsWith('3')) type = 'vortex';
+        activeForces.push(new PhysicsForce(centerX, centerY, type));
+    } 
+    else if (activeSelection.startsWith('cyberslash')) {
+        const offset = 35; 
+        if (activeSelection.endsWith('0')) { 
+            const angles = [
+                {sx: centerX - offset, sy: centerY - offset, ex: centerX + offset, ey: centerY + offset, ang: Math.PI/4},
+                {sx: centerX + offset, sy: centerY - offset, ex: centerX - offset, ey: centerY + offset, ang: 3*Math.PI/4}
+            ];
+            let cut = angles[Math.floor(Math.random() * angles.length)];
+            activeSlashes.push(new BladeSlash(cut.sx, cut.sy, cut.ex, cut.ey, burstColor));
+            for(let i=0; i<15; i++) {
+                let px = cut.sx + (cut.ex - cut.sx) * Math.random(); let py = cut.sy + (cut.ey - cut.sy) * Math.random();
+                activeSparks.push(new EmberSpark(px, py, burstColor, cut.ang + Math.PI/2));
+            }
+        } 
+        else if (activeSelection.endsWith('1')) { 
+            activeSlashes.push(new BladeSlash(centerX - offset, centerY - offset, centerX + offset, centerY + offset, burstColor));
+            setTimeout(() => { activeSlashes.push(new BladeSlash(centerX + offset, centerY - offset, centerX - offset, centerY + offset, burstColor)); }, 80); 
+            for(let i=0; i<25; i++) { activeSparks.push(new EmberSpark(centerX + (Math.random()*20-10), centerY + (Math.random()*20-10), burstColor)); }
+        }
+        else if (activeSelection.endsWith('2')) { 
+            let steps = 16; let r = 30;
+            for(let i=0; i<steps; i++) {
+                let a1 = (i / steps) * Math.PI * 2; let a2 = ((i+1) / steps) * Math.PI * 2;
+                let x1 = centerX + Math.cos(a1) * r; let y1 = centerY + Math.sin(a1) * r;
+                let x2 = centerX + Math.cos(a2) * r; let y2 = centerY + Math.sin(a2) * r;
+                setTimeout(() => {
+                    activeSlashes.push(new BladeSlash(x1, y1, x2, y2, burstColor, 2));
+                    activeSparks.push(new EmberSpark(x1, y1, burstColor, a1));
+                }, i * 15);
+            }
+        }
+        else if (activeSelection.endsWith('3')) { 
+            activeSlashes.push(new BladeSlash(centerX, centerY - 45, centerX, centerY + 45, burstColor, 10));
+            for(let i=0; i<25; i++) {
+                let py = (centerY - 45) + Math.random() * 90;
+                activeSparks.push(new EmberSpark(centerX, py, "#ffffff")); activeSparks.push(new EmberSpark(centerX, py, burstColor));
+            }
+        }
+    }
+    else if (activeSelection.startsWith('hud')) {
+        const mappedRect = { left: cellRect.left - canvasRect.left, top: cellRect.top - canvasRect.top, right: cellRect.right - canvasRect.left, bottom: cellRect.bottom - canvasRect.top, width: cellRect.width, height: cellRect.height };
+        if (activeSelection.endsWith('0')) { activeHudElements.push(new HudTarget(centerX, centerY, burstColor)); } 
+        else if (activeSelection.endsWith('1')) { activeHudElements.push(new MatrixRain(mappedRect, burstColor)); }
+        else if (activeSelection.endsWith('2')) { activeHudElements.push(new TechScanner(mappedRect, burstColor)); }
+        else if (activeSelection.endsWith('3')) { for(let i=0; i<5; i++) { setTimeout(() => { activeHudElements.push(new TelemetryData(centerX, centerY, burstColor)); }, i * 100); } }
+    }
+    else if (activeSelection.startsWith('fluid')) {
+        let type = 'mercury'; let count = 22;
+        if (activeSelection.endsWith('1')) type = 'ferro'; else if (activeSelection.endsWith('2')) type = 'slime'; else if (activeSelection.endsWith('3')) { type = 'fusion'; count = 8; }
+        for (let i = 0; i < count; i++) { liquidDrops.push(new LiquidBlob(centerX, centerY, burstColor, type)); }
+    }
+    else if (activeSelection.startsWith('harmonics')) {
+        const boardRect = activeBoard.getBoundingClientRect();
+        const bLeft = boardRect.left - canvasRect.left; const bRight = boardRect.right - canvasRect.left;
+        const bTop = boardRect.top - canvasRect.top; const bBottom = boardRect.bottom - canvasRect.top;
+        if (activeSelection.endsWith('0')) { 
+            const anchors = [ {x: bLeft, y: bTop}, {x: bRight, y: bTop}, {x: bRight, y: bBottom}, {x: bLeft, y: bBottom}, {x: (bLeft+bRight)/2, y: bTop}, {x: (bLeft+bRight)/2, y: bBottom} ];
+            anchors.forEach(anc => { activeWaves.push(new GuitarString({x: centerX, y: centerY}, anc, burstColor)); });
+        }
+        else if (activeSelection.endsWith('1')) { 
+            const cells = Array.from(activeBoard.querySelectorAll('.cell, .preview-cell'));
+            cells.forEach(c => {
+                const cRect = c.getBoundingClientRect(); const cX = (cRect.left + cRect.width/2) - canvasRect.left; const cY = (cRect.top + cRect.height/2) - canvasRect.top;
+                if (Math.abs(cX - centerX) > 5 || Math.abs(cY - centerY) > 5) { activeWaves.push(new GuitarString({x: centerX, y: centerY}, {x: cX, y: cY}, burstColor)); }
+            });
+        }
+        else if (activeSelection.endsWith('2')) { 
+            activeWaves.push(new GuitarString({x: 0, y: centerY}, {x: fxCanvas.width, y: centerY}, burstColor));
+            activeWaves.push(new GuitarString({x: centerX, y: 0}, {x: centerX, y: fxCanvas.height}, burstColor));
+        }
+        else if (activeSelection.endsWith('3')) { 
+            activeWaves.push(new GeometricShell(centerX, centerY, burstColor));
+            setTimeout(() => activeWaves.push(new GeometricShell(centerX, centerY, burstColor)), 140);
+            setTimeout(() => activeWaves.push(new GeometricShell(centerX, centerY, burstColor)), 280);
+        }
+    }
+    else if (activeSelection.startsWith('growth')) {
+        if (activeSelection.endsWith('0')) {
+            for (let i = 0; i < 6; i++) { let baseAngle = (i / 6) * Math.PI * 2; growingBranches.push(new GrowthSegment(centerX, centerY, baseAngle, 30, 1, 4, burstColor, 'crystal')); }
+        }
+        else if (activeSelection.endsWith('1')) {
+            for (let i = 0; i < 3; i++) { let baseAngle = (i / 3) * Math.PI * 2 + Math.random(); growingBranches.push(new GrowthSegment(centerX, centerY, baseAngle, 25, 1, 5, burstColor, 'ivy')); }
+        }
+        else if (activeSelection.endsWith('2')) {
+            let shellCount = 6;
+            for (let i = 0; i < shellCount; i++) { let baseAngle = (i / shellCount) * Math.PI * 2; growingBranches.push(new GrowthSegment(centerX, centerY, baseAngle, 38, 1, 4, burstColor, 'mandala')); }
+        }
+        else if (activeSelection.endsWith('3')) {
+            for (let i = 0; i < 4; i++) { let baseAngle = (i / 4) * Math.PI * 2 + (Math.random() * 0.4 - 0.2); growingBranches.push(new GrowthSegment(centerX, centerY, baseAngle, 25, 1, 5, burstColor, 'lightning')); }
+        }
+    }
+    else if (activeSelection.startsWith('holo')) {
+        triggerHoloMatrixTilt(e, cell, sign);
+    }
+    else if (activeSelection.startsWith('domglitch')) {
+        if (activeSelection.endsWith('0')) {
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    let ghost = document.createElement('div');
+                    ghost.className = 'ghost-echo';
+                    ghost.innerText = sign;
+                    ghost.style.color = burstColor;
+                    ghost.style.textShadow = `0 0 15px ${burstColor}`;
+                    cell.appendChild(ghost);
+                    ghost.addEventListener('animationend', () => ghost.remove());
+                }, i * 80);
+            }
+        }
+        else if (activeSelection.endsWith('1')) {
+            const textCore = cell.querySelector('.cell-text');
+            if(textCore) {
+                textCore.classList.add('glitch-active');
+                setTimeout(() => textCore.classList.remove('glitch-active'), 250);
+            }
+        }
+        else if (activeSelection.endsWith('2')) {
+            const directions = [
+                {x: '-45px', y: '-45px'}, {x: '45px', y: '-45px'},
+                {x: '-45px', y: '45px'},  {x: '45px', y: '45px'}
+            ];
+            directions.forEach(dir => {
+                let chunk = document.createElement('div');
+                chunk.className = 'quadrant-chunk';
+                chunk.style.backgroundColor = burstColor;
+                chunk.style.boxShadow = `0 0 10px ${burstColor}`;
+                chunk.style.setProperty('--mx', dir.x);
+                chunk.style.setProperty('--my', dir.y);
+                cell.appendChild(chunk);
+                chunk.addEventListener('animationend', () => chunk.remove());
+            });
+        }
+        else if (activeSelection.endsWith('3')) {
+            let frame = document.createElement('div');
+            frame.className = 'laser-frame-pulse';
+            frame.style.setProperty('--laser-color', burstColor);
+            activeBoard.appendChild(frame); // Asali board mein laser aayega ab
+            frame.addEventListener('animationend', () => frame.remove());
+        }
+    }
+    else if (activeSelection.startsWith('impact')) {
+        animeX = centerX;
+        animeY = centerY;
+        animeColor = burstColor;
+        animeTimer = animeMaxDuration;
+        animeActive = true;
+    }
+    else if (activeSelection.startsWith('quantum')) {
+        const bRect = activeBoard.getBoundingClientRect();
+        const bCenterX = bRect.left + bRect.width / 2;
+        const bCenterY = bRect.top + bRect.height / 2;
+
+        let offsetFactorX = ((cellRect.left + cellRect.width/2) - bCenterX) / (bRect.width / 2);
+        let offsetFactorY = ((cellRect.top + cellRect.height/2) - bCenterY) / (bRect.height / 2);
+        
+        let rotX = -offsetFactorY * 26;
+        let rotY = offsetFactorX * 26;
+
+        activeBoard.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(20px)`;
+        setTimeout(() => {
+            activeBoard.style.transform = `rotateX(0deg) rotateY(0deg) translateZ(0px)`;
+        }, 550);
+
+        if (activeSelection.endsWith('0')) {
+            Array.from(activeBoard.querySelectorAll('.cell, .preview-cell')).forEach(c => {
+                let r = c.getBoundingClientRect();
+                let cx = (r.left + r.width/2) - canvasRect.left;
+                let cy = (r.top + r.height/2) - canvasRect.top;
+                if (Math.abs(cx - centerX) > 5 || Math.abs(cy - centerY) > 5) {
+                    quantumElements.push(new NeuralWurmPath(centerX, centerY, cx, cy, burstColor));
+                }
+            });
+        }
+        else if (activeSelection.endsWith('1')) {
+            let beamCount = 8;
+            for (let i = 0; i < beamCount; i++) {
+                let angle = (i / beamCount) * Math.PI * 2 + (Math.random() * 0.5);
+                let distance = Math.random() * 100 + 80;
+                let tx = centerX + Math.cos(angle) * distance;
+                let ty = centerY + Math.sin(angle) * distance;
+                let fluidBeam = new NeuralWurmPath(centerX, centerY, tx, ty, burstColor);
+                fluidBeam.speed = 0.025; 
+                quantumElements.push(fluidBeam);
+            }
+        }
+        else if (activeSelection.endsWith('2')) {
+            for (let i = 0; i < 35; i++) {
+                quantumElements.push(new VoxelInfrastructure(centerX + (Math.random()*40-20), centerY + (Math.random()*40-20), burstColor));
+            }
+        }
+        else if (activeSelection.endsWith('3')) {
+            quantumElements.push(new HorizonWave(centerX, centerY, burstColor));
+            setTimeout(() => quantumElements.push(new HorizonWave(centerX, centerY, "#ffffff")), 120);
+        }
+    }
+}
+
+    function buildTestingArenaBoard() {
+        previewBoard.innerHTML = "";
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'preview-cell';
+            
+            cell.innerHTML = `
+                <div class="shine"></div>
+                <div class="shine-rainbow"></div>
+                <span class="cell-text">${dummyBoardState[i]}</span>
+            `; 
+            
+            if(dummyBoardState[i]==='O') cell.classList.add('o-sign');
+            if(dummyBoardState[i]==='X') cell.classList.add('x-sign');
+
+            cell.onclick = (e) => {
+                if(dummyBoardState[i] !== '') {
+                    if(activeSelection.startsWith('holo')) triggerHoloMatrixTilt(e, cell, dummyBoardState[i]);
+                    return; 
+                }
+                dummyBoardState[i] = currentSignTracker;
+                cell.querySelector('.cell-text').innerText = currentSignTracker;
+                cell.classList.add(currentSignTracker === 'O' ? 'o-sign' : 'x-sign');
+                
+                triggerEffectLogic(cell, currentSignTracker, e);
+                currentSignTracker = currentSignTracker === 'O' ? 'X' : 'O';
+            };
+            previewBoard.appendChild(cell);
+        }
+    }
+
+    function clearPreviewArena() {
+        dummyBoardState = Array(9).fill(''); 
+        currentSignTracker = 'O'; 
+        
+        activeForces = []; activeSlashes = []; activeSparks = []; 
+        activeHudElements = []; liquidDrops = []; activeWaves = []; growingBranches = [];
+        animeActive = false; animeTimer = 0; 
+        
+        // Reset Engine 10 State
+        quantumElements = [];
+        previewBoard.style.transform = 'none';
+        
+        if(fxCtx) fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+        if(fluidCtx) fluidCtx.clearRect(0, 0, fluidCanvas.width, fluidCanvas.height);
+
+        buildTestingArenaBoard(); 
+    }
+
+    // ==========================================================
+    // 🧱 UI GENERATOR & INLINE PREVIEW MOVER LOGIC 🧱
+    // ==========================================================
+    function buildConfigurationMenuPanel() {
+        fxLibrary.forEach((category, catIndex) => {
+            const card = document.createElement('div');
+            card.className = 'fx-category';
+
+            const header = document.createElement('div');
+            header.className = 'fx-header';
+            header.innerHTML = `<div class="fx-title"><span class="fx-icon">${category.icon}</span> ${category.name}</div><span class="arrow">▼</span>`;
+
+            const content = document.createElement('div');
+            content.className = 'fx-content';
+            
+            const inner = document.createElement('div');
+            inner.className = 'fx-content-inner';
+
+            category.levels.forEach((lvl, lvlIdx) => {
+                const btnId = `${category.id}-${lvlIdx}`;
+                const btn = document.createElement('button');
+                btn.className = `fx-btn ${activeSelection === btnId ? 'selected' : ''}`;
+                btn.innerText = lvl;
+
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.fx-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    activeSelection = btnId;
+                    
+                    localStorage.setItem('selected_fx', activeSelection);
+                    inner.appendChild(portablePreview);
+                    portablePreview.style.display = 'flex';
+                    
+                    // 🌟 Z-INDEX, CANVAS & CSS TOGGLE LOGIC 🌟
+                    previewBoard.classList.remove('solid-boxes', 'holo-mode', 'quantum-mode'); // Added quantum-mode clear to not break 1 to 9
+                    
+                    if(activeSelection.startsWith('spacetime')) { 
+                        fxCanvas.style.zIndex = '15'; 
+                        fluidWrapper.style.display = 'none';
+                        setTimeout(() => initSpacetimeMeshLocked(), 350); 
+                    } else if (activeSelection.startsWith('fluid')) {
+                        fxCanvas.style.zIndex = '30'; 
+                        fluidWrapper.style.display = 'block'; 
+                    } else if (activeSelection.startsWith('growth')) {
+                        fxCanvas.style.zIndex = '15'; 
+                        fluidWrapper.style.display = 'none';
+                        previewBoard.classList.add('solid-boxes');
+                    } else if (activeSelection.startsWith('holo')) {
+                        fxCanvas.style.zIndex = '15'; 
+                        fluidWrapper.style.display = 'none';
+                        previewBoard.classList.add('holo-mode'); 
+                    } else if (activeSelection.startsWith('domglitch')) {
+                        fxCanvas.style.zIndex = '15'; 
+                        fluidWrapper.style.display = 'none';
+                    } else if (activeSelection.startsWith('impact')) {
+                        fxCanvas.style.zIndex = '30'; 
+                        fluidWrapper.style.display = 'none';
+                    } else if (activeSelection.startsWith('quantum')) {
+                        fxCanvas.style.zIndex = '30'; 
+                        fluidWrapper.style.display = 'none';
+                        previewBoard.classList.add('quantum-mode'); // Applied Engine 10 board css
+                    } else {
+                        fxCanvas.style.zIndex = '30'; 
+                        fluidWrapper.style.display = 'none';
+                    }
+                    
+                    clearPreviewArena(); 
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    setTimeout(() => { portablePreview.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+                };
+                inner.appendChild(btn);
+            });
+
+            content.appendChild(inner); 
+            card.appendChild(header); 
+            card.appendChild(content);
+            container.appendChild(card);
+
+            header.onclick = () => {
+                const isAct = card.classList.contains('active');
+                document.querySelectorAll('.fx-category').forEach(c => {
+                    c.classList.remove('active'); 
+                    c.querySelector('.fx-content').style.maxHeight = null;
+                });
+                if (!isAct) {
+                    card.classList.add('active'); 
+                    setTimeout(() => { content.style.maxHeight = content.scrollHeight + "px"; }, 10);
+                }
+            };
+        });
+    }
+
+    function showApplyConfirm() {
+        const selectedBtn = document.querySelector('.fx-btn.selected');
+        if (selectedBtn) { document.getElementById('confirmEffectName').innerText = selectedBtn.innerText; }
+        document.getElementById('applyConfirmModal').style.display = 'flex';
+    }
+
+    function closeApplyConfirm() { document.getElementById('applyConfirmModal').style.display = 'none'; }
+    
+    function confirmApplyEffect() {
+        menuClickSound(); // Click sound aaye
+        document.getElementById('applyConfirmModal').style.display = 'none'; // Modal band karo
+        
+        // 1. Board aur test arena saaf karo
+        if (typeof clearPreviewArena === 'function') { clearPreviewArena(); }
+        
+        // 2. Testing dabba chhupao
+        const previewContainer = document.getElementById('inline-preview-container');
+        if (previewContainer) { previewContainer.style.display = 'none'; }
+        
+        // 3. Khule hue options (menu) wapas sikud (collapse) do
+        document.querySelectorAll('.fx-category').forEach(c => {
+            c.classList.remove('active'); 
+            if (c.querySelector('.fx-content')) { c.querySelector('.fx-content').style.maxHeight = null; }
+        });
+
+        // 🚨 Yahan se clickEffectPage.style.display = 'none' HATA DIYA GAYA HAI 🚨
+        
+        // 4. Apna VIP toast dikhao! 😎
+        if (typeof window.showToast === 'function') {
+            window.showToast("🎉 Effect Applied Successfully!");
+        }
+    }
+
+    if (activeSelection.startsWith('fluid')) fluidWrapper.style.display = 'block';
+    if (activeSelection.startsWith('growth')) previewBoard.classList.add('solid-boxes');
+    if (activeSelection.startsWith('holo')) previewBoard.classList.add('holo-mode');
+    if (activeSelection.startsWith('quantum')) previewBoard.classList.add('quantum-mode');
+
+    buildConfigurationMenuPanel();
+    buildTestingArenaBoard();
+// ⭐ FIX FOR HTML BUTTONS (Making them Global) ⭐
+window.clearPreviewArena = clearPreviewArena;
+window.showApplyConfirm = showApplyConfirm;
+window.closeApplyConfirm = closeApplyConfirm;
+window.confirmApplyEffect = confirmApplyEffect;
+
+// ⭐ ASALI GAME KA VFX LAUNCHER ⭐
+window.triggerRealGameEffect = function(cell, sign, e) {
+    let selectedFx = localStorage.getItem('selected_fx');
+    if(!selectedFx) return; // Agar koi effect nahi chuna, toh chup chap wapas jao
+
+    // 1. Kanch ko Poori Screen (Global) par set karo
+    fxCanvas = document.getElementById('globalFxCanvas');
+    fxCtx = fxCanvas.getContext('2d');
+    fluidWrapper = document.getElementById('globalFluidWrapper');
+    fluidCanvas = document.getElementById('globalFluidCanvas');
+    fluidCtx = fluidCanvas.getContext('2d');
+
+    // 2. Kanch ka size mobile ki screen ke barabar karo
+    
+        fxCanvas.width = window.innerWidth;
+    fxCanvas.height = window.innerHeight;
+    fluidCanvas.width = window.innerWidth;
+    fluidCanvas.height = window.innerHeight;
+
+    fxCanvas.style.display = 'block';
+
+    // 👇 Z-INDEX & GRID FIX 👇
+    if (selectedFx.startsWith('spacetime')) { 
+        fxCanvas.style.zIndex = '14'; // Grid Board ke piche jayega (Board = 15)
+        initSpacetimeMeshLocked(); 
+    } else {
+        fxCanvas.style.zIndex = '9998'; // Baki effects board ke upar aayenge
+    }
+
+    if (selectedFx.startsWith('fluid')) { fluidWrapper.style.display = 'block'; }
+
+    // 3. Asali board par CSS classes lagao (3D Holo aur Glitch ke liye)
+    const mainBoard = document.getElementById('board');
+    mainBoard.classList.add('board-canvas-wrapper'); // Engine ko dhoka dene ke liye 🤫
+    if (selectedFx.startsWith('holo')) mainBoard.classList.add('holo-mode');
+    else mainBoard.classList.remove('holo-mode');
+
+    if (selectedFx.startsWith('quantum')) mainBoard.classList.add('quantum-mode');
+    else mainBoard.classList.remove('quantum-mode');
+
+    // 4. Exact Touch Location nikalo aur Asali dhamaaka karo! 💣
+    const rect = cell.getBoundingClientRect();
+    
+    let activeEvent = e || { clientX: rect.left + rect.width/2 + (Math.random() * 20 - 10), clientY: rect.top + rect.height/2 + (Math.random() * 20 - 10) };
+
+triggerEffectLogic(cell, sign, activeEvent, mainBoard);
+};
