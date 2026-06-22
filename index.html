@@ -14,6 +14,22 @@
 </head>
 <body class="default">
 
+<canvas id="globalFxCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; display: none;"></canvas>
+<div id="globalFluidWrapper" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9997; filter: blur(8px) contrast(15); display: none;">
+    <canvas id="globalFluidCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+</div>
+
+<style>
+    .holo-mode .cell, .quantum-mode .cell { transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), border 0.3s, box-shadow 0.3s; overflow: hidden; }
+    .holo-mode .cell::before { content: ''; position: absolute; inset: 0; border-radius: 10px; padding: 2px; background: linear-gradient(135deg, transparent, rgba(0,255,255,0.4), transparent); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; opacity: 1; transition: 0.3s; }
+    .board-canvas-wrapper.quantum-mode { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+</style>
+
+<canvas id="globalFxCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; display: none;"></canvas>
+<div id="globalFluidWrapper" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9997; filter: blur(8px) contrast(15); display: none;">
+    <canvas id="globalFluidCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+</div>
+
 <div id="pingDisplay" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); border: 1px solid #00ff4d; color: #00ff4d; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 900; z-index: 9999; text-shadow: 0 0 5px #00ff4d; box-shadow: 0 0 10px rgba(0,255,77,0.3); display: none; align-items: center; gap: 5px; font-family: 'Poppins', sans-serif;">
     <span id="pingIcon">📶</span> <span id="pingText">45 ms</span>
 </div>
@@ -49,6 +65,8 @@
 
     <button id="personalThemeBtn" class="theme-btn" style="background: linear-gradient(90deg, #ff8c00, #ff0080) !important; color: #fff !important; font-weight: bold; margin-top: 10px; width: 100%; box-shadow: 0 0 10px #ff8c00;">✨ PERSONAL THEME</button>
     <input type="file" id="personalThemeInput" accept="image/*, video/mp4, video/webm" style="display:none;">
+    
+        <button id="clickEffectBtn" class="theme-btn" style="background: linear-gradient(90deg, #00ffcc, #3333ff) !important; color: #fff !important; font-weight: 900; margin-top: 10px; width: 100%; box-shadow: 0 0 15px #00ffcc; text-transform: uppercase; letter-spacing: 1px;">🎇 CLICK EFFECTS</button>
 
     <div id="customPickerContainer" style="display:none; flex-direction:column; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #00ffff;">
         <label class="custom-label">BG Color: <input type="color" id="customBgColor" value="#1a1a2e" style="width:30px; height:30px; padding:0; border:none; border-radius:5px; cursor:pointer;"></label>
@@ -77,6 +95,8 @@
   </div>
   <button class="btn" id="levelUpMode">LEVEL UP MODE</button> 
   <button class="btn" id="multi">LOCAL MULTI PLAYER</button>
+
+<button class="btn" id="blitzBtn" style="background: linear-gradient(90deg, #ff0000, #ff8c00) !important; box-shadow: 0 0 15px #ff0000; animation: customBtnPulse 1s infinite alternate;">⏳ BLITZ MODE (3s)</button>
 
   <button class="btn" id="ultimateMultiBtn" style="background: linear-gradient(90deg, #ff0055, #8a2be2) !important; box-shadow: 0 0 15px #ff0055;">✨ ULTIMATE LOCAL</button>
 
@@ -138,6 +158,14 @@
 
   <button id="backLobbyBtn">BACK TO LOBBY</button>
   <h1 id="modeTitle"></h1>
+  
+  <div id="blitzTimerContainer" style="display:none; flex-direction:column; align-items:center; width:100%; margin-bottom:15px; z-index: 20;">
+    <div id="blitzTimeText" style="font-size: 28px; font-weight: 900; color: #fff; text-shadow: 0 0 10px #fff; margin-bottom: 5px;">3.0s</div>
+    <div style="width: 80%; max-width: 300px; height: 15px; background: #222; border: 2px solid #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(255,255,255,0.2);">
+        <div id="blitzTimerBar" style="height: 100%; width: 100%; background: #00ff4d; box-shadow: 0 0 10px #00ff4d; transition: width 0.05s linear, background 0.3s;"></div>
+    </div>
+</div>
+
   <button id="resetModeScoreBtn">RESET ALL PROGRESS</button>
   
   <div class="scoreboard" id="scoreboard"></div>
@@ -383,6 +411,49 @@
         </div>
     </div>
 </div>
+
+<div id="clickEffectPage" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0b1a; z-index: 9000; flex-direction: column; align-items: center; overflow-y: auto; padding-bottom: 50px;">
+    
+    <div class="header" style="width: 100%; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: linear-gradient(180deg, rgba(11,11,26,0.95) 60%, transparent); z-index: 9001; backdrop-filter: blur(5px);">
+        <h1 style="color: #00ffcc; text-shadow: 0 0 15px #00ffcc; letter-spacing: 3px; font-size: 22px; text-transform: uppercase; margin: 0;">🎇 FX ARENA</h1>
+        <button id="closeClickEffectPageBtn" style="background: transparent; border: none; color: #ff0055; font-size: 40px; cursor: pointer; line-height: 0.8; font-weight: 100; text-shadow: 0 0 15px #ff0055; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&times;</button>
+    </div>
+
+<div class="sub-title" style="color: #888; margin-bottom: 20px; font-size: 13px; font-weight: bold; letter-spacing: 1px; text-align: center; padding: 0 20px;">Configure and apply your custom interaction effects</div>
+
+<button id="removeClickEffectBtn" style="background: rgba(255,0,85,0.1); border: 1px solid #ff0055; color: #ff0055; padding: 10px 20px; border-radius: 10px; font-weight: 900; margin-bottom: 15px; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 10px rgba(255,0,85,0.2);">Remove All Effects</button>
+
+    <div class="fx-container" id="fxContainer" style="width: 95%; max-width: 500px; display: flex; flex-direction: column; gap: 12px; z-index: 10;"></div>
+
+    <div id="inline-preview-container" style="display: none; flex-direction: column; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(0,255,204,0.2); z-index: 20; position: relative;">
+        <div class="arena-title" style="font-size: 11px; font-weight: 900; color: #ffcc00; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px;">🧪 Tap Below to Test</div>
+        
+        <div class="board-canvas-wrapper" style="position: relative; z-index: 10; perspective: 1200px;">
+            <canvas id="fxCanvasLayer" width="380" height="380" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 15;"></canvas>
+            
+            <div class="fluid-wrapper" id="fluidWrapper" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; background: transparent; filter: blur(8px) contrast(15); pointer-events: none; z-index: 14; display: none;">
+                <canvas id="fluidCanvasLayer" width="380" height="380" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
+            
+            <div class="preview-board" id="previewBoard" style="display: grid; grid-template-columns: repeat(3, 70px); grid-template-rows: repeat(3, 70px); gap: 8px; background: rgba(10,10,25,0.7); padding: 10px; border-radius: 12px; border: 2px solid rgba(0,255,204,0.2); box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 25; position: relative;"></div>
+        </div>
+
+        <div class="arena-actions" style="display: flex; gap: 10px; margin-top: 15px; z-index: 30; position: relative;">
+            <button class="clear-arena-btn" onclick="clearPreviewArena()" style="padding:8px 15px; border-radius:10px; background:rgba(255,0,85,0.1); border: 1px solid rgba(255,0,85,0.4); color:#ff0055; font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase;">🧹 Clear Map</button>
+            <button class="apply-arena-btn" onclick="showApplyConfirm()" style="padding:8px 15px; border-radius:10px; background:rgba(0,255,204,0.1); border: 1px solid rgba(0,255,204,0.4); color:#00ffcc; font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase;">✅ Apply Effect</button>
+        </div>
+    </div>
+</div>
+    <div id="applyConfirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(5px);">
+        <div class="confirm-box" style="background: linear-gradient(145deg, #111, #1a1a2e); padding: 25px; border: 2px solid #00ffcc; border-radius: 15px; text-align: center; box-shadow: 0 0 20px rgba(0,255,204,0.3); width: 300px; max-width: 90%;">
+            <h2 style="color: #00ffcc; text-shadow: 0 0 10px #00ffcc; margin-bottom: 10px; font-size: 22px;">CONFIRM APPLY</h2>
+            <p style="color: #fff; margin-bottom: 25px; font-size: 14px;">Set <br><b id="confirmEffectName" style="color:#ffcc00; font-size: 18px; text-transform: uppercase;">Effect Name</b><br> as your primary click style?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="confirmApplyEffect()" style="background: #00ffcc; color: #000; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px #00ffcc; transition: 0.2s;">YES, APPLY</button>
+                <button onclick="closeApplyConfirm()" style="background: transparent; color: #aaa; border: 1px solid #555; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">CANCEL</button>
+            </div>
+        </div>
+    </div>
 
 <script type="module" src="game.js"></script>
 </body>
