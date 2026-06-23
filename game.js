@@ -1940,8 +1940,8 @@ function handleUltimateMove(largeIdx, smallIdx) {
     if (largeBoardState[largeIdx] !== '') return; 
     if (smallBoardsState[largeIdx][smallIdx] !== '') return; 
 
-    // Play Sound
-    if(currentPlayer === 'O') tapSound(); else aiMoveSound();
+        // 🔊 DEDICATED ULTIMATE MODE SOUND
+    playUltimateSound(currentPlayer);
 
     smallBoardsState[largeIdx][smallIdx] = currentPlayer;
     
@@ -2727,6 +2727,9 @@ function triggerEffectLogic(cell, sign, e, targetBoard = previewBoard) {
     const centerX = (cellRect.left + cellRect.width / 2) - canvasRect.left;
     const centerY = (cellRect.top + cellRect.height / 2) - canvasRect.top;
     const burstColor = sign === "O" ? "#00ffff" : "#ff00ff";
+    
+        // 🔊 MASTER SOUND TRIGGER (Ab yeh O aur X ko alag-alag aawaz dega)
+    playMasterFX(activeSelection, sign);
 
     // SMART RADAR: Pata karo ki asali board hai ya testing board
     const activeBoard = cell.closest('#board') || document.getElementById('previewBoard');
@@ -2934,6 +2937,35 @@ function triggerEffectLogic(cell, sign, e, targetBoard = previewBoard) {
         }
     }
 }
+
+    // 🔊 DEDICATED ULTIMATE MODE SOUND (Clean & Tactical) 🔊
+window.playUltimateSound = function(sign) {
+    if(synthCtx.state === 'suspended') synthCtx.resume();
+    
+    const osc = synthCtx.createOscillator();
+    const gainNode = synthCtx.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(masterCompressor); // Speaker safe
+    
+    const now = synthCtx.currentTime;
+    const isX = (sign === 'X');
+
+    // Tactical UI Pop Sound (Triangle wave gives a nice clean bite)
+    osc.type = 'triangle';
+    
+    // O ke liye high-tech tick, X ke liye deep thud
+    osc.frequency.setValueAtTime(isX ? 400 : 900, now);
+    osc.frequency.exponentialRampToValueAtTime(isX ? 50 : 100, now + 0.1);
+
+    // Very fast, snappy volume envelope (0.1 seconds only)
+    gainNode.gain.setValueAtTime(0.001, now);
+    gainNode.gain.linearRampToValueAtTime(isX ? 1.0 : 0.8, now + 0.01); // Fast attack
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);       // Fast release
+    
+    osc.start(now);
+    osc.stop(now + 0.1);
+};
 
     function buildTestingArenaBoard() {
         previewBoard.innerHTML = "";
@@ -3169,4 +3201,120 @@ window.triggerRealGameEffect = function(cell, sign, e) {
     let activeEvent = e || { clientX: rect.left + rect.width/2 + (Math.random() * 20 - 10), clientY: rect.top + rect.height/2 + (Math.random() * 20 - 10) };
 
 triggerEffectLogic(cell, sign, activeEvent, mainBoard);
+};
+
+// 🔊 40-IN-1 ADVANCED PROCEDURAL AUDIO ENGINE (CUSTOM & LOUD) 🔊
+const synthCtx = window.AudioContext ? new AudioContext() : new webkitAudioContext();
+
+// 🚀 MASTER COMPRESSOR: Speaker nahi fatega
+const masterCompressor = synthCtx.createDynamicsCompressor();
+masterCompressor.threshold.setValueAtTime(-10, synthCtx.currentTime);
+masterCompressor.knee.setValueAtTime(40, synthCtx.currentTime);
+masterCompressor.ratio.setValueAtTime(12, synthCtx.currentTime);
+masterCompressor.attack.setValueAtTime(0, synthCtx.currentTime);
+masterCompressor.release.setValueAtTime(0.25, synthCtx.currentTime);
+masterCompressor.connect(synthCtx.destination);
+
+window.playMasterFX = function(activeSelection, sign) {
+    if(!activeSelection) return;
+    if(synthCtx.state === 'suspended') synthCtx.resume();
+    
+    const parts = activeSelection.split('-');
+    const category = parts[0];
+    const level = parseInt(parts[1] || 0);
+
+    const osc = synthCtx.createOscillator();
+    const gainNode = synthCtx.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(masterCompressor);
+    
+    const now = synthCtx.currentTime;
+    let dur = 0.25; 
+    let vol = 0.7; 
+
+    // ⭐ O = Sharp/High, X = Deep/Heavy
+    const isX = (sign === 'X');
+    // X ko thoda upar uthaya (0.5 se 0.6) taaki aawaz speaker mein dab na jaye
+    const pMod = isX ? 0.6 : 1.5; 
+
+    if (category === 'spacetime') {
+        osc.type = 'triangle';
+        let f = level === 0 ? 350 : level === 1 ? 250 : level === 2 ? 450 : 300;
+        osc.frequency.setValueAtTime(f * pMod, now);
+        // FIX: X ka sound ab 150Hz tak hi jayega (Pehle 40Hz tha isliye mute ho gaya tha)
+        osc.frequency.exponentialRampToValueAtTime(isX ? 150 : 1000, now + 0.3); 
+        dur = 0.4; vol = isX ? 1.0 : 0.8; // X ka volume MAX!
+    } 
+    else if (category === 'cyberslash') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(1500 * pMod, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.15);
+        dur = 0.2; vol = isX ? 0.8 : 0.6;
+    } 
+    else if (category === 'hud') {
+        osc.type = 'square';
+        let f = (700 + (level * 200)) * pMod;
+        osc.frequency.setValueAtTime(f, now);
+        osc.frequency.setValueAtTime(f * 1.5, now + 0.05); 
+        dur = 0.15; vol = isX ? 0.5 : 0.3; // Square wave naturally loud hoti hai
+    } 
+    else if (category === 'fluid') {
+        osc.type = 'sine';
+        let f = (isX ? 300 : 600) + (level * 50);
+        osc.frequency.setValueAtTime(f, now);
+        osc.frequency.linearRampToValueAtTime(f + 300, now + 0.1); 
+        osc.frequency.linearRampToValueAtTime(f - 100, now + 0.2); 
+        dur = 0.3; vol = isX ? 1.0 : 0.9;
+    }
+    else if (category === 'impact') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400 * pMod, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.3); 
+        dur = 0.3; vol = isX ? 1.0 : 0.9;
+    }
+    else if (category === 'quantum') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(200 * pMod, now);
+        osc.frequency.linearRampToValueAtTime(isX ? 100 : 400, now + 0.5); 
+        dur = 0.5; vol = isX ? 0.8 : 0.7;
+    }
+    // 👇 NAYE ALAG-ALAG BLOCKS (No more copy-paste shortcuts!) 👇
+    else if (category === 'harmonics') {
+        osc.type = 'sine'; // Plucky string type feel
+        let f = (500 + (level * 150)) * pMod;
+        osc.frequency.setValueAtTime(f, now);
+        osc.frequency.exponentialRampToValueAtTime(isX ? f * 0.6 : f * 1.5, now + 0.3);
+        dur = 0.4; vol = isX ? 1.0 : 0.8; // X volume boosted
+    }
+    else if (category === 'growth') {
+        osc.type = 'triangle'; // Organic feel
+        let f = (400 + (level * 200)) * pMod;
+        osc.frequency.setValueAtTime(f, now);
+        osc.frequency.linearRampToValueAtTime(isX ? 200 : f * 1.8, now + 0.2);
+        dur = 0.3; vol = isX ? 1.0 : 0.8; 
+    }
+    else if (category === 'holo') {
+        osc.type = 'square'; // 8-bit shiny card pop feel
+        let f = (700 + (level * 200)) * pMod;
+        osc.frequency.setValueAtTime(f, now);
+        osc.frequency.setValueAtTime(isX ? f*0.8 : f*1.2, now + 0.05);
+        osc.frequency.setValueAtTime(isX ? f*0.6 : f*1.5, now + 0.1);
+        dur = 0.25; vol = isX ? 0.5 : 0.3; 
+    }
+    else if (category === 'domglitch') {
+        osc.type = 'sawtooth'; // Erratic glitchy noise
+        let base = isX ? 250 : 700; // X ko solid base glitch diya
+        osc.frequency.setValueAtTime(base + Math.random()*200, now);
+        osc.frequency.setValueAtTime(base - 100 + Math.random()*100, now + 0.05);
+        dur = 0.15; vol = isX ? 1.0 : 0.8; 
+    }
+
+    // Master Volume & Fade (Aawaz cut na maare, smooth end ho)
+    gainNode.gain.setValueAtTime(0.001, now);
+    gainNode.gain.linearRampToValueAtTime(vol, now + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    
+    osc.start(now);
+    osc.stop(now + dur);
 };
