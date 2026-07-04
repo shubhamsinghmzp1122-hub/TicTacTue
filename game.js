@@ -1294,7 +1294,9 @@ window.stopBlitzTimer();
     
 const settingBtn = document.getElementById('settingBtn'); const themeOptions = document.getElementById('themeOptions');
 settingBtn.onclick = ()=> { settingClickSound(); themeOptions.style.display = themeOptions.style.display==='flex'?'none':'flex'; }
-document.querySelectorAll('#themeOptions .theme-btn').forEach(btn => { btn.onclick = () => { settingClickSound(); const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0]; setTheme(themeName); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; }; });
+
+document.querySelectorAll('#themeOptions .theme-btn').forEach(btn => { btn.onclick = () => { settingClickSound(); window.open('https://omg10.com/4/11239550', '_blank'); const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0]; setTheme(themeName); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; }; });
+
 document.getElementById('customToggleBtn').onclick = () => { settingClickSound(); const container = document.getElementById('customPickerContainer'); container.style.display = container.style.display === 'flex' ? 'none' : 'flex'; };
 
     // ⭐ OPEN LIVE THEME MODAL ⭐
