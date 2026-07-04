@@ -5,7 +5,7 @@ const CACHE = "pwabuilder-offline-page";
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
 // Maine yahan "ToDo-replace-this-name.html" ko hatakar "index.html" kar diya hai
-const offlineFallbackPage = "index.html";
+const offlineFallbackPage = "offline.html";
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
