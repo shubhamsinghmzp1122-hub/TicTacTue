@@ -864,9 +864,12 @@ function startGame(selectedMode){
   
   updateMyPresence('busy');
 
-  if (isOnline) {
+    if (isOnline) {
       document.getElementById('videoContainer').style.display = 'flex';
       document.getElementById('chatContainer').style.display = 'flex'; 
+      // 👇 Ye 2 lines magic ka kaam karengi 👇
+      document.getElementById('micBtn').style.display = 'block';
+      document.getElementById('camBtn').style.display = 'block';
   } else {
       document.getElementById('micBtn').style.display = 'none';
       document.getElementById('camBtn').style.display = 'none';
