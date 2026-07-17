@@ -59,6 +59,7 @@ const CACHE_NAME = 'live-theme-videos-v1';
 
 let downloadQueue = [];
 let isDownloadPaused = false;
+window.autoPausedForMatch = false; // naya push system
 let currentDownloadIndex = 0;
 let totalFilesCount = 52;
 
@@ -99,6 +100,7 @@ async function initDownloadState() {
         return;
     }
 
+// 👇 YAHAN SE COPY KARO AUR PASTE KAR DO 👇
     if (savedIndex && parseInt(savedIndex) > 0) {
         currentDownloadIndex = parseInt(savedIndex);
         let pct = savedPercent || "0%";
@@ -107,6 +109,9 @@ async function initDownloadState() {
         statusText.innerText = `Paused at ${currentDownloadIndex}/${totalFilesCount}`;
         btn.innerText = "▶️ RESUME";
         resetBtn.style.display = 'block';
+        
+        // 👇 Ye ek line game ko yaad dila degi ki download already ruka hua hai
+        isDownloadPaused = true; 
     }
 }
 
@@ -829,7 +834,23 @@ function listenToRoom() {
 
 // ⭐ UPDATED START GAME (Chat Box show/hide) ⭐
 function startGame(selectedMode){
-  scoreO = 0; scoreX = 0; lobby.style.display='none'; gameDiv.style.display='flex'; gameDiv.className = 'game-board ' + currentTheme; 
+  scoreO = 0; scoreX = 0; lobby.style.display='none'; gameDiv.style.display='flex'; gameDiv.className = 'game-board ' + currentTheme;
+  
+    // ⭐ NAYA: AUTO-PAUSE DOWNLOAD DURING MATCH ⭐
+  const isPackFinished = localStorage.getItem('liveTheme_downloadComplete') === 'true';
+  // Check karega ki agar download chalu tha, tabhi roko
+  if (!isDownloadPaused && !isPackFinished && currentDownloadIndex > 0) {
+      isDownloadPaused = true; // Background loop rok dega
+      window.autoPausedForMatch = true; // Yaad rakhega ki auto-pause hua hai
+      
+      // UI button chup-chaap update kar do
+      document.getElementById('pauseDownloadPackBtn').style.display = 'none';
+      const startBtn = document.getElementById('startDownloadPackBtn');
+      startBtn.style.display = 'block';
+      startBtn.innerText = "▶️ RESUME";
+      document.getElementById('packStatusText').innerText = "Match Started! Download Auto-Paused ⏸️";
+  }
+
   if (isLevelUpMode) { modeTitle.innerHTML = 'LEVEL UP MODE'; } else { modeTitle.innerHTML = selectedMode; }
   document.getElementById('resetModeScoreBtn').style.display = 'none'; updateLevelSystemInLobby(); 
   isLevelUpMode = (selectedMode.includes("LEVEL UP MODE")); if (isLevelUpMode) levelUpMatchCount = 0; 
@@ -864,13 +885,14 @@ function startGame(selectedMode){
   
   updateMyPresence('busy');
 
-    if (isOnline) {
+     if (isOnline) {
       document.getElementById('videoContainer').style.display = 'flex';
       document.getElementById('chatContainer').style.display = 'flex'; 
       // 👇 Ye 2 lines magic ka kaam karengi 👇
       document.getElementById('micBtn').style.display = 'block';
       document.getElementById('camBtn').style.display = 'block';
   } else {
+
       document.getElementById('micBtn').style.display = 'none';
       document.getElementById('camBtn').style.display = 'none';
       document.getElementById('videoContainer').style.display = 'none';
@@ -915,9 +937,38 @@ document.getElementById('profileBtn').onclick = () => {
     document.getElementById('profileModal').style.display = 'flex';
 };
 
-document.getElementById("ultimateMultiBtn").onclick = ()=>{ 
-    menuClickSound(); vsAI = false; isLevelUpMode = false; isUltimateMode = true; 
-    startGame('ULTIMATE LOCAL MATCH'); 
+// ⭐ MAIN MENU DROPDOWN LOGIC ⭐
+document.getElementById("mainOfflineBtn").onclick = () => {
+    menuClickSound();
+    
+    // Offline menu click hote hi difficulty chup jayega
+    document.getElementById("difficulty").style.display = "none";
+    
+    const offMenu = document.getElementById("offlineMenu");
+    const onMenu = document.getElementById("onlineMenu");
+    
+    if (offMenu.style.display === "none") {
+        offMenu.style.display = "flex";
+        onMenu.style.display = "none";
+    } else {
+        offMenu.style.display = "none";
+    }
+};
+
+document.getElementById("mainOnlineBtn").onclick = () => {
+    menuClickSound();
+    
+    // Online click hote hi background mein difficulty reset ho jayega
+    document.getElementById("difficulty").style.display = "none";
+    
+    const offMenu = document.getElementById("offlineMenu");
+    const onMenu = document.getElementById("onlineMenu");
+    if (onMenu.style.display === "none") {
+        onMenu.style.display = "flex";
+        offMenu.style.display = "none";
+    } else {
+        onMenu.style.display = "none";
+    }
 };
 
 document.getElementById("single").onclick = ()=>{ menuClickSound(); if (difficultyDiv.style.display === 'flex') { difficultyDiv.style.display = 'none'; } else { difficultyDiv.style.display = 'flex'; } };
@@ -928,6 +979,15 @@ document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false;
 
 // Naya Blitz Button ka Event
 document.getElementById("blitzBtn").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; isUltimateMode = false; isBlitzMode = true; startGame('⏳ BLITZ MODE (3s)'); };
+
+document.getElementById("ultimateMultiBtn").onclick = () => { 
+    menuClickSound(); 
+    vsAI = false; 
+    isLevelUpMode = false; 
+    isBlitzMode = false; 
+    isUltimateMode = true; // Ye flag true karna sabse zaroori hai!
+    startGame('✨ ULTIMATE LOCAL'); 
+};
 
 document.getElementById('searchPlayerBtn').onclick = async () => {
     menuClickSound(); const searchInput = document.getElementById('searchUidInput'); const searchUid = searchInput.value.trim(); const resultText = document.getElementById('searchResultText');
@@ -1258,48 +1318,61 @@ document.getElementById('cancelMatchmakingBtn').onclick = async () => {
     if (playerRole === "O" && roomCode !== "") { await deleteDoc(doc(db, "rooms", roomCode)).catch(e=>{}); } roomCode = ""; playerRole = ""; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
 };
 
-backLobbyBtn.onclick = async ()=>{
-  menuClickSound(); 
-  isBlitzMode = false;
-window.stopBlitzTimer();
+// 1. Button dabane par sirf Warning Pop-up aayega
+backLobbyBtn.onclick = () => {
+    menuClickSound();
+    document.getElementById('backLobbyConfirmModal').style.display = 'flex';
+};
 
-  // 🌟 FIX: LOBBY ME AATE HI GLOBAL CANVAS CLEAR KARO 🌟
-  const gCanvas = document.getElementById('globalFxCanvas');
-  if(gCanvas) {
-      const gCtx = gCanvas.getContext('2d');
-      gCtx.clearRect(0,0,gCanvas.width, gCanvas.height);
-      gCanvas.style.display = 'none';
-  }
-  const gFluid = document.getElementById('globalFluidWrapper');
-  if(gFluid) gFluid.style.display = 'none';
+// 2. Asli Lobby wapas jane ka logic (Jab YES click ho)
+document.getElementById('confirmBackLobbyBtn').onclick = async () => {
+    menuClickSound();
+    document.getElementById('backLobbyConfirmModal').style.display = 'none'; // Pop-up band karo
+    
+    // ⭐ NAYA: AUTO-RESUME DOWNLOAD IN LOBBY ⭐
+    if (window.autoPausedForMatch) {
+        window.autoPausedForMatch = false; // Reset tracker
+        startLiveThemeDownload(); // Wapas chalu kar do
+        window.showToast("Lobby Entered: Download Auto-Resumed! 🚀");
+    }
 
-  if (isOnline) { 
-      try { await updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {}
-      isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
-      try { if (playerRole === "O") await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
-      roomCode = ""; playerRole = ""; 
-      if(window.pc){ window.pc.ontrack = null; window.pc.onicecandidate = null; window.pc.close(); window.pc=null; } 
-      if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
-      document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; 
-      document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
-      document.getElementById('videoContainer').style.display='none'; document.getElementById('localVideo').srcObject = null; document.getElementById('remoteVideo').srcObject = null;
-  }
+    isBlitzMode = false;
+    window.stopBlitzTimer();
+
+    // 🌟 FIX: LOBBY ME AATE HI GLOBAL CANVAS CLEAR KARO 🌟
+    const gCanvas = document.getElementById('globalFxCanvas');
+    if(gCanvas) {
+        const gCtx = gCanvas.getContext('2d');
+        gCtx.clearRect(0,0,gCanvas.width, gCanvas.height);
+        gCanvas.style.display = 'none';
+    }
+    const gFluid = document.getElementById('globalFluidWrapper');
+    if(gFluid) gFluid.style.display = 'none';
+
+    if (isOnline) { 
+        try { await updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {}
+        isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
+        try { if (playerRole === "O") await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
+        roomCode = ""; playerRole = ""; 
+        if(window.pc){ window.pc.ontrack = null; window.pc.onicecandidate = null; window.pc.close(); window.pc=null; } 
+        if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
+        document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; 
+        document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
+        document.getElementById('videoContainer').style.display='none'; document.getElementById('localVideo').srcObject = null; document.getElementById('remoteVideo').srcObject = null;
+    }
+    
     scoreO = 0; scoreX = 0; isLevelUpMode = false; isUltimateMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; document.getElementById('ultimateBoard').style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
     
-  updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
-  if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
-  
-      // ⭐ NAYA ADDITION 1: LOBBY RETURN REFRESH ⭐
-      if (isLiveThemeActive) {
-          window.activateLiveTheme();
-      }
-    };
+    updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
+    if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
     
-const settingBtn = document.getElementById('settingBtn'); const themeOptions = document.getElementById('themeOptions');
-settingBtn.onclick = ()=> { settingClickSound(); themeOptions.style.display = themeOptions.style.display==='flex'?'none':'flex'; }
+    // ⭐ NAYA ADDITION 1: LOBBY RETURN REFRESH ⭐
+    if (isLiveThemeActive) {
+        window.activateLiveTheme();
+    }
+};
 
-document.querySelectorAll('#themeOptions .theme-btn').forEach(btn => { btn.onclick = () => { settingClickSound(); window.open('https://omg10.com/4/11239550', '_blank'); const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0]; setTheme(themeName); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; }; });
-
+document.querySelectorAll('#themeOptions .theme-btn').forEach(btn => { btn.onclick = () => { settingClickSound(); const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0]; setTheme(themeName); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; }; });
 document.getElementById('customToggleBtn').onclick = () => { settingClickSound(); const container = document.getElementById('customPickerContainer'); container.style.display = container.style.display === 'flex' ? 'none' : 'flex'; };
 
     // ⭐ OPEN LIVE THEME MODAL ⭐
@@ -1531,7 +1604,12 @@ function setTheme(t, bgColor = '', textColor = '', customEmoji = '', isRainEnabl
       customStyleTag.innerHTML = `body.custom { background: ${bgColor} !important; color: ${textColor} !important; } .lobby.custom { background: ${bgColor} !important; color: ${textColor} !important; } .lobby.custom h1, .game-board.custom h1, .lobby.custom #liveOnlineText { color: ${textColor} !important; text-shadow: ${customShadow} !important; animation: none !important; } .lobby.custom .btn { border-color: ${textColor} !important; color: ${textColor} !important; background: rgba(0,0,0,0.7) !important; box-shadow: ${neonBox} !important;} .lobby.custom .btn:hover { background: ${textColor} !important; color: #000 !important; box-shadow: ${hoverGlow} !important; } .lobby.custom #settingBtn { background: ${textColor} !important; color: #000 !important; border: 2px solid #fff !important; box-shadow: ${neonBox} !important; text-shadow: none !important; } .lobby.custom #settingBtn:hover { background: #fff !important; color: #000 !important; box-shadow: ${hoverGlow} !important; } .game-board.custom #backLobbyBtn { border: 2px solid ${textColor} !important; color: ${textColor} !important; background: rgba(0,0,0,0.8) !important; text-shadow: none !important; box-shadow: ${neonBox} !important; } .game-board.custom #backLobbyBtn:hover { background: ${textColor} !important; color: #000 !important; box-shadow: ${heavyGlow} !important; } .game-board.custom #scoreboard, .game-board.custom #modeTitle, #level-info-text { color: ${textColor} !important; text-shadow: ${customShadow} !important; } .game-board.custom .cell { border-color: ${textColor} !important; background: rgba(0,0,0,0.6) !important; color: ${textColor} !important; text-shadow: ${customShadow} !important; box-shadow: ${isNeonEnabled ? `inset 0 0 10px ${textColor}` : 'none'} !important; animation: none !important; } .game-board.custom .board { border-color: ${textColor} !important; background: rgba(10,10,10,0.8) !important; box-shadow: ${heavyGlow} !important; } .custom .drop { color: ${textColor} !important; text-shadow: ${isNeonEnabled ? `0 0 5px ${textColor}` : 'none'} !important; } .custom .drop::before { content: '${customEmoji}' !important; }`;
   } else { customStyleTag.innerHTML = ''; }
   document.querySelectorAll('.btn').forEach(b=>{ b.style.color="";b.style.textShadow="";b.style.borderColor="";b.style.boxShadow=""; b.style.background=""; });
-  if(t==='default'){ document.querySelectorAll('.btn').forEach(b=>{ b.style.color="#fff"; b.style.borderColor="#00ffff"; b.style.background="rgba(0, 0, 0, 0.7)"; }); backLobbyBtn.style.cssText = `position:absolute;top:20px;right:20px; border:2px solid #00ffff;color:#000;padding:10px 20px; border-radius:15px;cursor:pointer;transition:0.3s; background:linear-gradient(90deg,#00ffff,#ff00ff) !important; font-weight:bold;text-shadow:0 0 5px #ffffff !important; box-shadow:0 0 10px #00ffff, 0 0 20px #ff00ff; z-index: 15;`; document.getElementById('settingBtn').style.cssText = `position:absolute;top:20px;left:20px;border:2px solid #ffffff !important;color:#000000 !important; padding:8px 15px;border-radius:12px;cursor:pointer;transition:0.3s; background:#00ffff !important; font-weight:900 !important; text-shadow:none !important; display:flex;align-items:center;gap:5px; z-index: 100 !important; box-shadow: 0 0 15px rgba(0, 255, 255, 0.8) !important; opacity: 1 !important;`; } 
+  if(t==='default'){ document.querySelectorAll('.btn').forEach(b=>{ b.style.color="#fff"; b.style.borderColor="#00ffff"; b.style.background="rgba(0, 0, 0, 0.7)"; }); backLobbyBtn.style.cssText = `position:absolute;top:20px;right:20px; border:2px solid #00ffff;color:#000;padding:10px 20px; border-radius:15px;cursor:pointer;transition:0.3s; background:linear-gradient(90deg,#00ffff,#ff00ff) !important; font-weight:bold;text-shadow:0 0 5px #ffffff !important; box-shadow:0 0 10px #00ffff, 0 0 20px #ff00ff; z-index: 15;`;
+  let oldSettingBtn = document.getElementById('settingBtn');
+if (oldSettingBtn) {
+    oldSettingBtn.style.cssText = `position:absolute;top:20px;left:20px;border:2px solid #ffffff !important;color:#000000 !important; padding:8px 15px;border-radius:12px;cursor:pointer;transition:0.3s; background:#00ffff !important; font-weight:900 !important; text-shadow:none !important; display:flex;align-items:center;gap:5px; z-index: 100 !important; box-shadow: 0 0 15px rgba(0, 255, 255, 0.8) !important; opacity: 1 !important;`;
+        }
+    } 
   stopRain(); stopNightSky(); stopDaySky();
   if (t === 'pink' || t === 'red' || t === 'yellow' || t === 'green' || (t === 'custom' && isRainEnabled)) { startRain(); } else if (t === 'dark') { startNightSky(); } else if (t === 'light') { startDaySky(); }
   updateLevelDisplay(); if (gameDiv.style.display === 'flex') { drawBoard(); }
@@ -1582,45 +1660,153 @@ function drawWinningLine(combo){ if(!combo||combo.length!==3) return; const cell
 function showPopup(winMsg, loseMsg){ popup.style.display='flex'; let contentHTML = `<div class="win-msg">${winMsg}</div>`; if (loseMsg && loseMsg !== "") { contentHTML += `<div class="lose-msg">${loseMsg}</div>`; } winnerText.innerHTML = contentHTML; }
 
 function createParticle() { const particle = document.createElement('div'); particle.classList.add('particle'); const size = Math.random() * 4 + 1; const duration = Math.random() * 4 + 3; const left = Math.random() * 100; const top = Math.random() * 100; const delay = Math.random() * -duration; particle.style.width = `${size}px`; particle.style.height = `${size}px`; particle.style.left = `${left}vw`; particle.style.top = `${top}vh`; particle.style.animationDuration = `${duration}s`; particle.style.animationDelay = `${delay}s`; particle.style.opacity = Math.random() * 0.5 + 0.3; particle.addEventListener('animationend', () => { particle.remove(); createParticle(); }); particleContainer.appendChild(particle); }
-function startLoadingScreen() { loadingOverlay.style.display = 'flex'; loadingOverlay.style.pointerEvents = 'auto'; requestAnimationFrame(() => { loadingOverlay.style.opacity = '1'; }); let currentProgress = 0; loadingBarFill.style.width = '0%'; loadingPercentage.textContent = '0%'; const interval = setInterval(() => { currentProgress += (UPDATE_INTERVAL / LOADING_DURATION) * 100; if (currentProgress >= 100) { currentProgress = 100; clearInterval(interval); } loadingBarFill.style.width = `${currentProgress}%`; loadingPercentage.textContent = `${Math.floor(currentProgress)}%`; if (currentProgress === 100) { setTimeout(() => { loadingOverlay.style.opacity = '0'; setTimeout(() => { loadingOverlay.style.display = 'none'; lobby.style.display='flex'; updateLevelSystemInLobby(); setTheme('default'); }, 1000); }, 500); } }, UPDATE_INTERVAL); }
+
+// 1. Error aane par Pop-up banane wala function (Dynamic)
+function showNetworkErrorPopup() {
+    let popup = document.getElementById('networkErrorPopup');
+    if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'networkErrorPopup';
+        popup.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:99999; display:flex; justify-content:center; align-items:center; flex-direction:column; backdrop-filter: blur(5px);";
+        popup.innerHTML = `
+            <div style="background:#111; border:2px solid #ff0055; padding:25px 40px; border-radius:15px; text-align:center; box-shadow:0 0 30px rgba(255,0,85,0.6);">
+                <h2 style="color:#ff0055; margin:0 0 10px 0; text-shadow:0 0 10px #ff0055; font-size:24px;">⚠️ Network Error</h2>
+                <p style="color:#fff; margin-bottom:25px; font-size:16px;">Connection timeout! Data load nahi ho paya.</p>
+                <button onclick="window.location.reload()" style="background:#00ffff; color:#000; border:none; padding:12px 25px; font-weight:900; font-size:16px; cursor:pointer; border-radius:8px; box-shadow:0 0 15px #00ffff; text-transform:uppercase;">🔄 Refresh Game</button>
+            </div>
+        `;
+        document.body.appendChild(popup);
+    }
+    popup.style.display = 'flex';
+}
+
+// 2. Tumhara Naya Smooth AAA-Style Loading Screen
+async function startLoadingScreen() { 
+    loadingOverlay.style.display = 'flex'; 
+    loadingOverlay.style.pointerEvents = 'auto'; 
+    requestAnimationFrame(() => { loadingOverlay.style.opacity = '1'; }); 
+
+    let visualProgress = 0;
+    let isDataLoaded = false;
+    let hasError = false;
+
+    // 🔥 A. SMOOTH VISUAL TIMER (Fills up to 99% slowly with realistic stutters)
+    const visualInterval = setInterval(() => {
+        if (hasError) {
+            clearInterval(visualInterval);
+            return;
+        }
+        
+        // Agar data load nahi hua hai, toh 99% pe jaake ruk jayega
+        if (visualProgress < 99) {
+            // Randomly thoda-thoda aage badhega (realistic gaming feel)
+            let increment = Math.random() * 4 + 0.5; 
+            visualProgress += increment;
+            if (visualProgress > 99) visualProgress = 99;
+            
+            loadingBarFill.style.width = `${visualProgress}%`;
+            loadingPercentage.textContent = `${Math.floor(visualProgress)}%`;
+        } else if (isDataLoaded) {
+            // Data aa gaya aur bar 99 pe hai, toh ek jhatke me 100 kar do
+            visualProgress = 100;
+            loadingBarFill.style.width = `100%`;
+            loadingPercentage.textContent = `100%`;
+            clearInterval(visualInterval);
+            finishLoadingSequence();
+        }
+    }, 120); // Har 120ms me thoda update hoga
+
+    // 🔥 B. TIMEOUT TRACKER (12 seconds)
+    const timeoutTracker = setTimeout(() => {
+        if (!isDataLoaded) {
+            hasError = true;
+            clearInterval(visualInterval); // 👈 Bas ye ek line add karni hai bhai
+            showNetworkErrorPopup();
+        }
+    }, 12000); // 12 seconds ka time diya hai load hone ke liye
+
+    // 🔥 C. ASLI BACKEND LOADING
+    try {
+        await initializePlayerAuth();
+        await window.loadMyFriends();
+        await window.loadFriendRequests();
+        
+        // Sab kuch success ho gaya
+        isDataLoaded = true;
+        clearTimeout(timeoutTracker); // Error timer ko cancel kar do
+
+        // Agar visual bar pehle hi 99% par khadi hai, toh game chalu kar do
+        if (visualProgress >= 99) {
+            visualProgress = 100;
+            loadingBarFill.style.width = `100%`;
+            loadingPercentage.textContent = `100%`;
+            clearInterval(visualInterval);
+            finishLoadingSequence();
+        }
+    } catch (error) {
+        console.log("Loading Failed bhai:", error);
+        hasError = true;
+        clearTimeout(timeoutTracker);
+        showNetworkErrorPopup();
+    }
+}
+
+// 3. Game start hone ka aakhri animation
+function finishLoadingSequence() {
+    setTimeout(() => { 
+        loadingOverlay.style.opacity = '0'; 
+        setTimeout(() => { 
+            loadingOverlay.style.display = 'none'; 
+            lobby.style.display = 'flex'; 
+            updateLevelSystemInLobby(); 
+            setTheme('default'); 
+        }, 1000); 
+    }, 500); 
+}
+
 function showSplash() { splashOverlay.style.display = 'flex'; splashLogo.style.transform = 'scale(0.9)'; for (let i = 0; i < PARTICLE_COUNT; i++) { createParticle(); } requestAnimationFrame(() => { splashLogo.style.transform = 'scale(1)'; }); setTimeout(() => { splashOverlay.style.opacity = '0'; splashLogo.style.transform = 'scale(1.2)'; setTimeout(() => { splashOverlay.style.display = 'none'; particleContainer.innerHTML = ''; lightStreak.style.opacity = 0; startLoadingScreen(); }, 1000); }, SPLASH_DURATION); }
 
 function initializePlayerAuth() {
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const userDocRef = doc(db, "users", user.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                myUID = userDoc.data().gameUID;
-            } else {
-                let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
-                await setDoc(userDocRef, {
-                    gameUID: newGameUID,
-                    playerName: playerName,
-                    level: playerLevel,
-                    matchesWon: totalMatchesWon,
-                    exp: currentExp,
-                    createdAt: serverTimestamp()
-                });
-                myUID = newGameUID;
-            }
-
-            const myStatusRef = ref(rtdb, '/status/' + myUID);
-            onValue(ref(rtdb, '.info/connected'), (snap) => {
-                if (snap.val() === true) {
-                    onDisconnect(myStatusRef).set("offline").then(() => {
-                        updateMyPresence(gameDiv.style.display === 'flex' ? 'busy' : 'online');
+    return new Promise((resolve) => {
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    myUID = userDoc.data().gameUID;
+                } else {
+                    let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
+                    await setDoc(userDocRef, {
+                        gameUID: newGameUID,
+                        playerName: playerName,
+                        level: playerLevel,
+                        matchesWon: totalMatchesWon,
+                        exp: currentExp,
+                        createdAt: serverTimestamp()
                     });
+                    myUID = newGameUID;
                 }
-            });
-            listenForInvites(); 
-        } else {
-            signInAnonymously(auth).catch((error) => console.log("Auth Error:", error));
-        }
+
+                const myStatusRef = ref(rtdb, '/status/' + myUID);
+                onValue(ref(rtdb, '.info/connected'), (snap) => {
+                    if (snap.val() === true) {
+                        onDisconnect(myStatusRef).set("offline").then(() => {
+                            updateMyPresence(gameDiv.style.display === 'flex' ? 'busy' : 'online');
+                        });
+                    }
+                });
+                listenForInvites(); 
+                resolve(); // 👈 Yahan Loading Screen ko signal milega ki Auth pura ho gaya
+            } else {
+                signInAnonymously(auth).then(() => {
+                    // Sign in hone ke baad state change dobara trigger hoga
+                }).catch((error) => console.log("Auth Error:", error));
+            }
+        });
     });
 }
 
-window.addEventListener('load', () => { loadGameData(); showSplash(); initializePlayerAuth(); });
+window.addEventListener('load', () => { loadGameData(); showSplash(); });
 document.addEventListener('touchstart', resumeAudio, {passive:true}); document.addEventListener('click', resumeAudio, {passive:true});
 
 let deferredPrompt;
