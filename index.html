@@ -31,7 +31,7 @@
 </div>
 
 <div id="pingDisplay" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); border: 1px solid #00ff4d; color: #00ff4d; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 900; z-index: 9999; text-shadow: 0 0 5px #00ff4d; box-shadow: 0 0 10px rgba(0,255,77,0.3); display: none; align-items: center; gap: 5px; font-family: 'Poppins', sans-serif;">
-    <span id="pingIcon">📶</span> <span id="pingText">45 ms</span>
+    <span id="pingIcon"></span> <span id="pingText">-- ms</span>
 </div>
 
 <div id="liveThemeVideoContainer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; display: none; background: #000; overflow: hidden;">
@@ -335,7 +335,7 @@
     <div class="room-box" style="border-color: #ff0055; box-shadow: 0 0 20px #ff0055;">
         <h2 style="color: #ff0055; text-shadow: 0 0 15px #ff0055;">DISCONNECTED</h2>
         <p style="color: #fff; margin: 15px 0 25px; font-size: 18px;">Opponent has left the game.</p>
-        <button class="btn" onclick="document.getElementById('disconnectModal').style.display='none'; document.getElementById('backLobbyBtn').click();" style="border-color:#ff0055; color:#ff0055;">BACK TO LOBBY</button>
+        <button class="btn" onclick="document.getElementById('disconnectModal').style.display='none'; document.getElementById('confirmBackLobbyBtn').click();" style="border-color:#ff0055; color:#ff0055; font-weight: bold; width: 100%;">OK</button>
     </div>
 </div>
 
