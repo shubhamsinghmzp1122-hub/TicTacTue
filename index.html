@@ -239,8 +239,24 @@
 </div>
 
 <div class="game-board" id="game" style="display:none;">
-  <button id="micBtn">🔇 Mic: OFF</button>
-  <button id="camBtn">📷 Cam: OFF</button>
+  
+  <button id="micBtn" title="Toggle Mic" class="media-btn off">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="1" y1="1" x2="23" y2="23"></line>
+    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
+    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
+    <line x1="12" y1="19" x2="12" y2="23"></line>
+    <line x1="8" y1="23" x2="16" y2="23"></line>
+  </svg>
+</button>
+
+<button id="camBtn" title="Toggle Cam" class="media-btn off">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h6a2 2 0 0 1 2 2v4"></path>
+    <line x1="1" y1="1" x2="23" y2="23"></line>
+    <polygon points="23 7 16 12 23 17 23 7"></polygon>
+  </svg>
+</button>
   
   <div id="videoContainer" style="display:none; position:absolute; top: 70px; left: 20px; flex-direction: column; gap: 20px; z-index: 50;">
       <div style="position:relative;">
@@ -269,7 +285,14 @@
       </div>
   </div>
 
-  <button id="backLobbyBtn">BACK TO LOBBY</button>
+  <button id="backLobbyBtn" title="Back to Lobby">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+    <polyline points="16 17 21 12 16 7"></polyline>
+    <line x1="21" y1="12" x2="9" y2="12"></line>
+  </svg>
+</button>
+
   <h1 id="modeTitle"></h1>
   
   <div id="blitzTimerContainer" style="display:none; flex-direction:column; align-items:center; width:100%; margin-bottom:15px; z-index: 20;">
@@ -517,7 +540,8 @@
             </div>
             <div style="display: flex; gap: 10px; justify-content: center; width: 100%;">
                 <button id="resetDownloadPackBtn" class="live-btn" style="flex: 1; background: #ff0055; color: #fff; box-shadow: 0 0 15px #ff0055; display: none;">❌ RESET</button>
-                <button class="live-btn" onclick="document.getElementById('liveThemeModal').style.display='none';" style="flex: 1; background: rgba(0,0,0,0.5); border-color:#888; color:#888;">CLOSE</button>
+                <button class="live-btn" onclick="document.getElementById('liveThemeModal').style.display='none'; document.getElementById('gearBtn').style.display='flex';" style="flex: 1; background: rgba(0,0,0,0.5); border-color:#888; color:#888;">CLOSE</button>
+
             </div>
         </div>
     </div>
@@ -536,14 +560,16 @@
 
 <div id="clickEffectPage" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0b1a; z-index: 9000; flex-direction: column; align-items: center; overflow-y: auto; padding-bottom: 50px;">
     
-    <div class="header" style="width: 100%; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: linear-gradient(180deg, rgba(11,11,26,0.95) 60%, transparent); z-index: 9001; backdrop-filter: blur(5px);">
+        <div class="header" style="width: 100%; padding: 15px 25px; display: flex; justify-content: center; align-items: center; position: sticky; top: 0; background: linear-gradient(180deg, rgba(11,11,26,0.95) 60%, transparent); z-index: 9001; backdrop-filter: blur(5px);">
         <h1 style="color: #00ffcc; text-shadow: 0 0 15px #00ffcc; letter-spacing: 3px; font-size: 22px; text-transform: uppercase; margin: 0;">🎇 FX ARENA</h1>
-        <button id="closeClickEffectPageBtn" style="background: transparent; border: none; color: #ff0055; font-size: 40px; cursor: pointer; line-height: 0.8; font-weight: 100; text-shadow: 0 0 15px #ff0055; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&times;</button>
     </div>
 
 <div class="sub-title" style="color: #888; margin-bottom: 20px; font-size: 13px; font-weight: bold; letter-spacing: 1px; text-align: center; padding: 0 20px;">Configure and apply your custom interaction effects</div>
 
-<button id="removeClickEffectBtn" style="background: rgba(255,0,85,0.1); border: 1px solid #ff0055; color: #ff0055; padding: 10px 20px; border-radius: 10px; font-weight: 900; margin-bottom: 15px; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 10px rgba(255,0,85,0.2);">Remove All Effects</button>
+<div style="display: flex; gap: 10px; margin-bottom: 15px; width: 95%; max-width: 500px; padding: 0 10px;">
+    <button id="closeClickEffectPageBtn" style="flex: 1; background: rgba(170,170,170,0.1); border: 1px solid #aaa; color: #aaa; padding: 10px; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.2s;">◀ BACK</button>
+    <button id="removeClickEffectBtn" style="flex: 2; background: rgba(255,0,85,0.1); border: 1px solid #ff0055; color: #ff0055; padding: 10px; border-radius: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 10px rgba(255,0,85,0.2); transition: 0.2s;">Remove Click Effect</button>
+</div>
 
     <div class="fx-container" id="fxContainer" style="width: 95%; max-width: 500px; display: flex; flex-direction: column; gap: 12px; z-index: 10;"></div>
 
