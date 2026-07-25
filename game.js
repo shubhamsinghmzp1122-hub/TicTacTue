@@ -1354,23 +1354,25 @@ document.getElementById('confirmBackLobbyBtn').onclick = async () => {
     const gFluid = document.getElementById('globalFluidWrapper');
     if(gFluid) gFluid.style.display = 'none';
 
-    if (isOnline) { 
-        try { await updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {}
-        isOnline = false; if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } 
+        if (isOnline) { 
+        isOnline = false; // 👈 1. Pehle khud ko offline mark karo
+        if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } // 👈 2. Apna Listener TURANT band karo taaki popup na aaye
+        
+        try { await updateDoc(doc(db, "rooms", roomCode), { status: "disconnected" }); } catch(e) {} // 👈 3. Ab opponent ko batao ki main nikal gaya
         try { if (playerRole === "O") await deleteDoc(doc(db, "rooms", roomCode)); } catch(e) {} 
+        
         roomCode = ""; playerRole = ""; 
         if(window.pc){ window.pc.ontrack = null; window.pc.onicecandidate = null; window.pc.close(); window.pc=null; } 
         if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
         
-        // REPLACE WITH THIS:
-    const micBtnEl = document.getElementById('micBtn');
-    const camBtnEl = document.getElementById('camBtn');
-    micBtnEl.style.display = 'none'; micBtnEl.innerHTML = micOffSvg; micBtnEl.className = 'media-btn off';
-    camBtnEl.style.display = 'none'; camBtnEl.innerHTML = camOffSvg; camBtnEl.className = 'media-btn off';
-
+        const micBtnEl = document.getElementById('micBtn');
+        const camBtnEl = document.getElementById('camBtn');
+        micBtnEl.style.display = 'none'; micBtnEl.innerHTML = micOffSvg; micBtnEl.className = 'media-btn off';
+        camBtnEl.style.display = 'none'; camBtnEl.innerHTML = camOffSvg; camBtnEl.className = 'media-btn off';
+        
         document.getElementById('videoContainer').style.display='none'; document.getElementById('localVideo').srcObject = null; document.getElementById('remoteVideo').srcObject = null;
     }
-    
+
     scoreO = 0; scoreX = 0; isLevelUpMode = false; isUltimateMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; document.getElementById('ultimateBoard').style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
     
     // YEH NAYA CODE ADD KARO:
@@ -1778,14 +1780,14 @@ async function startLoadingScreen() {
 }
 
 // 3. Game start hone ka aakhri animation
-// REPLACE WITH THIS:
 function finishLoadingSequence() {
     setTimeout(() => { 
         loadingOverlay.style.opacity = '0'; 
         setTimeout(() => { 
             loadingOverlay.style.display = 'none'; 
             lobby.style.display = 'flex'; 
-            document.getElementById('pingDisplay').style.display = 'flex'; // 👈 Ping ko pehli baar mein hi INSTANT dikhao!
+            if (typeof updatePingUI === 'function') updatePingUI(); // 👈 Pehle SVG UI render hoga!
+            document.getElementById('pingDisplay').style.display = 'flex'; 
             updateLevelSystemInLobby(); 
             setTheme('default'); 
         }, 1000); 
