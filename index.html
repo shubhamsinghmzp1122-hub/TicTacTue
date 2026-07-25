@@ -47,14 +47,14 @@
 
 <div class="lobby default" id="lobby" style="display:none;">
     
-    <div id="lobbyBatteryDisplay" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); border: 2px solid #00ffff; color: #fff; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 900; z-index: 100; display: flex; align-items: center; gap: 6px; font-family: 'Poppins', sans-serif; box-shadow: 0 0 10px rgba(0,255,255,0.2);">
-      <svg id="batterySvg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);">
+    <div id="lobbyBatteryDisplay" style="position: absolute; top: 20px; right: 20px; background: rgba(10, 10, 15, 0.54); backdrop-filter: blur(6px); border: 1px solid rgba(0, 255, 255, 0.4); color: #fff; padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 900; z-index: 100; display: flex; align-items: center; gap: 4px; font-family: 'Poppins', sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+      <svg id="batterySvg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);">
           <rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect>
           <line x1="22" y1="11" x2="22" y2="13"></line>
           <rect x="4" y="9" width="12" height="6" fill="currentColor" stroke="none" id="batteryFill" style="transition: width 0.3s ease-in-out;"></rect>
       </svg>
       <span id="batteryText">--%</span>
-      <span id="chargingIcon" style="display: none; color: #ffcc00; filter: drop-shadow(0 0 3px #ffcc00); font-size: 16px;">⚡</span>
+      <span id="chargingIcon" style="display: none; color: #ffcc00; filter: drop-shadow(0 0 3px #ffcc00); font-size: 12px;">⚡</span>
   </div>
 
 <button id="gearBtn" style="position: absolute; top: 20px; left: 20px; width: 45px; height: 45px; background: rgba(0,0,0,0.6); border: 2px solid #00ffff; border-radius: 50%; color: #00ffff; font-size: 24px; display: flex; align-items: center; justify-content: center; z-index: 10000; box-shadow: 0 0 15px #00ffff; cursor: pointer; padding: 0; transition: transform 0.5s;">⚙️</button>
