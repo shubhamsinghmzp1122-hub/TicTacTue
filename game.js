@@ -326,6 +326,7 @@ async function playWeatherVideo(weather, time) {
 window.activateLiveTheme = function() {
     menuClickSound();
     document.getElementById('liveThemeModal').style.display = 'none';
+    document.getElementById('gearBtn').style.display = 'flex'; // 👇 NAYA: Theme apply hone ke baad gear wapas laane ke liye
     
     // 🛑 FIX: Live Theme start hone se pehle baaki theme ki baarish/rang hata do
     setTheme('default');
@@ -472,16 +473,21 @@ async function startVoiceChat(isCreator) {
     }
 }
 
+    // REPLACE WITH THIS:
+const micOnSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+const micOffSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+
+const camOnSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>`;
+const camOffSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m4 0h6a2 2 0 0 1 2 2v4"></path><line x1="1" y1="1" x2="23" y2="23"></line><polygon points="23 7 16 12 23 17 23 7"></polygon></svg>`;
+
 document.getElementById('micBtn').onclick = () => {
     if(window.localStream) {
         const audioTracks = window.localStream.getAudioTracks();
         if(audioTracks.length > 0) {
             const t = audioTracks[0]; t.enabled = !t.enabled;
             const btn = document.getElementById('micBtn');
-            btn.innerText = t.enabled ? '🎙️ Mic: ON' : '🔇 Mic: OFF';
-            btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
-            btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
-            btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
+            btn.innerHTML = t.enabled ? micOnSvg : micOffSvg;
+            btn.className = t.enabled ? 'media-btn on' : 'media-btn off';
         } else {
             alert("Microphone track not found! Make sure you allowed permissions.");
         }
@@ -494,10 +500,8 @@ document.getElementById('camBtn').onclick = () => {
         if(videoTracks.length > 0) {
             const t = videoTracks[0]; t.enabled = !t.enabled;
             const btn = document.getElementById('camBtn');
-            btn.innerText = t.enabled ? '📷 Cam: ON' : '📷 Cam: OFF';
-            btn.style.color = t.enabled ? '#00ff4d' : '#ff0000';
-            btn.style.borderColor = t.enabled ? '#00ff4d' : '#ff0000';
-            btn.style.boxShadow = t.enabled ? '0 0 10px #00ff4d' : '0 0 10px #ff0000';
+            btn.innerHTML = t.enabled ? camOnSvg : camOffSvg;
+            btn.className = t.enabled ? 'media-btn on' : 'media-btn off';
         } else {
             alert("Camera track not found! Make sure you allowed permissions.");
         }
@@ -1356,8 +1360,13 @@ document.getElementById('confirmBackLobbyBtn').onclick = async () => {
         roomCode = ""; playerRole = ""; 
         if(window.pc){ window.pc.ontrack = null; window.pc.onicecandidate = null; window.pc.close(); window.pc=null; } 
         if(window.localStream){window.localStream.getTracks().forEach(t=>t.stop()); window.localStream=null;} 
-        document.getElementById('micBtn').style.display='none'; document.getElementById('micBtn').innerHTML='🔇 Mic: OFF'; document.getElementById('micBtn').style.color='#ff0000'; document.getElementById('micBtn').style.borderColor='#ff0000'; document.getElementById('micBtn').style.boxShadow='0 0 10px #ff0000'; 
-        document.getElementById('camBtn').style.display='none'; document.getElementById('camBtn').innerHTML='📷 Cam: OFF'; document.getElementById('camBtn').style.color='#ff0000'; document.getElementById('camBtn').style.borderColor='#ff0000'; document.getElementById('camBtn').style.boxShadow='0 0 10px #ff0000'; 
+        
+        // REPLACE WITH THIS:
+    const micBtnEl = document.getElementById('micBtn');
+    const camBtnEl = document.getElementById('camBtn');
+    micBtnEl.style.display = 'none'; micBtnEl.innerHTML = micOffSvg; micBtnEl.className = 'media-btn off';
+    camBtnEl.style.display = 'none'; camBtnEl.innerHTML = camOffSvg; camBtnEl.className = 'media-btn off';
+
         document.getElementById('videoContainer').style.display='none'; document.getElementById('localVideo').srcObject = null; document.getElementById('remoteVideo').srcObject = null;
     }
     
@@ -1380,14 +1389,16 @@ document.getElementById('liveThemeTriggerBtn').onclick = () => {
     settingClickSound(); 
     document.getElementById('liveThemeModal').style.display = 'flex'; 
     document.getElementById('themeOptions').style.display = 'none'; // Background wala theme menu hide karne ke liye
+    document.getElementById('gearBtn').style.display = 'none'; // 👇 NAYA: Gear button hide karne ke liye
 };
 
 // ⭐ OPEN FULL PAGE CLICK EFFECTS ⭐
-document.getElementById('clickEffectBtn').onclick = () => { 
+    document.getElementById('clickEffectBtn').onclick = () => { 
     settingClickSound(); 
     document.getElementById('clickEffectPage').style.display = 'flex'; 
     document.getElementById('themeOptions').style.display = 'none'; 
     document.getElementById('pingDisplay').style.display = 'none';
+    document.getElementById('gearBtn').style.display = 'none';
 
     // 🌟 FIX: PREVIEW CANVAS WAPAS SET KARO TESTING KE LIYE 🌟
     fxCanvas = document.getElementById('fxCanvasLayer');
@@ -1447,7 +1458,8 @@ document.getElementById('removeClickEffectBtn').onclick = () => {
 document.getElementById('closeClickEffectPageBtn').onclick = () => {
     menuClickSound(); // Close hone par sound effect
     document.getElementById('clickEffectPage').style.display = 'none';
-    
+        document.getElementById('gearBtn').style.display = 'flex';
+        
     // NAYA LOGIC: X dabaate hi sab kuch wapas default reset ho jayega
     document.querySelectorAll('.fx-category').forEach(c => {
         c.classList.remove('active'); 
@@ -1604,7 +1616,12 @@ function setTheme(t, bgColor = '', textColor = '', customEmoji = '', isRainEnabl
       customStyleTag.innerHTML = `body.custom { background: ${bgColor} !important; color: ${textColor} !important; } .lobby.custom { background: ${bgColor} !important; color: ${textColor} !important; } .lobby.custom h1, .game-board.custom h1, .lobby.custom #liveOnlineText { color: ${textColor} !important; text-shadow: ${customShadow} !important; animation: none !important; } .lobby.custom .btn { border-color: ${textColor} !important; color: ${textColor} !important; background: rgba(0,0,0,0.7) !important; box-shadow: ${neonBox} !important;} .lobby.custom .btn:hover { background: ${textColor} !important; color: #000 !important; box-shadow: ${hoverGlow} !important; } .lobby.custom #settingBtn { background: ${textColor} !important; color: #000 !important; border: 2px solid #fff !important; box-shadow: ${neonBox} !important; text-shadow: none !important; } .lobby.custom #settingBtn:hover { background: #fff !important; color: #000 !important; box-shadow: ${hoverGlow} !important; } .game-board.custom #backLobbyBtn { border: 2px solid ${textColor} !important; color: ${textColor} !important; background: rgba(0,0,0,0.8) !important; text-shadow: none !important; box-shadow: ${neonBox} !important; } .game-board.custom #backLobbyBtn:hover { background: ${textColor} !important; color: #000 !important; box-shadow: ${heavyGlow} !important; } .game-board.custom #scoreboard, .game-board.custom #modeTitle, #level-info-text { color: ${textColor} !important; text-shadow: ${customShadow} !important; } .game-board.custom .cell { border-color: ${textColor} !important; background: rgba(0,0,0,0.6) !important; color: ${textColor} !important; text-shadow: ${customShadow} !important; box-shadow: ${isNeonEnabled ? `inset 0 0 10px ${textColor}` : 'none'} !important; animation: none !important; } .game-board.custom .board { border-color: ${textColor} !important; background: rgba(10,10,10,0.8) !important; box-shadow: ${heavyGlow} !important; } .custom .drop { color: ${textColor} !important; text-shadow: ${isNeonEnabled ? `0 0 5px ${textColor}` : 'none'} !important; } .custom .drop::before { content: '${customEmoji}' !important; }`;
   } else { customStyleTag.innerHTML = ''; }
   document.querySelectorAll('.btn').forEach(b=>{ b.style.color="";b.style.textShadow="";b.style.borderColor="";b.style.boxShadow=""; b.style.background=""; });
-  if(t==='default'){ document.querySelectorAll('.btn').forEach(b=>{ b.style.color="#fff"; b.style.borderColor="#00ffff"; b.style.background="rgba(0, 0, 0, 0.7)"; }); backLobbyBtn.style.cssText = `position:absolute;top:20px;right:20px; border:2px solid #00ffff;color:#000;padding:10px 20px; border-radius:15px;cursor:pointer;transition:0.3s; background:linear-gradient(90deg,#00ffff,#ff00ff) !important; font-weight:bold;text-shadow:0 0 5px #ffffff !important; box-shadow:0 0 10px #00ffff, 0 0 20px #ff00ff; z-index: 15;`;
+  
+// REPLACE WITH THIS:
+if(t==='default'){ 
+    document.querySelectorAll('.btn').forEach(b=>{ b.style.color="#fff"; b.style.borderColor="#00ffff"; b.style.background="rgba(0, 0, 0, 0.7)"; }); 
+    backLobbyBtn.removeAttribute('style'); // Yeh CSS class ko bina disturbing chalne dega
+
   let oldSettingBtn = document.getElementById('settingBtn');
 if (oldSettingBtn) {
     oldSettingBtn.style.cssText = `position:absolute;top:20px;left:20px;border:2px solid #ffffff !important;color:#000000 !important; padding:8px 15px;border-radius:12px;cursor:pointer;transition:0.3s; background:#00ffff !important; font-weight:900 !important; text-shadow:none !important; display:flex;align-items:center;gap:5px; z-index: 100 !important; box-shadow: 0 0 15px rgba(0, 255, 255, 0.8) !important; opacity: 1 !important;`;
@@ -3325,13 +3342,15 @@ window.playUltimateSound = function(sign) {
             if (c.querySelector('.fx-content')) { c.querySelector('.fx-content').style.maxHeight = null; }
         });
 
-        // 🚨 Yahan se clickEffectPage.style.display = 'none' HATA DIYA GAYA HAI 🚨
-        
-        // 4. Apna VIP toast dikhao! 😎
-        if (typeof window.showToast === 'function') {
-            window.showToast("🎉 Effect Applied Successfully!");
-        }
+      // 🚨 NAYA ADDITION: Apply hote hi FX Arena band aur Lobby mein wapas 🚨
+    document.getElementById('clickEffectPage').style.display = 'none';
+    document.getElementById('gearBtn').style.display = 'flex';
+    
+    // 4. Apna VIP toast dikhao! 😎
+    if (typeof window.showToast === 'function') {
+        window.showToast("🎉 Effect Applied Successfully!");
     }
+}
 
     if (activeSelection.startsWith('fluid')) fluidWrapper.style.display = 'block';
     if (activeSelection.startsWith('growth')) previewBoard.classList.add('solid-boxes');
