@@ -889,18 +889,19 @@ function startGame(selectedMode){
   
   updateMyPresence('busy');
 
+    // REPLACE WITH THIS:
      if (isOnline) {
       document.getElementById('videoContainer').style.display = 'flex';
       document.getElementById('chatContainer').style.display = 'flex'; 
-      // 👇 Ye 2 lines magic ka kaam karengi 👇
       document.getElementById('micBtn').style.display = 'block';
       document.getElementById('camBtn').style.display = 'block';
+      document.getElementById('pingDisplay').style.display = 'flex'; // 👈 Online mein turant dikhao
   } else {
-
       document.getElementById('micBtn').style.display = 'none';
       document.getElementById('camBtn').style.display = 'none';
       document.getElementById('videoContainer').style.display = 'none';
       document.getElementById('chatContainer').style.display = 'none'; 
+      document.getElementById('pingDisplay').style.display = 'none'; // 👈 Offline mein turant hatao!
       resetGame(); 
   } 
 }
@@ -1372,6 +1373,13 @@ document.getElementById('confirmBackLobbyBtn').onclick = async () => {
     
     scoreO = 0; scoreX = 0; isLevelUpMode = false; isUltimateMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; document.getElementById('ultimateBoard').style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
     
+    // YEH NAYA CODE ADD KARO:
+popup.style.display = 'none';
+winningLine.style.display = 'none';
+
+    // YEH LINE ADD KARO:
+document.getElementById('pingDisplay').style.display = 'flex'; // Lobby mein aate hi Ping instant dikhao!
+
     updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
     if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
     
@@ -1733,14 +1741,15 @@ async function startLoadingScreen() {
         }
     }, 120); // Har 120ms me thoda update hoga
 
-    // 🔥 B. TIMEOUT TRACKER (12 seconds)
+// REPLACE WITH THIS:
+    // 🔥 B. TIMEOUT TRACKER (20 seconds)
     const timeoutTracker = setTimeout(() => {
         if (!isDataLoaded) {
             hasError = true;
-            clearInterval(visualInterval); // 👈 Bas ye ek line add karni hai bhai
+            clearInterval(visualInterval); 
             showNetworkErrorPopup();
         }
-    }, 12000); // 12 seconds ka time diya hai load hone ke liye
+    }, 20000); // 👈 20 seconds ka time diya hai load hone ke liye
 
     // 🔥 C. ASLI BACKEND LOADING
     try {
@@ -1769,12 +1778,14 @@ async function startLoadingScreen() {
 }
 
 // 3. Game start hone ka aakhri animation
+// REPLACE WITH THIS:
 function finishLoadingSequence() {
     setTimeout(() => { 
         loadingOverlay.style.opacity = '0'; 
         setTimeout(() => { 
             loadingOverlay.style.display = 'none'; 
             lobby.style.display = 'flex'; 
+            document.getElementById('pingDisplay').style.display = 'flex'; // 👈 Ping ko pehli baar mein hi INSTANT dikhao!
             updateLevelSystemInLobby(); 
             setTheme('default'); 
         }, 1000); 
@@ -1937,75 +1948,72 @@ setInterval(() => {
     }
 }, 15 * 60 * 1000); // 15 Minute (900,000 milliseconds)
 
+// SEARCH KARO AUR REPLACE KARO (POORA PING BLOCK):
+
 // ⭐ PING SYSTEM LOGIC (SMART WI-FI/MOBILE SVG ICONS) ⭐
-setInterval(() => {
+function updatePingUI() {
     const pingBox = document.getElementById('pingDisplay');
     const pingText = document.getElementById('pingText');
     const pingIcon = document.getElementById('pingIcon');
     const lobbyDiv = document.getElementById('lobby');
     const gameDiv = document.getElementById('game');
 
-    // 🎨 PRO SVG ICONS (Apne aap color change karenge)
+    // 🎨 PRO SVG ICONS
     const wifiSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>`;
     const cellularSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg>`;
     const warningSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 2px currentColor);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
-        // 🛑 Kahan dikhana hai, kahan nahi
     const fxPage = document.getElementById('clickEffectPage');
-    // Naya logic: Agar page 'none' nahi hai, matlab khula hai, toh ping uda do!
-    if (fxPage && fxPage.style.display !== 'none') {
-        pingBox.style.display = 'none'; return; 
-    }
+    if (fxPage && fxPage.style.display !== 'none') { pingBox.style.display = 'none'; return; }
+    if (lobbyDiv.style.display === 'none' && gameDiv.style.display === 'none') { pingBox.style.display = 'none'; return; }
+    if (gameDiv.style.display === 'flex' && !isOnline) { pingBox.style.display = 'none'; return; }
+    else { pingBox.style.display = 'flex'; }
 
-    if (lobbyDiv.style.display === 'none' && gameDiv.style.display === 'none') {
-        pingBox.style.display = 'none'; return; 
-    }
-
-    if (gameDiv.style.display === 'flex' && !isOnline) {
-        pingBox.style.display = 'none'; return;
-    } else {
-        pingBox.style.display = 'flex';
-    }
-
-    // 🛑 Agar internet band ho gaya
     if (!navigator.onLine) {
-        pingBox.style.borderColor = "#ff0055"; pingBox.style.color = "#ff0055";
-        pingBox.style.textShadow = "0 0 5px #ff0055"; pingBox.style.boxShadow = "0 0 10px rgba(255,0,85,0.5)";
-        pingText.innerText = "999+ ms";
-        pingIcon.innerHTML = warningSvg;
+        pingBox.style.border = "1px solid rgba(255, 0, 85, 0.4)"; pingBox.style.color = "#ff0055";
+        pingBox.style.textShadow = "0 0 5px #ff0055"; 
+        pingText.innerText = "999+ ms"; pingIcon.innerHTML = warningSvg;
         return;
     }
 
-    // 🔍 Wi-Fi ya Mobile Data (SMART DETECTION)
-    let currentIcon = cellularSvg; // Default Mobile Data
-    if (navigator.connection && navigator.connection.type === 'wifi') {
-        currentIcon = wifiSvg; // Agar WiFi mila toh icon change
-    }
+    let currentIcon = cellularSvg; 
+    if (navigator.connection && navigator.connection.type === 'wifi') { currentIcon = wifiSvg; }
 
-    // Asli ping nikalna 
     let basePing = 40; 
     if (navigator.connection && navigator.connection.rtt) { basePing = navigator.connection.rtt; }
-    
     let ping = basePing + Math.floor(Math.random() * 8) - 4;
     if (ping < 15) ping = 25; 
     
     if(ping >= 999) { pingText.innerText = "999+ ms"; } 
     else { pingText.innerText = ping + " ms"; }
     
-    pingIcon.innerHTML = currentIcon; // Yahan Emoji ki jagah apna custom Logo update ho raha hai!
+    pingIcon.innerHTML = currentIcon; 
 
-    // 🟢🟡🔴 PING COLORS
+    // 🟢🟡🔴 PING COLORS (Transparent Glass Pill)
+    pingBox.style.background = "rgba(10, 10, 15, 0.4)"; 
+    pingBox.style.backdropFilter = "blur(6px)"; 
+    pingBox.style.borderRadius = "20px"; 
+    pingBox.style.padding = "4px 12px"; 
+    pingBox.style.boxShadow = "0 4px 10px rgba(0,0,0,0.3)"; 
+
     if (ping < 250) { 
-        pingBox.style.borderColor = "#00ff4d"; pingBox.style.color = "#00ff4d";
-        pingBox.style.textShadow = "0 0 5px #00ff4d"; pingBox.style.boxShadow = "0 0 10px rgba(0,255,77,0.3)";
+        pingBox.style.border = "1px solid rgba(0, 255, 77, 0.4)"; 
+        pingBox.style.color = "#00ff4d";
+        pingBox.style.textShadow = "0 0 5px #00ff4d";
     } else if (ping < 600) { 
-        pingBox.style.borderColor = "#ffcc00"; pingBox.style.color = "#ffcc00";
-        pingBox.style.textShadow = "0 0 5px #ffcc00"; pingBox.style.boxShadow = "0 0 10px rgba(255,204,0,0.3)";
+        pingBox.style.border = "1px solid rgba(255, 204, 0, 0.4)";
+        pingBox.style.color = "#ffcc00";
+        pingBox.style.textShadow = "0 0 5px #ffcc00";
     } else { 
-        pingBox.style.borderColor = "#ff0055"; pingBox.style.color = "#ff0055";
-        pingBox.style.textShadow = "0 0 5px #ff0055"; pingBox.style.boxShadow = "0 0 10px rgba(255,0,85,0.3)";
+        pingBox.style.border = "1px solid rgba(255, 0, 85, 0.4)";
+        pingBox.style.color = "#ff0055";
+        pingBox.style.textShadow = "0 0 5px #ff0055";
     }
-}, 1500);
+}
+
+// 🔥 MAGIC YAHAN HAI: Pehli baar turant call karo, fir interval set karo!
+updatePingUI(); 
+setInterval(updatePingUI, 1500);
 
 // ⭐ SMART BATTERY MANAGEMENT SYSTEM (DYNAMIC BAR + SOUNDS) ⭐
 let hasNotified15 = false;
@@ -2032,20 +2040,20 @@ if ('getBattery' in navigator) {
                 batteryFill.setAttribute('width', fillWidth);
             }
 
-            // Level ke hisaab se border aur battery dono ka rang badalna
+                        // Level ke hisaab se border aur battery dono ka rang badalna (Minimal Pill Design)
             if (batteryBox) {
                 if (level <= 15) {
-                    batteryBox.style.borderColor = "#ff0055"; // Red Alert
+                    batteryBox.style.border = "1px solid rgba(255, 0, 85, 0.4)"; // Red Alert
                     batteryBox.style.color = "#ff0055";
-                    batteryBox.style.boxShadow = "0 0 10px rgba(255,0,85,0.5)";
+                    batteryBox.style.textShadow = "0 0 5px #ff0055";
                 } else if (level <= 30) {
-                    batteryBox.style.borderColor = "#ffcc00"; // Yellow Warning
+                    batteryBox.style.border = "1px solid rgba(255, 204, 0, 0.4)"; // Yellow Warning
                     batteryBox.style.color = "#ffcc00";
-                    batteryBox.style.boxShadow = "0 0 10px rgba(255,204,0,0.4)";
+                    batteryBox.style.textShadow = "0 0 5px #ffcc00";
                 } else {
-                    batteryBox.style.borderColor = "#00ffff"; // Cyan Normal
+                    batteryBox.style.border = "1px solid rgba(0, 255, 255, 0.4)"; // Cyan Normal
                     batteryBox.style.color = "#fff";
-                    batteryBox.style.boxShadow = "0 0 10px rgba(0,255,255,0.2)";
+                    batteryBox.style.textShadow = "none";
                 }
             }
 
