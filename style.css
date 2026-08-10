@@ -521,3 +521,37 @@ body .game-board #board.spacetime-transparent {
 .rain-container {
     z-index: 3 !important;
 }
+
+/* Custom Color Swatch Buttons */
+.color-swatch {
+    width: 35px; 
+    height: 35px; 
+    border-radius: 50%; 
+    cursor: pointer; 
+    border: 2px solid transparent; 
+    transition: all 0.2s ease;
+}
+.color-swatch:hover {
+    transform: scale(1.2); 
+    border-color: #ffffff;
+}
+/* Custom Neon Slider Styles */
+.neon-slider { -webkit-appearance: none; appearance: none; outline: none; cursor: pointer; }
+.neon-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 22px; height: 22px;
+    border-radius: 50%; background: #ffffff; border: 3px solid #000000;
+    box-shadow: 0 0 10px rgba(255,255,255,0.8); cursor: pointer;
+}
+
+/* ♾️ INFINITE MODE CSS ♾️ */
+@keyframes fadeBlink { 
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 20px #ffcc00; border-color: #ffcc00; } 
+    50% { opacity: 0.4; transform: scale(0.9); box-shadow: none; border-color: transparent; } 
+}
+.blink-warning { animation: fadeBlink 1s infinite !important; }
+
+@keyframes popOutAnim { 
+    0% { transform: scale(1); opacity: 1; filter: brightness(2); } 
+    100% { transform: scale(0); opacity: 0; filter: brightness(0); } 
+}
+.pop-out-ghost { animation: popOutAnim 0.35s ease-in forwards !important; pointer-events: none; z-index: 1000; }
