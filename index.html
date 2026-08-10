@@ -25,11 +25,6 @@
     .board-canvas-wrapper.quantum-mode { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
 </style>
 
-<canvas id="globalFxCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; display: none;"></canvas>
-<div id="globalFluidWrapper" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9997; filter: blur(8px) contrast(15); display: none;">
-    <canvas id="globalFluidCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
-</div>
-
 <div id="pingDisplay" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); border: 1px solid #00ff4d; color: #00ff4d; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 900; z-index: 9999; text-shadow: 0 0 5px #00ff4d; box-shadow: 0 0 10px rgba(0,255,77,0.3); display: none; align-items: center; gap: 5px; font-family: 'Poppins', sans-serif;">
     <span id="pingIcon"></span> <span id="pingText">-- ms</span>
 </div>
@@ -84,11 +79,20 @@
       </div>
 
       <div id="customPickerContainer" style="display:none; position:absolute; bottom:30px; left:50%; transform:translateX(-50%); background:#111; border:2px solid #00ffff; border-radius:15px; padding:15px; width:90%; max-width:300px; box-shadow:0 0 20px rgba(0,255,255,0.4); flex-direction:column; gap:8px;">
-          <label class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;">BG Color: <input type="color" id="customBgColor" value="#1a1a2e" style="width:30px;height:30px;border:none;"></label>
-          <label class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;">Text Color: <input type="color" id="customTextColor" value="#00ffcc" style="width:30px;height:30px;border:none;"></label>
+          
+          <div class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;align-items:center; margin-bottom: 10px;">BG Color: 
+    <div id="btnBgColor" style="background-color: #1a1a2e; width:30px; height:30px; border:2px solid #fff; border-radius:8px; cursor:pointer; box-shadow:0 0 10px #1a1a2e; transition:0.2s;"></div>
+    <input type="color" id="customBgColor" value="#1a1a2e" style="display:none;">
+</div>
+
+<div class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;align-items:center; margin-bottom: 10px;">Text Color: 
+    <div id="btnTextColor" style="background-color: #00ffcc; width:30px; height:30px; border:2px solid #fff; border-radius:8px; cursor:pointer; box-shadow:0 0 10px #00ffcc; transition:0.2s;"></div>
+    <input type="color" id="customTextColor" value="#00ffcc" style="display:none;">
+</div>
+
           <label class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;">Neon Glow: <input type="checkbox" id="enableCustomNeon" checked style="width:18px;height:18px;"></label>
           <label class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;">Enable Rain: <input type="checkbox" id="enableCustomRain" style="width:18px;height:18px;"></label>
-          <label class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;">Rain Emoji: <input type="text" id="customRainEmoji" value="💀" maxlength="2" style="width:40px;text-align:center;"></label>
+          <label class="custom-label" style="color:#fff;font-weight:bold;display:flex;justify-content:space-between;">Rain Emoji: <input type="text" id="customRainEmoji" value="😜" maxlength="2" style="width:40px;text-align:center;"></label>
           <button id="applyCustomBtn" style="background:#00ffff; color:#000; font-weight:bold; padding:8px; border-radius:8px; border:none; margin-top:5px;">Apply Colors</button>
       </div>
   </div>
@@ -108,7 +112,7 @@
         const total = nodes.length;
         const angleStep = 360 / total;
 
-        const nodeNames = ["Default Space", "Dark Hacker", "Light Clean", "Red Alert", "Yellow Volt", "Green Matrix", "Love Mode", "Custom Palette", "Live Weather", "Photo Upload", "Click Effects"];
+        const nodeNames = ["Default Space", "Dark Hacker", "Light Clean", "Red Alert", "Yellow Volt", "Green Matrix", "Love Mode", "Custom Palette", "Live Weather", "Personal Themes", "Click Effects"];
 
         let currentRot = 0; let isDragging = false; let startY = 0; let lastRot = 0; let activeIndex = 0;
 
@@ -211,6 +215,9 @@
               </div>
               <button class="btn" id="levelUpMode" style="width: 100%; margin: 5px 0;">LEVEL UP MODE</button> 
               <button class="btn" id="multi" style="width: 100%; margin: 5px 0;">LOCAL MULTI PLAYER</button>
+              
+              <button class="btn" id="infiniteBtn" style="width: 100%; margin: 5px 0; background: linear-gradient(90deg, #00ffff, #0088ff) !important; color: #000 !important; box-shadow: 0 0 15px #00ffff; font-weight: 900;"> INFINITE MODE</button>
+
               <button class="btn" id="blitzBtn" style="width: 100%; margin: 5px 0; background: linear-gradient(90deg, #ff0000, #ff8c00) !important; box-shadow: 0 0 15px #ff0000; animation: customBtnPulse 1s infinite alternate;">⏳ BLITZ MODE (3s)</button>
               <button class="btn" id="ultimateMultiBtn" style="width: 100%; margin: 5px 0; background: linear-gradient(90deg, #ff0055, #8a2be2) !important; box-shadow: 0 0 15px #ff0055;">✨ ULTIMATE LOCAL</button>
           </div>
@@ -609,6 +616,26 @@
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button class="btn" id="confirmBackLobbyBtn" style="background: #ff0055 !important; color: #fff !important; border-color: #ff0055; padding: 8px 15px; font-size: 14px; margin: 0; box-shadow: 0 0 10px #ff0055;">YES, LEAVE</button>
             <button class="btn" onclick="document.getElementById('backLobbyConfirmModal').style.display='none'; menuClickSound();" style="background: transparent !important; color: #aaa !important; border-color: #555; padding: 8px 15px; font-size: 14px; margin: 0;">CANCEL</button>
+        </div>
+    </div>
+</div>
+    
+    <div id="customColorPickerModal" class="room-modal" style="z-index: 10005;">
+    <div class="room-box" style="border-color: #00ffff; box-shadow: 0 0 25px #00ffff; width: 320px; max-width: 90vw; padding: 25px; background: linear-gradient(145deg, #111, #1a1a2e);">
+        
+        <h2 id="neonTunerTitle" style="color: #00ffff; text-shadow: 0 0 15px #00ffff; font-size: 22px; margin-bottom: 15px; letter-spacing: 2px;">NEON TUNER</h2>
+
+        <div id="colorPreviewBox" style="width: 100%; height: 50px; border-radius: 10px; background: #00ffcc; box-shadow: 0 0 15px #00ffcc; margin-bottom: 20px; border: 2px solid #fff; transition: background 0.1s;"></div>
+        
+        <div style="text-align: left; color: #fff; font-size: 13px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;">HUE (Color)</div>
+        <input type="range" id="hueSlider" class="neon-slider" min="0" max="360" value="180" style="width: 100%; height: 15px; border-radius: 8px; background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); margin-bottom: 15px;">
+        
+        <div style="text-align: left; color: #fff; font-size: 13px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;">BRIGHTNESS</div>
+        <input type="range" id="lightSlider" class="neon-slider" min="5" max="95" value="50" style="width: 100%; height: 15px; border-radius: 8px; background: linear-gradient(to right, #000, #00ffcc, #fff); margin-bottom: 25px;">
+        
+        <div style="display: flex; gap: 10px;">
+            <button class="btn" id="applyTunerColorBtn" style="flex: 1; background: #00ffff !important; color: #000 !important; border-color: #00ffff; margin: 0; padding: 10px; font-weight: bold; box-shadow: 0 0 15px #00ffff;">SET COLOR</button>
+            <button class="btn" onclick="document.getElementById('customColorPickerModal').style.display='none'; menuClickSound();" style="flex: 1; background: transparent !important; color: #aaa !important; border-color: #555; margin: 0; padding: 10px;">CANCEL</button>
         </div>
     </div>
 </div>
