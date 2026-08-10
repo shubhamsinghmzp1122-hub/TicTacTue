@@ -3,6 +3,19 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
+
+/*
+// 🤪❤️Chrome me main console open karne ke liye hai❤️🤪
+// 🐛 NAYA FLOATING CONSOLE (Eruda injected via JS)
+let erudaScript = document.createElement('script');
+erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
+document.head.appendChild(erudaScript);
+erudaScript.onload = function () {
+    eruda.init();
+};
+*/
+
+
 const firebaseConfig = {
   apiKey: "AIzaSyDXUTAIDN9oBwFj9N6zRDl4sRVx3tc4STc",
   authDomain: "tic-tac-toe-onlinex.firebaseapp.com",
@@ -283,6 +296,18 @@ function getTimeOfDay() {
     return 'night';
 }
 
+// ⭐ NAYA: SMART FALLBACK BRAIN (Memory + Calendar) ⭐
+function getSmartFallbackWeather() {
+    // 1. Pehle Memory check karo
+    const savedWeather = localStorage.getItem('last_known_weather');
+    if (savedWeather) return savedWeather;
+
+    // 2. Agar memory khali hai, toh Calendar dekho
+    const month = new Date().getMonth(); // 0 = Jan, 11 = Dec
+    if (month >= 2 && month <= 5) return 'hot';      // March se June (Garmi)
+    if (month >= 6 && month <= 8) return 'rainy';    // July se Sept (Baarish)
+    return 'cold';                                   // Oct se Feb (Sardi)
+}
 // 3. The Seamless Cross-Fade Video Director 🎬
 async function playWeatherVideo(weather, time) {
     // Agar future mein kisi specific combo ki video missing hui toh galti se crash na ho
@@ -305,19 +330,22 @@ async function playWeatherVideo(weather, time) {
         const cache = await caches.open(CACHE_NAME);
         const cachedRes = await cache.match(videoUrl);
         
-        if (cachedRes) {
+                if (cachedRes) {
             const blob = await cachedRes.blob();
             nextPlayer.src = URL.createObjectURL(blob);
         } else {
             nextPlayer.src = videoUrl; // Agar memory me na mile toh internet se
         }
 
-        // Play aur Cross-Fade Magic
-        nextPlayer.play().then(() => {
-            nextPlayer.style.opacity = 1;   // Nayi video Fade-IN
-            currentPlayer.style.opacity = 0; // Purani video Fade-OUT
-            activeVideoPlayer = (activeVideoPlayer === 1) ? 2 : 1; // Tracker Swap
-        }).catch(e => console.log("AutoPlay blocked, waiting for interaction..."));
+        // ⭐ PARDE KE PICHE KA MAGIC (Pre-loading) ⭐
+        // Video jab internet se fully load hokar chalne ko ready ho jaye, tabhi parda hatao!
+        nextPlayer.oncanplay = () => {
+            nextPlayer.play().then(() => {
+                nextPlayer.style.opacity = 1;   // Nayi video smoothly Fade-IN
+                currentPlayer.style.opacity = 0; // Purani video Fade-OUT
+                activeVideoPlayer = (activeVideoPlayer === 1) ? 2 : 1; // Tracker Swap
+            }).catch(e => console.log("AutoPlay blocked, waiting for interaction..."));
+        };
 
     } catch(err) { console.log("Video Play Error:", err); }
 }
@@ -355,17 +383,25 @@ window.activateLiveTheme = function() {
                 const weatherCondition = mapWeatherCode(wmoCode); // Map Code
                 const timeCondition = getTimeOfDay(); // Map Time
                 
+                // ⭐ NAYA: Asli mausam ko Memory mein save karo ⭐
+                localStorage.setItem('last_known_weather', weatherCondition);
+                
                 playWeatherVideo(weatherCondition, timeCondition);
                 window.showToast(`Live BG: ${weatherCondition.toUpperCase()} ${timeCondition.toUpperCase()} 🎬`);
             } catch(error) {
-                playWeatherVideo('cloudy', getTimeOfDay());
+                // Error aane par Naya Dimaag use karo
+                let smartMausam = getSmartFallbackWeather();
+                playWeatherVideo(smartMausam, getTimeOfDay());
             }
         }, (error) => {
-            window.showToast("Location denied. Default weather applied. ☁️");
-            playWeatherVideo('cloudy', getTimeOfDay());
+            // Location block hone par Naya Dimaag use karo
+            let smartMausam = getSmartFallbackWeather();
+            window.showToast(`Location blocked. Smart Fallback: ${smartMausam.toUpperCase()} 🧠`);
+            playWeatherVideo(smartMausam, getTimeOfDay());
         });
     } else {
-        playWeatherVideo('cloudy', getTimeOfDay());
+        let smartMausam = getSmartFallbackWeather();
+        playWeatherVideo(smartMausam, getTimeOfDay());
     }
 };
 
@@ -513,13 +549,17 @@ function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24);
 
 const lobby = document.getElementById('lobby'); const difficultyDiv = document.getElementById('difficulty'); const boardDiv = document.getElementById('board'); const gameDiv = document.getElementById('game'); const popup = document.getElementById('popup'); const winnerText = document.getElementById('winnerText'); const modeTitle = document.getElementById('modeTitle'); const winningLine = document.getElementById('winning-line'); const scoreboard = document.getElementById('scoreboard'); const backLobbyBtn = document.getElementById('backLobbyBtn'); const rainContainer = document.getElementById('rain-container'); const moon = document.getElementById('moon'); const sun = document.getElementById('sun'); const starContainer = document.getElementById('star-container'); const loadingOverlay = document.getElementById('loading-overlay'); const loadingBarFill = document.getElementById('loading-bar-fill'); const loadingPercentage = document.getElementById('loading-percentage'); const levelContainer = document.getElementById('level-system-container'); const levelInfoText = document.getElementById('level-info-text'); const levelProgressFill = document.getElementById('level-progress-fill'); const splashOverlay = document.getElementById('splash-overlay'); const splashLogo = document.querySelector('.splash-logo'); const particleContainer = document.getElementById('particle-container'); const lightStreak = document.querySelector('.light-streak');
 const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION = 5000; const UPDATE_INTERVAL = 50; 
+
+let isInfiniteMode = false; let movesO = []; let movesX = [];
+
 let board = ["","","","","","","","",""]; let currentPlayer = "O"; let vsAI = false; let aiLevel = "easy"; let winningCombo = []; let scoreO = 0; let scoreX = 0; let currentTheme = 'default';
 
 let isUltimateMode = false; let ultimateStartingTurn = 'O'; 
 let ultimateActiveBoardIndex = -1; let largeBoardState = []; let smallBoardsState = [];
 
 let isLevelUpMode = false;
-let isBlitzMode = false;
+let isBlitzMode = false; isInfiniteMode = false; movesO = []; movesX = [];
+
 let blitzTimeLeft = 3000;
 let blitzInterval = null;
 const BLITZ_MAX = 3000;
@@ -565,15 +605,61 @@ async function handleCellClick(i, e) {
 function makeMove(i, e){
   if(board[i]!=="" || checkWinner()) return;
   if(currentPlayer === 'O') tapSound(); else aiMoveSound(); 
-  board[i] = currentPlayer; 
-  drawBoard(); // Dabba ban gaya
   
-  // 👇 YAHAN SE ASALI AAG LAGEGI 👇
-  const allCells = document.querySelectorAll('#board .cell');
-  if(allCells[i]) {
-      window.triggerRealGameEffect(allCells[i], currentPlayer, e);
+  // Naye Fix ke liye trackers
+  let ghostIndex = -1;
+  let ghostHTML = "";
+  let ghostClass = "";
+
+  // 👇 INFINITE LOGIC 👇
+  if (isInfiniteMode) {
+      let currentArray = (currentPlayer === 'O') ? movesO : movesX;
+      currentArray.push(i); 
+      
+      if (currentArray.length > 3) {
+          let oldestMove = currentArray.shift(); // 4th move aate hi 1st wala hatao
+          
+          let allCells = document.querySelectorAll('#board .cell');
+          if(allCells[oldestMove]) {
+              // Ghost banane se pehle data save kar lo, kyunki drawBoard isko delete kar dega
+              ghostIndex = oldestMove;
+              ghostHTML = allCells[oldestMove].innerHTML; 
+              ghostClass = allCells[oldestMove].className;
+          }
+          board[oldestMove] = ""; // Asli board se data uda do
+      }
   }
-  // 👆 AAG LAG GAYI 👆
+
+  board[i] = currentPlayer; 
+  drawBoard(); // 🧨 Yahan saare puraane cells destroy hoke naye ban gaye!
+  
+  // 🪄 NAYA MAGIC: Naye banne hue board par Ghost ko wapas zinda karo!
+  if (ghostIndex !== -1) {
+      let newCells = document.querySelectorAll('#board .cell');
+      if (newCells[ghostIndex]) {
+          let ghost = document.createElement('div');
+          ghost.className = ghostClass + ' pop-out-ghost';
+          ghost.innerHTML = ghostHTML; 
+          
+          ghost.style.position = 'absolute'; 
+          ghost.style.top = '-2px'; 
+          ghost.style.left = '-2px';
+          ghost.style.width = '100px'; 
+          ghost.style.height = '100px';
+          ghost.style.margin = '0';
+          ghost.style.border = 'none'; 
+          ghost.style.zIndex = '50'; 
+          
+          newCells[ghostIndex].appendChild(ghost);
+          setTimeout(() => ghost.remove(), 350);
+      }
+  }
+
+  // 👇 YAHAN SE ASALI AAG LAGEGI 👇
+  const allCellsForVFX = document.querySelectorAll('#board .cell');
+  if(allCellsForVFX[i]) {
+      window.triggerRealGameEffect(allCellsForVFX[i], currentPlayer, e);
+  }
 
   const winner = checkWinner();
 
@@ -581,7 +667,7 @@ function makeMove(i, e){
   if(board.every(x=>x!=="")){ window.stopBlitzTimer(); handleDraw(); return; }
   currentPlayer = (currentPlayer==='O')?'X':'O';
   
-  if (isBlitzMode) window.startBlitzTimer(); // 🔥 Har turn badalne par 3s ka timer restart
+  if (isBlitzMode) window.startBlitzTimer(); 
   
   if(vsAI && currentPlayer==='X') { aiMoveSound(); setTimeout(aiMove,350); }
 }
@@ -691,7 +777,20 @@ window.resetGame = async function(){
       let nextStarter = window.startingTurn === 'O' ? 'X' : 'O';
       await updateDoc(doc(db, "rooms", roomCode), { board: ["","","","","","","","",""], currentPlayer: nextStarter, startingTurn: nextStarter }); return; 
   }
-  popup.style.display='none'; winningLine.style.display='none'; board=["","","","","","","","",""]; winningCombo=[];
+  popup.style.display='none'; winningLine.style.display='none'; board=["","","","","","","","",""]; winningCombo=[]; movesO = []; movesX = [];
+
+      // 👇 NAYA MAGIC: PLAY AGAIN PE JAAL KO SEEDHA KARNE KE LIYE 👇
+  activeForces = []; 
+  let selectedFx = localStorage.getItem('selected_fx');
+  if (selectedFx && selectedFx.startsWith('spacetime')) {
+      initSpacetimeMeshLocked(); // Jaal ki tedi lines ko ekdum flat karega
+      if (!window.isVfxRunning) {
+          window.isVfxRunning = true;
+          setTimeout(() => MasterVFXEngineLoop(), 10); // Seedha jaal wapas paint kar dega
+      }
+  }
+  // 👆 YAHAN TAK 👆
+
   if (isLevelUpMode) { levelUpMatchCount++; if (levelUpMatchCount % 2 !== 0) { currentPlayer = "O"; aiLevel = "hard"; } else { currentPlayer = "X"; aiLevel = "ultrahard"; } 
   } else if (vsAI && aiLevel === 'ultrahard') { 
       currentPlayer = "X"; 
@@ -761,7 +860,9 @@ roomActionBtn.onclick = async () => {
 
     const docRef = doc(db, "rooms", code); const docSnap = await getDoc(docRef);
     if (docSnap.exists() && docSnap.data().status === "waiting") {
-        roomCode = code; playerRole = "X"; await updateDoc(docRef, { status: "playing" }); listenToRoom();
+        
+    roomCode = code; playerRole = "X"; await updateDoc(docRef, { status: "playing", joinedBy: myUID }); listenToRoom();
+
     } else {
         roomStatusText.innerHTML = "<span style='color:#ff0055; text-shadow:0 0 10px #ff0055;'>❌ Room not found!</span>"; roomActionBtn.innerText = "JOIN";
     }
@@ -838,6 +939,10 @@ function listenToRoom() {
 
 // ⭐ UPDATED START GAME (Chat Box show/hide) ⭐
 function startGame(selectedMode){
+isInfiniteMode = selectedMode.includes("INFINITE");
+  movesO = [];
+  movesX = [];
+
   scoreO = 0; scoreX = 0; lobby.style.display='none'; gameDiv.style.display='flex'; gameDiv.className = 'game-board ' + currentTheme;
   
     // ⭐ NAYA: AUTO-PAUSE DOWNLOAD DURING MATCH ⭐
@@ -981,6 +1086,13 @@ document.querySelectorAll('.diff').forEach(btn=>{ btn.onclick = ()=>{ menuClickS
 document.getElementById("levelUpMode").onclick = ()=>{ menuClickSound(); vsAI = true; isLevelUpMode = true; startGame('LEVEL UP MODE (Alternating Difficulty & Start)'); };
 
 document.getElementById("multi").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; isUltimateMode = false; isBlitzMode = false; startGame('Player O vs Player X'); };
+
+document.getElementById("infiniteBtn").onclick = () => { 
+    menuClickSound(); 
+    vsAI = false; isLevelUpMode = false; isUltimateMode = false; isBlitzMode = false; 
+    isInfiniteMode = true; 
+    startGame('INFINITE MODE'); 
+};
 
 // Naya Blitz Button ka Event
 document.getElementById("blitzBtn").onclick = ()=>{ menuClickSound(); vsAI = false; isLevelUpMode = false; isUltimateMode = false; isBlitzMode = true; startGame('⏳ BLITZ MODE (3s)'); };
@@ -1344,7 +1456,7 @@ document.getElementById('confirmBackLobbyBtn').onclick = async () => {
     isBlitzMode = false;
     window.stopBlitzTimer();
 
-    // 🌟 FIX: LOBBY ME AATE HI GLOBAL CANVAS CLEAR KARO 🌟
+    // 🌟 FIX: LOBBY ME AATE HI GLOBAL CANVAS CLEAR AUR MEMORY FREE KARO 🌟
     const gCanvas = document.getElementById('globalFxCanvas');
     if(gCanvas) {
         const gCtx = gCanvas.getContext('2d');
@@ -1354,7 +1466,20 @@ document.getElementById('confirmBackLobbyBtn').onclick = async () => {
     const gFluid = document.getElementById('globalFluidWrapper');
     if(gFluid) gFluid.style.display = 'none';
 
-        if (isOnline) { 
+    // 🧹 NAYA MAGIC: RAM aur Background Arrays ko ekdam Clean kar do
+    activeForces = []; 
+    activeSlashes = []; 
+    activeSparks = []; 
+    activeHudElements = []; 
+    liquidDrops = []; 
+    activeWaves = []; 
+    growingBranches = []; 
+    quantumElements = [];
+    animeActive = false; 
+    animeTimer = 0;
+    window.isVfxRunning = false;
+
+    if (isOnline) { 
         isOnline = false; // 👈 1. Pehle khud ko offline mark karo
         if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; } // 👈 2. Apna Listener TURANT band karo taaki popup na aaye
         
@@ -1376,11 +1501,11 @@ document.getElementById('confirmBackLobbyBtn').onclick = async () => {
     scoreO = 0; scoreX = 0; isLevelUpMode = false; isUltimateMode = false; levelUpMatchCount = 0; lobby.style.display='flex'; gameDiv.style.display='none'; document.getElementById('ultimateBoard').style.display='none'; board = ["","","","","","","","",""]; winningCombo = []; currentPlayer = "O"; difficultyDiv.style.display='none'; gameDiv.className = 'game-board ' + currentTheme; document.getElementById('resetModeScoreBtn').style.display = 'block'; 
     
     // YEH NAYA CODE ADD KARO:
-popup.style.display = 'none';
-winningLine.style.display = 'none';
+    popup.style.display = 'none';
+    winningLine.style.display = 'none';
 
     // YEH LINE ADD KARO:
-document.getElementById('pingDisplay').style.display = 'flex'; // Lobby mein aate hi Ping instant dikhao!
+    document.getElementById('pingDisplay').style.display = 'flex'; // Lobby mein aate hi Ping instant dikhao!
 
     updateScoreboard(); updateLevelSystemInLobby(); updateMyPresence('online'); 
     if (currentTheme === 'dark') { moon.style.display = 'block'; starContainer.style.display = 'block'; } if (currentTheme === 'light') { sun.style.display = 'block'; }
@@ -1394,12 +1519,21 @@ document.getElementById('pingDisplay').style.display = 'flex'; // Lobby mein aat
 document.querySelectorAll('#themeOptions .theme-btn').forEach(btn => { btn.onclick = () => { settingClickSound(); const themeName = btn.textContent.includes('Love Mode') ? 'pink' : btn.textContent.toLowerCase().split(' ')[0]; setTheme(themeName); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; }; });
 document.getElementById('customToggleBtn').onclick = () => { settingClickSound(); const container = document.getElementById('customPickerContainer'); container.style.display = container.style.display === 'flex' ? 'none' : 'flex'; };
 
-    // ⭐ OPEN LIVE THEME MODAL ⭐
+  // ⭐ OPEN LIVE THEME MODAL (HYBRID SYSTEM) ⭐
 document.getElementById('liveThemeTriggerBtn').onclick = () => { 
     settingClickSound(); 
-    document.getElementById('liveThemeModal').style.display = 'flex'; 
-    document.getElementById('themeOptions').style.display = 'none'; // Background wala theme menu hide karne ke liye
-    document.getElementById('gearBtn').style.display = 'none'; // 👇 NAYA: Gear button hide karne ke liye
+    document.getElementById('themeOptions').style.display = 'none'; 
+    
+    // Smart Hardware Detector
+    if (checkDevicePower() === "HIGH_END") {
+        // Ameer phone: Pura download modal kholo
+        document.getElementById('liveThemeModal').style.display = 'flex'; 
+        document.getElementById('gearBtn').style.display = 'none'; 
+    } else {
+        // Sasta/Purana phone: Modal bypass karo aur direct stream chalu karo!
+        window.showToast("🚀 Smart Streaming Enabled for Low-End Device!");
+        window.activateLiveTheme(); 
+    }
 };
 
 // ⭐ OPEN FULL PAGE CLICK EFFECTS ⭐
@@ -1468,8 +1602,12 @@ document.getElementById('removeClickEffectBtn').onclick = () => {
 document.getElementById('closeClickEffectPageBtn').onclick = () => {
     menuClickSound(); // Close hone par sound effect
     document.getElementById('clickEffectPage').style.display = 'none';
-        document.getElementById('gearBtn').style.display = 'flex';
-        
+    document.getElementById('gearBtn').style.display = 'flex';
+    
+    // 👇 NAYA MAGIC: PURANA EFFECT WAPAS RESTORE KARO 👇
+    activeSelection = localStorage.getItem('selected_fx') || '';
+    document.querySelectorAll('.fx-btn').forEach(b => b.classList.remove('selected'));
+
     // NAYA LOGIC: X dabaate hi sab kuch wapas default reset ho jayega
     document.querySelectorAll('.fx-category').forEach(c => {
         c.classList.remove('active'); 
@@ -1489,11 +1627,127 @@ document.getElementById('closeClickEffectPageBtn').onclick = () => {
     }
 };
 
-document.getElementById('applyCustomBtn').onclick = () => { settingClickSound(); const bgColor = document.getElementById('customBgColor').value; const textColor = document.getElementById('customTextColor').value; const customEmoji = document.getElementById('customRainEmoji').value || '✨'; const isRainEnabled = document.getElementById('enableCustomRain').checked; const isNeonEnabled = document.getElementById('enableCustomNeon').checked; setTheme('custom', bgColor, textColor, customEmoji, isRainEnabled, isNeonEnabled); themeOptions.style.display = 'none'; document.getElementById('customPickerContainer').style.display = 'none'; };
+document.getElementById('applyCustomBtn').onclick = () => { 
+    settingClickSound(); 
+    const bgColor = document.getElementById('customBgColor').value; 
+    const textColor = document.getElementById('customTextColor').value; 
+    let customEmoji = document.getElementById('customRainEmoji').value.trim(); 
+    let isRainEnabled = document.getElementById('enableCustomRain').checked; 
+    
+    // 🧠 SMART FIX: Agar emoji khali hai, toh zabardasti rain band kar do
+    if (customEmoji === '') { 
+        isRainEnabled = false; 
+        document.getElementById('enableCustomRain').checked = false;
+    }
+    
+    const isNeonEnabled = document.getElementById('enableCustomNeon').checked; 
+    setTheme('custom', bgColor, textColor, customEmoji, isRainEnabled, isNeonEnabled); 
+    themeOptions.style.display = 'none'; 
+    document.getElementById('customPickerContainer').style.display = 'none'; 
+};
+
+// 🧠 SMART UI FIX: Jab user bina emoji ke tick kare, toh usko rok do
+document.getElementById('enableCustomRain').addEventListener('change', function() {
+    const emojiVal = document.getElementById('customRainEmoji').value.trim();
+    if (this.checked && emojiVal === '') {
+        this.checked = false; // Tick ko wapas hata do
+        if(window.showToast) window.showToast("⚠️ Pehle koi Emoji daal bhai!");
+        document.getElementById('customRainEmoji').focus(); // Input box pe blink karao
+    }
+});
+
+// 🧠 SMART UI FIX 2: Jab user emoji delete karde, toh tick apne aap hata do
+document.getElementById('customRainEmoji').addEventListener('input', function() {
+    if (this.value.trim() === '') {
+        document.getElementById('enableCustomRain').checked = false;
+    }
+});
+
 let customStyleTag = document.getElementById('customThemeStyle'); if (!customStyleTag) { customStyleTag = document.createElement('style'); customStyleTag.id = 'customThemeStyle'; document.head.appendChild(customStyleTag); }
 
-// ⭐ PERSONAL THEME LOGIC (PHOTO / VIDEO PROCESSOR) ⭐
+// ⭐ PERSONAL THEME LOGIC (AUTO-COMPRESSOR & ULTRA-SAFE PROCESSOR) ⭐
 window.personalThemeBlobUrl = null;
+window.MAX_VIDEO_SIZE = 12 * 1024 * 1024; // Default safety ke liye 12MB
+
+// 🔍 Hybrid Phone Speed Checker (APIs + Benchmark Fallback)
+function checkDevicePower() {
+    const cores = navigator.hardwareConcurrency || 4; 
+    const ram = navigator.deviceMemory || 0; 
+
+    if (cores >= 8 || ram >= 6) { return "HIGH_END"; }
+
+    const start = performance.now();
+    let result = 0;
+    for (let i = 0; i < 2000000; i++) { result += Math.sqrt(i); }
+    const timeTaken = performance.now() - start;
+    
+    return (timeTaken < 40) ? "HIGH_END" : "LOW_END";
+}
+
+// ⚙️ Website Load Hote Hi Chup-Chaap Faisla Lena
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        if (checkDevicePower() === "HIGH_END") {
+            window.MAX_VIDEO_SIZE = 30 * 1024 * 1024; 
+            console.log("✅ High-End Device: Video limit 30MB | Live Theme Download Available 📥");
+        } else {
+            window.MAX_VIDEO_SIZE = 12 * 1024 * 1024; 
+            console.log("⚠️ Mid/Low-End Device: Video limit 12MB | Smart Streaming Active 🚀");
+        }
+    }, 500); 
+});
+
+// 🔮 INVISIBLE CANVAS IMAGE COMPRESSOR FUNCTION
+function compressImageAndApply(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            // Screen ke hisaab se max 1280px resolution calculate karna
+            const MAX_WIDTH = 1280;
+            const MAX_HEIGHT = 1280;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            } else {
+                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+            }
+
+            // Canvas par fast render aur 80% quality compression
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Compressed HD Base64 Data URL
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+            setTheme('personal');
+            document.getElementById('lobby').style.background = 'transparent';
+            document.getElementById('game').style.background = 'transparent';
+            
+            // Video chal rahi ho toh roko
+            const pvContainer = document.getElementById('personalVideoContainer');
+            if (pvContainer) pvContainer.style.display = 'none';
+
+            // Compressed Light-Weight Image apply karo (Zero RAM Crash)
+            document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), url('${compressedDataUrl}')`;
+            document.body.style.backgroundSize = "cover";
+            document.body.style.backgroundPosition = "center";
+            document.body.style.backgroundAttachment = "fixed";
+            
+            window.showToast("✨ HD Photo Theme Applied!");
+        };
+        img.onerror = function() {
+            window.showToast("❌ Image load nahi ho payi bhai!");
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+}
 
 document.getElementById('personalThemeBtn').onclick = () => {
     settingClickSound();
@@ -1503,15 +1757,7 @@ document.getElementById('personalThemeBtn').onclick = () => {
 document.getElementById('personalThemeInput').onchange = (e) => {
     const files = e.target.files;
     if (files.length === 0) return;
-    const file = files[0]; // Sirf 1 file chahiye
-
-    // 🛑 Size limit check (Max 30MB) - Game crash hone se bachayega
-    const maxSizeInBytes = 30 * 1024 * 1024;
-    if (file.size > maxSizeInBytes) {
-        window.showToast("❌ File size bahut badi hai! 30MB se kam rakho bhai.");
-        document.getElementById('personalThemeInput').value = '';
-        return;
-    }
+    const file = files[0];
 
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
@@ -1522,16 +1768,28 @@ document.getElementById('personalThemeInput').onchange = (e) => {
         return;
     }
 
-    window.showToast(`✅ Loading Personal Theme...`);
+    // 🛑 DYNAMIC VIDEO LIMIT CHECK (Smart Hardware Logic)
+    if (isVideo && file.size > window.MAX_VIDEO_SIZE) {
+        const allowedSizeMB = window.MAX_VIDEO_SIZE / (1024 * 1024);
+        window.showToast(`⚠️ Aapke phone ke hisaab se Video max ${allowedSizeMB}MB honi chahiye!`);
+        document.getElementById('personalThemeInput').value = '';
+        return;
+    }
+
+    window.showToast(`⏳ Optimizing & Loading Theme...`);
     document.getElementById('themeOptions').style.display = 'none';
+
+    if (isImage) {
+        compressImageAndApply(file);
+    } else if (isVideo) {
+        applyPersonalVideoTheme(file);
+    }
     
-    applyPersonalTheme(file, isImage, isVideo);
     document.getElementById('personalThemeInput').value = '';
 };
 
-function applyPersonalTheme(file, isImage, isVideo) {
-    setTheme('personal'); // Purana sab kuch clear karne ke liye
-    
+function applyPersonalVideoTheme(file) {
+    setTheme('personal');
     document.getElementById('lobby').style.background = 'transparent';
     document.getElementById('game').style.background = 'transparent';
 
@@ -1540,58 +1798,63 @@ function applyPersonalTheme(file, isImage, isVideo) {
     }
     window.personalThemeBlobUrl = URL.createObjectURL(file);
 
-    if (isImage) {
-        // 🖼️ PHOTO LOGIC (Bina Loop)
-        document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), url('${window.personalThemeBlobUrl}')`;
-        document.body.style.backgroundSize = "cover";
-        document.body.style.backgroundPosition = "center";
-        document.body.style.backgroundAttachment = "fixed";
-        document.body.style.transition = "background-image 0.5s ease-in-out";
-    } else if (isVideo) {
-        // 🎞️ VIDEO LOGIC (Auto Loop, Muted, 75% Dark Overlay)
-        document.body.style.backgroundImage = "none"; 
+    document.body.style.backgroundImage = "none"; 
+    
+    let videoContainer = document.getElementById('personalVideoContainer');
+    if (!videoContainer) {
+        videoContainer = document.createElement('div');
+        videoContainer.id = 'personalVideoContainer';
+        videoContainer.style.position = 'fixed';
+        videoContainer.style.top = '0';
+        videoContainer.style.left = '0';
+        videoContainer.style.width = '100vw';
+        videoContainer.style.height = '100vh';
+        videoContainer.style.zIndex = '-1';
+        videoContainer.style.background = '#000';
         
-        let videoContainer = document.getElementById('personalVideoContainer');
-        if (!videoContainer) {
-            // Javascript se naya player banana
-            videoContainer = document.createElement('div');
-            videoContainer.id = 'personalVideoContainer';
-            videoContainer.style.position = 'fixed';
-            videoContainer.style.top = '0';
-            videoContainer.style.left = '0';
-            videoContainer.style.width = '100vw';
-            videoContainer.style.height = '100vh';
-            videoContainer.style.zIndex = '-1'; // Sabse peeche
-            videoContainer.style.background = '#000';
-            
-            const videoEl = document.createElement('video');
-            videoEl.id = 'personalVideoPlayer';
-            videoEl.autoplay = true;
-            videoEl.loop = true;
-            videoEl.muted = true; // Aawaz hamesha band
-            videoEl.playsInline = true;
-            videoEl.style.width = '100%';
-            videoEl.style.height = '100%';
-            videoEl.style.objectFit = 'cover';
-            
-            const darkOverlay = document.createElement('div');
-            darkOverlay.style.position = 'absolute';
-            darkOverlay.style.top = '0';
-            darkOverlay.style.left = '0';
-            darkOverlay.style.width = '100%';
-            darkOverlay.style.height = '100%';
-            darkOverlay.style.background = 'rgba(0,0,0,0.75)'; // 75% Kala Sheesha
-            
-            videoContainer.appendChild(videoEl);
-            videoContainer.appendChild(darkOverlay);
-            document.body.appendChild(videoContainer);
-        }
+        const videoEl = document.createElement('video');
+        videoEl.id = 'personalVideoPlayer';
+        videoEl.setAttribute('autoplay', '');
+        videoEl.setAttribute('loop', '');
+        videoEl.setAttribute('muted', '');
+        videoEl.setAttribute('playsinline', '');
+        videoEl.muted = true;
+        videoEl.playsInline = true;
+        videoEl.style.width = '100%';
+        videoEl.style.height = '100%';
+        videoEl.style.objectFit = 'cover';
+
+        // 🛡️ Video Freeze Protection (Unfreeze Mechanism)
+        videoEl.onerror = function() {
+            window.showToast("❌ Video format support nahi kar raha bhai!");
+            setTheme('default');
+        };
+
+        const darkOverlay = document.createElement('div');
+        darkOverlay.style.position = 'absolute';
+        darkOverlay.style.top = '0';
+        darkOverlay.style.left = '0';
+        darkOverlay.style.width = '100%';
+        darkOverlay.style.height = '100%';
+        darkOverlay.style.background = 'rgba(0,0,0,0.75)';
         
-        document.getElementById('personalVideoContainer').style.display = 'block';
-        const player = document.getElementById('personalVideoPlayer');
-        player.src = window.personalThemeBlobUrl;
-        player.play().catch(e => console.log("Video auto-play blocked"));
+        videoContainer.appendChild(videoEl);
+        videoContainer.appendChild(darkOverlay);
+        document.body.appendChild(videoContainer);
     }
+    
+    document.getElementById('personalVideoContainer').style.display = 'block';
+    const player = document.getElementById('personalVideoPlayer');
+    player.src = window.personalThemeBlobUrl;
+    player.load();
+    
+    player.play().then(() => {
+        window.showToast("🎬 Live Video Theme Active!");
+    }).catch(e => {
+        console.log("AutoPlay bypass attempt...");
+        player.muted = true;
+        player.play();
+    });
 }
 
 function setTheme(t, bgColor = '', textColor = '', customEmoji = '', isRainEnabled = false, isNeonEnabled = false){
@@ -1669,6 +1932,12 @@ function drawBoard(){
     } 
     if(winningCombo.includes(i)) cell.classList.add('winningCell'); 
     
+        // 👇 INFINITE MODE BLINK WARNING 👇
+    if (isInfiniteMode) {
+        if (movesO.length === 3 && movesO[0] === i) cell.classList.add('blink-warning');
+        if (movesX.length === 3 && movesX[0] === i) cell.classList.add('blink-warning');
+    }
+
     // ⭐ BLITZ LOGIC: Penalty Move chamkane ke liye
     if(i === lastForcedIndex) {
       cell.classList.add("forced-move");
@@ -1684,7 +1953,8 @@ boardDiv.appendChild(cell);
 function updateScoreboard(){ scoreboard.innerHTML = isOnline ? '<span style="color:#00ffff">O: ' + scoreO + '</span> &nbsp;|&nbsp; <span style="color:#ff0000">X: ' + scoreX + '</span><br><div style="font-size:16px; color:#ccc; text-shadow:none; margin-top:5px;">You are <b style="color:#fff; font-size:22px;">' + playerRole + '</b></div>' : (vsAI ? 'Player (O): '+scoreO+' | AI (X): '+scoreX : 'Player O: '+scoreO+' | Player X: '+scoreX); }
 function checkWinner(){ const winCombos=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,b,c] of winCombos){ if(board[a] && board[a]===board[b] && board[a]===board[c]){ winningCombo=[a,b,c]; return board[a]; } } winningCombo=[]; return null; }
 function drawWinningLine(combo){ if(!combo||combo.length!==3) return; const cells=Array.from(boardDiv.querySelectorAll('.cell')); const first=cells[combo[0]], last=cells[combo[2]]; const boardRect=boardDiv.getBoundingClientRect(); const r1=first.getBoundingClientRect(), r2=last.getBoundingClientRect(); const x1=r1.left+r1.width/2-boardRect.left, y1=r1.top+r1.height/2-boardRect.top; const x2=r2.left+r2.width/2-boardRect.left, y2=r2.top+r2.height/2-boardRect.top; const dx=x2-x1, dy=y2-y1; const length=Math.sqrt(dx*dx+dy*dy); const angle=Math.atan2(dy,dx)*(180/Math.PI); const mx=(x1+x2)/2, my=(y1+y2)/2; winningLine.style.width=(length+20)+'px'; winningLine.style.height='10px'; winningLine.style.left=(mx-(length+20)/2)+'px'; winningLine.style.top=(my-5)+'px'; winningLine.style.transform=`rotate(${angle}deg)`; winningLine.style.display='block'; }
-function showPopup(winMsg, loseMsg){ popup.style.display='flex'; let contentHTML = `<div class="win-msg">${winMsg}</div>`; if (loseMsg && loseMsg !== "") { contentHTML += `<div class="lose-msg">${loseMsg}</div>`; } winnerText.innerHTML = contentHTML; }
+
+function showPopup(winMsg, loseMsg){ popup.style.display='flex'; let contentHTML = `<div class="win-msg">${winMsg}</div>`; if (loseMsg && loseMsg !== "") { contentHTML += `<div class="lose-msg">${loseMsg}</div>`; } winnerText.innerHTML = contentHTML; const playBtn = document.getElementById('playAgainBtn'); if(playBtn) { playBtn.disabled = true; playBtn.style.opacity = '0.5'; playBtn.innerText = "Wait... ⏳"; setTimeout(() => { playBtn.disabled = false; playBtn.style.opacity = '1'; playBtn.innerText = "Play Again"; }, 2000); } }
 
 function createParticle() { const particle = document.createElement('div'); particle.classList.add('particle'); const size = Math.random() * 4 + 1; const duration = Math.random() * 4 + 3; const left = Math.random() * 100; const top = Math.random() * 100; const delay = Math.random() * -duration; particle.style.width = `${size}px`; particle.style.height = `${size}px`; particle.style.left = `${left}vw`; particle.style.top = `${top}vh`; particle.style.animationDuration = `${duration}s`; particle.style.animationDelay = `${delay}s`; particle.style.opacity = Math.random() * 0.5 + 0.3; particle.addEventListener('animationend', () => { particle.remove(); createParticle(); }); particleContainer.appendChild(particle); }
 
@@ -2869,9 +3139,59 @@ function forceBlitzMove() {
             });
         }
 
-        requestAnimationFrame(MasterVFXEngineLoop);
+        // ⭐ NAYA SMART SENSOR (Battery Saver + Jaal Flattening Logic) ⭐
+        let isMeshMoving = false;
+        if (activeSelection.startsWith('spacetime')) {
+            for (let i = 0; i < meshGrid.length; i++) {
+                // Check karega ki kya koi bhi line apni asli jagah se 0.5px se zyada hili hui hai
+                if (Math.abs(meshGrid[i].x - meshGrid[i].ox) > 0.5 || Math.abs(meshGrid[i].y - meshGrid[i].oy) > 0.5) {
+                    isMeshMoving = true; 
+                    break;
+                }
+            }
+        }
+
+        let isAnyVfxAlive = isMeshMoving || activeForces.length > 0 || activeSlashes.length > 0 || activeSparks.length > 0 || activeHudElements.length > 0 || liquidDrops.length > 0 || activeWaves.length > 0 || growingBranches.length > 0 || quantumElements.length > 0 || animeActive;
+
+        if (isAnyVfxAlive) {
+            window.vfxLoopId = requestAnimationFrame(MasterVFXEngineLoop);
+        
+        } else {
+            window.isVfxRunning = false; // Particles gayab, Pankha band!
+            // ⭐ FIX 1: PANKHA BAND HONE PAR KANCH SAAF KARO ⭐
+            if(fxCtx) fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+            if(fluidCtx) fluidCtx.clearRect(0, 0, fluidCanvas.width, fluidCanvas.height);
+
+            // 👇 NAYA MAGIC: Agar spacetime hai toh ek aakhri ruka hua jaal bana do 👇
+            if (activeSelection.startsWith('spacetime') && fxCtx) {
+                fxCtx.strokeStyle = activeGridColor; 
+                fxCtx.lineWidth = 1;
+                // Rows banayega
+                for(let r = 0; r < gridRows; r++) {
+                    fxCtx.beginPath();
+                    for(let c = 0; c < gridCols; c++) {
+                        let n = meshGrid[r * gridCols + c]; if(!n) continue;
+                        if(c === 0) fxCtx.moveTo(n.x, n.y); else fxCtx.lineTo(n.x, n.y);
+                    }
+                    fxCtx.stroke();
+                }
+                // Columns banayega
+                for(let c = 0; c < gridCols; c++) {
+                    fxCtx.beginPath();
+                    for(let r = 0; r < gridRows; r++) {
+                        let n = meshGrid[r * gridCols + c]; if(!n) continue;
+                        if(r === 0) fxCtx.moveTo(n.x, n.y); else fxCtx.lineTo(n.x, n.y);
+                    }
+                    fxCtx.stroke();
+                }
+            }
+            // 👆 YAHAN TAK 👆
+        }
+
     }
-    MasterVFXEngineLoop();
+    
+    // Game start hone par pankha by default band rahega
+    window.isVfxRunning = false; 
 
 function triggerHoloMatrixTilt(e, cell, sign) {
     if (!e) return; 
@@ -2948,7 +3268,14 @@ function triggerEffectLogic(cell, sign, e, targetBoard = previewBoard) {
     
         // 🔊 MASTER SOUND TRIGGER (Ab yeh O aur X ko alag-alag aawaz dega)
     playMasterFX(activeSelection, sign);
-
+    
+    // ⭐ NAYA WAKE-UP ALARM (FIXED: Yahan ekdum safe hai) ⭐
+    if (!window.isVfxRunning) {
+        window.isVfxRunning = true;
+        // Thoda delay taaki data load ho jaye, phir pankha chale
+        setTimeout(() => MasterVFXEngineLoop(), 10); 
+    }
+    
     // SMART RADAR: Pata karo ki asali board hai ya testing board
     const activeBoard = cell.closest('#board') || document.getElementById('previewBoard');
 
@@ -3264,7 +3591,6 @@ window.playUltimateSound = function(sign) {
                     btn.classList.add('selected');
                     activeSelection = btnId;
                     
-                    localStorage.setItem('selected_fx', activeSelection);
                     inner.appendChild(portablePreview);
                     portablePreview.style.display = 'flex';
                     
@@ -3339,6 +3665,9 @@ window.playUltimateSound = function(sign) {
         menuClickSound(); // Click sound aaye
         document.getElementById('applyConfirmModal').style.display = 'none'; // Modal band karo
         
+        // 👇 NAYA MAGIC: AB ASLI MEIN SAVE HOGA 👇
+    localStorage.setItem('selected_fx', activeSelection);
+
         // 1. Board aur test arena saaf karo
         if (typeof clearPreviewArena === 'function') { clearPreviewArena(); }
         
@@ -3401,10 +3730,13 @@ window.triggerRealGameEffect = function(cell, sign, e) {
         fxCanvas.style.zIndex = '14'; // Grid Board ke piche jayega (Board = 15)
         initSpacetimeMeshLocked(); 
     } else {
-        fxCanvas.style.zIndex = '9998'; // Baki effects board ke upar aayenge
+        fxCanvas.style.zIndex = '28'; // ⭐ FIX 2: Popups (30+) se niche, Board (15) ke upar!
     }
 
-    if (selectedFx.startsWith('fluid')) { fluidWrapper.style.display = 'block'; }
+    if (selectedFx.startsWith('fluid')) { 
+        fluidWrapper.style.display = 'block'; 
+        fluidWrapper.style.zIndex = '27'; // ⭐ FIX 2: Fluid wala kanch bhi popup ke niche!
+    }
 
     // 3. Asali board par CSS classes lagao (3D Holo aur Glitch ke liye)
     const mainBoard = document.getElementById('board');
@@ -3537,4 +3869,104 @@ window.playMasterFX = function(activeSelection, sign) {
     
     osc.start(now);
     osc.stop(now + dur);
+};
+
+// ⭐ PRO SLIDER COLOR PICKER LOGIC (WITH STATE MEMORY) ⭐
+let activeColorTarget = null; 
+const hueSlider = document.getElementById('hueSlider');
+const lightSlider = document.getElementById('lightSlider');
+const previewBox = document.getElementById('colorPreviewBox');
+
+// 🧠 YAHAN HUM STATE SAVE KARENGE (Memory)
+// By default BG thoda Dark Blue (Hue 240, Light 14) aur Text Cyan (Hue 168, Light 50) rakha hai
+let savedBgHue = 240, savedBgLight = 14; 
+let savedTextHue = 168, savedTextLight = 50;
+
+// HSL to HEX Converter
+function hslToHex(h, s, l) {
+  l /= 100;
+  const a = s * Math.min(l, 1 - l) / 100;
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// Slider hilane par color live update karega
+function updatePreview() {
+    let h = hueSlider.value;
+    let l = lightSlider.value;
+    let hexColor = hslToHex(h, 100, l); 
+    
+    // Preview Box update
+    previewBox.style.background = hexColor;
+    previewBox.style.boxShadow = `0 0 15px ${hexColor}`;
+    
+    // Brightness Slider ka background dynamic
+    lightSlider.style.background = `linear-gradient(to right, #000000, hsl(${h}, 100%, 50%), #ffffff)`;
+}
+
+// Dono sliders par event listener
+if(hueSlider && lightSlider) {
+    hueSlider.addEventListener('input', updatePreview);
+    lightSlider.addEventListener('input', updatePreview);
+}
+
+// "SET COLOR" Button dabaane par
+document.getElementById('applyTunerColorBtn').onclick = () => {
+    menuClickSound();
+    let finalHex = hslToHex(hueSlider.value, 100, lightSlider.value);
+    
+    if(activeColorTarget === 'bg') {
+        // 💾 BG ke naye sliders ki memory save karo
+        savedBgHue = hueSlider.value;
+        savedBgLight = lightSlider.value;
+        
+        document.getElementById('customBgColor').value = finalHex;
+        document.getElementById('btnBgColor').style.backgroundColor = finalHex;
+        document.getElementById('btnBgColor').style.boxShadow = `0 0 10px ${finalHex}`;
+    } else if(activeColorTarget === 'text') {
+        // 💾 Text ke naye sliders ki memory save karo
+        savedTextHue = hueSlider.value;
+        savedTextLight = lightSlider.value;
+        
+        document.getElementById('customTextColor').value = finalHex;
+        document.getElementById('btnTextColor').style.backgroundColor = finalHex;
+        document.getElementById('btnTextColor').style.boxShadow = `0 0 10px ${finalHex}`;
+    }
+    document.getElementById('customColorPickerModal').style.display = 'none';
+};
+
+// BG Color Box pe click karne par modal open (Memory Restore ke saath)
+document.getElementById('btnBgColor').onclick = () => {
+    settingClickSound(); 
+    activeColorTarget = 'bg';
+    
+    // ✨ NAYA FIX: Modal ka title change karo
+    document.getElementById('neonTunerTitle').innerText = "BG COLOR";
+    
+    // 🔄 BG wali memory sliders mein wapas daalo
+    hueSlider.value = savedBgHue;
+    lightSlider.value = savedBgLight;
+    
+    document.getElementById('customColorPickerModal').style.display = 'flex';
+    updatePreview(); // Preview update karo
+};
+
+// Text Color Box pe click karne par modal open (Memory Restore ke saath)
+document.getElementById('btnTextColor').onclick = () => {
+    settingClickSound(); 
+    activeColorTarget = 'text';
+    
+    // ✨ NAYA FIX: Modal ka title change karo
+    document.getElementById('neonTunerTitle').innerText = "TEXT COLOR";
+    
+    // 🔄 Text wali memory sliders mein wapas daalo
+    hueSlider.value = savedTextHue;
+    lightSlider.value = savedTextLight;
+    
+    document.getElementById('customColorPickerModal').style.display = 'flex';
+    updatePreview(); // Preview update karo
 };
