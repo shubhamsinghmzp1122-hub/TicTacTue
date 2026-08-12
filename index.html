@@ -191,8 +191,25 @@
     });
   </script>
 
-    <div id="level-system-container" style="display:none;"><div id="level-info-text">Level: 1</div><div class="progress-bar-wrapper"><div id="level-progress-fill"></div></div></div>
-  
+    <div id="level-system-container" style="display:none; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div id="level-info-text" style="margin-bottom: 0;">Level: 1</div>
+            
+            <button id="leaderboardBtn" title="Global Leaderboard" style="background: none; border: none; cursor: pointer; padding: 0; outline: none; filter: drop-shadow(0 0 10px #ffd700); transition: transform 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.transform='scale(1.15) rotate(-5deg)'" onmouseout="this.style.transform='scale(1) rotate(0deg)'">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                    <path d="M4 22h16"></path>
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="progress-bar-wrapper"><div id="level-progress-fill"></div></div>
+    </div>
+
     <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 15px; z-index: 15;">
       <button id="profileBtn" class="btn" style="background: linear-gradient(90deg, #00ffff, #00b3b3) !important; color: #000 !important; border-radius: 25px; font-size: 16px; padding: 5px 20px; box-shadow: 0 0 15px #00ffff; margin: 0;">👤 MY PROFILE</button>
       <button id="friendsListBtn" class="btn" style="background: linear-gradient(90deg, #ff00ff, #b300b3) !important; color: #fff !important; border-radius: 25px; font-size: 16px; padding: 5px 20px; box-shadow: 0 0 15px #ff00ff; margin: 0;">🤝 FRIENDS</button>
@@ -386,9 +403,12 @@
         <div style="color: #aaa; font-size: 16px; letter-spacing: 3px; margin-bottom: 15px; font-weight: bold;">UID: <span id="uidTextDisplay" style="color: #00ffff; text-shadow: 0 0 5px #00ffff; user-select: text;">LOADING...</span></div>
 
         <div id="profileBadgeDisplay" style="color: #ff00ff; font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px #ff00ff; font-size: 18px; letter-spacing: 1px;">🎖️ ROOKIE</div>
-
         
-        <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #00ffff; box-shadow: inset 0 0 10px rgba(0,255,255,0.2);">
+            <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #00ffff; box-shadow: inset 0 0 10px rgba(0,255,255,0.2);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
+                <span style="color: #ccc; font-size: 16px;">Global Rank:</span>
+                <span id="profileRankDisplay" style="color: #ffd700; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #ffd700;">-</span>
+            </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
                 <span style="color: #ccc; font-size: 16px;">Current Level:</span>
                 <span id="profileLevelDisplay" style="color: #00ffff; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ffff;">1</span>
@@ -402,7 +422,7 @@
                 <span id="profileExpDisplay" style="color: #ff00ff; font-weight: bold; font-size: 16px;">0 / 10 EXP</span>
             </div>
         </div>
-        
+
         <button class="btn" onclick="document.getElementById('profileModal').style.display='none';" style="background: transparent !important; border-color:#ff0055; color:#ff0055; width: 100%; box-shadow: 0 0 10px #ff0055;">CLOSE</button>
     </div>
 </div>
@@ -420,6 +440,10 @@
         
         <div style="background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; text-align: left; margin-bottom: 20px; border: 1px solid #ff00ff; box-shadow: inset 0 0 10px rgba(255,0,255,0.2);">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
+                <span style="color: #ccc; font-size: 16px;">Global Rank:</span>
+                <span id="searchRankDisplay" style="color: #ffd700; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #ffd700;">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px;">
                 <span style="color: #ccc; font-size: 16px;">Level:</span>
                 <span id="searchLevelDisplay" style="color: #00ffff; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ffff;">1</span>
             </div>
@@ -428,11 +452,27 @@
                 <span id="searchWinsDisplay" style="color: #00ff4d; font-weight: 900; font-size: 18px; text-shadow: 0 0 5px #00ff4d;">0 🏆</span>
             </div>
         </div>
-        
+
         <button id="sendRequestBtn" class="btn" style="background: #ff00ff !important; color: #fff !important; width: 100%; box-shadow: 0 0 15px #ff00ff; margin-bottom: 10px; border: none !important; transition: 0.3s;">➕ SEND REQUEST</button>
         <button id="removeFriendBtnCard" class="btn" style="background: rgba(255,0,85,0.2) !important; color: #ff0055 !important; border: 1px solid #ff0055 !important; width: 100%; margin-bottom: 10px; display: none; transition: 0.3s; box-shadow: 0 0 10px #ff0055;">❌ REMOVE FRIEND</button>
 
         <button class="btn" onclick="document.getElementById('searchedProfileModal').style.display='none';" style="background: transparent !important; border-color:#888; color:#888; width: 100%;">CLOSE</button>
+    </div>
+</div>
+
+    <div id="leaderboardModal" class="room-modal" style="z-index: 3900;">
+
+    <div class="room-box" style="border-color: #ffd700; box-shadow: 0 0 25px #ffd700; width: 350px; max-width: 95vw; background: linear-gradient(145deg, #111, #222); padding: 15px; display: flex; flex-direction: column; height: 80vh;">
+        <h2 style="color: #ffd700; text-shadow: 0 0 15px #ffd700; margin-bottom: 10px; font-size: 24px; letter-spacing: 2px;">🏆 LEADERBOARD</h2>
+        
+        <div id="leaderboardList" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.6); border: 1px solid #ffd700; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <p style="color: #00ffff; margin-top: 50px;">Fetching Global Data... ⏳</p>
+        </div>
+
+        <div id="myLeaderboardRank" style="margin-top: 10px; background: rgba(0, 255, 255, 0.15); border: 2px solid #00ffff; border-radius: 10px; padding: 10px; box-shadow: 0 0 15px rgba(0,255,255,0.4); display: none;">
+            </div>
+
+        <button class="btn" onclick="document.getElementById('leaderboardModal').style.display='none'; menuClickSound();" style="background: transparent !important; border-color:#888; color:#888; width: 100%; margin-top: 15px;">CLOSE</button>
     </div>
 </div>
 
