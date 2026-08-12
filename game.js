@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 
-import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
 
@@ -545,7 +546,12 @@ document.getElementById('camBtn').onclick = () => {
 };
 
 const AudioCtx = window.AudioContext || window.webkitAudioContext; const audioCtx = new AudioCtx(); function beep(freq, time=0.16){ try{ const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='sine'; o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(0.0001, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + time); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + time); }catch(e){} }
-function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24); } function winOSound(){ beep(800,0.1); setTimeout(()=>beep(950,0.1),100); setTimeout(()=>beep(1100,0.1),200); } function winXSound(){ beep(400,0.1); setTimeout(()=>beep(350,0.1),100); setTimeout(()=>beep(300,0.1),200); } function drawSound(){ beep(500,0.12); setTimeout(()=>beep(250,0.2),120); } function menuClickSound() { beep(620, 0.08); } function settingClickSound() { beep(580, 0.06); } function resumeAudio(){ try{ audioCtx.resume && audioCtx.resume(); }catch(e){} document.removeEventListener('touchstart', resumeAudio); document.removeEventListener('click', resumeAudio); }
+function tapSound() { beep(420,0.14); } function aiMoveSound() { beep(300,0.24); } function winOSound(){ beep(800,0.1); setTimeout(()=>beep(950,0.1),100); setTimeout(()=>beep(1100,0.1),200); } function winXSound(){ beep(400,0.1); setTimeout(()=>beep(350,0.1),100); setTimeout(()=>beep(300,0.1),200); } function drawSound(){ beep(500,0.12); setTimeout(()=>beep(250,0.2),120); } function menuClickSound() { beep(620, 0.08); } function settingClickSound() { beep(580, 0.06); } function resumeAudio(){ try{ audioCtx.resume && audioCtx.resume(); }catch(e){} document.removeEventListener('touchstart', resumeAudio); document.removeEventListener('click', resumeAudio);}
+
+    // 🔥 HTML BUTTONS KE LIYE SOUNDS KO GLOBAL BANAYA 🔥
+    window.menuClickSound = menuClickSound;
+    window.settingClickSound = settingClickSound;
+    window.tapSound = tapSound;
 
 const lobby = document.getElementById('lobby'); const difficultyDiv = document.getElementById('difficulty'); const boardDiv = document.getElementById('board'); const gameDiv = document.getElementById('game'); const popup = document.getElementById('popup'); const winnerText = document.getElementById('winnerText'); const modeTitle = document.getElementById('modeTitle'); const winningLine = document.getElementById('winning-line'); const scoreboard = document.getElementById('scoreboard'); const backLobbyBtn = document.getElementById('backLobbyBtn'); const rainContainer = document.getElementById('rain-container'); const moon = document.getElementById('moon'); const sun = document.getElementById('sun'); const starContainer = document.getElementById('star-container'); const loadingOverlay = document.getElementById('loading-overlay'); const loadingBarFill = document.getElementById('loading-bar-fill'); const loadingPercentage = document.getElementById('loading-percentage'); const levelContainer = document.getElementById('level-system-container'); const levelInfoText = document.getElementById('level-info-text'); const levelProgressFill = document.getElementById('level-progress-fill'); const splashOverlay = document.getElementById('splash-overlay'); const splashLogo = document.querySelector('.splash-logo'); const particleContainer = document.getElementById('particle-container'); const lightStreak = document.querySelector('.light-streak');
 const PARTICLE_COUNT = 80; const SPLASH_DURATION = 3500; const LOADING_DURATION = 5000; const UPDATE_INTERVAL = 50; 
@@ -834,6 +840,7 @@ document.getElementById('createRoomBtn').onclick = async () => {
         currentPlayer: "O", 
         startingTurn: "O", 
         status: "waiting",
+        country: localStorage.getItem('my_country') || "EARTH",
         createdAt: serverTimestamp() 
     }); 
     listenToRoom();
@@ -1025,10 +1032,21 @@ document.getElementById('saveNameBtn').onclick = () => {
     profileNameDisplay.innerText = playerName; nameEditContainer.style.display = 'none'; nameDisplayContainer.style.display = 'flex';
 };
 
-document.getElementById('profileBtn').onclick = () => {
+document.getElementById('profileBtn').onclick = async () => {
     menuClickSound(); profileNameDisplay.innerText = playerName; document.getElementById('uidTextDisplay').innerText = myUID; nameEditContainer.style.display = 'none'; nameDisplayContainer.style.display = 'flex';
     document.getElementById('profileLevelDisplay').innerText = playerLevel; document.getElementById('profileWinsDisplay').innerText = totalMatchesWon + ' 🏆'; document.getElementById('profileExpDisplay').innerText = currentExp + ' / ' + expToNextLevel + ' EXP';
-    
+
+        // 🔥 INSTANT RANK LOAD (Bina kisi try/catch aur 1 sec lagaye)
+    let myRank = window.cachedMyRank || "-";
+    const r1Svg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#ffd700" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 8px #ffd700); vertical-align: middle; margin-left: 5px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    const r2Svg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#c0c0c0" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 6px #c0c0c0); vertical-align: middle; margin-left: 5px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
+    const r3Svg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#cd7f32" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 6px #cd7f32); vertical-align: middle; margin-left: 5px;"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>`;
+    let rankHTML = myRank;
+    if (myRank === 1) rankHTML = `${myRank} ${r1Svg}`;
+    if (myRank === 2) rankHTML = `${myRank} ${r2Svg}`;
+    if (myRank === 3) rankHTML = `${myRank} ${r3Svg}`;
+    document.getElementById('profileRankDisplay').innerHTML = rankHTML;
+
     let rName = ""; let rColor = ""; let rSvg = "";
     if (playerLevel < 10) { rName = "NOVICE"; rColor = "#a0a0a0"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
     else if (playerLevel < 20) { rName = "FIGHTER"; rColor = "#cd7f32"; rSvg = `<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
@@ -1151,16 +1169,23 @@ document.getElementById('sendRequestBtn').onclick = async () => {
     menuClickSound(); const btn = document.getElementById('sendRequestBtn'); btn.innerText = "⏳ SENDING..."; btn.disabled = true;
     try {
         const requestDocId = myUID + "_" + currentSearchedUID;
+
         await setDoc(doc(db, "friend_requests", requestDocId), { fromUID: myUID, fromName: playerName, toUID: currentSearchedUID, status: "pending", timestamp: serverTimestamp() });
+        window.sentRequestsCache = window.sentRequestsCache || {};
+        window.sentRequestsCache[currentSearchedUID] = true; // 🔥 Instant cache update
         btn.innerText = "✅ SENT!"; btn.style.background = "#00ff4d"; btn.style.boxShadow = "0 0 15px #00ff4d";
+
         setTimeout(() => { document.getElementById('searchedProfileModal').style.display = 'none'; }, 1500);
     } catch (error) { console.log("Request Error: ", error); btn.innerText = "❌ ERROR!"; btn.disabled = false; }
 };
 
-window.loadFriendRequests = async function() {
-    const reqBox = document.getElementById('contentRequests'); reqBox.innerHTML = "<p style='color:#00ffff; margin-top:110px;'>Radar scanning... ⏳</p>";
-    try {
-        const q = query(collection(db, "friend_requests"), where("toUID", "==", myUID), where("status", "==", "pending")); const snapshot = await getDocs(q);
+// 🔥 NAYA: Background Sync wala Friend Request System
+window.loadFriendRequests = function() {
+    const reqBox = document.getElementById('contentRequests'); 
+    const q = query(collection(db, "friend_requests"), where("toUID", "==", myUID), where("status", "==", "pending"));
+    
+    // onSnapshot apne aap background mein data lata rahega bina kisi button dabaye!
+    onSnapshot(q, (snapshot) => {
         if(snapshot.empty) { reqBox.innerHTML = "<p style='color:#aaa; margin-top:110px;'>No new requests 😴</p>"; return; }
         let html = "";
         snapshot.forEach(docSnap => {
@@ -1173,18 +1198,21 @@ window.loadFriendRequests = async function() {
                 </div></div>`;
         });
         reqBox.innerHTML = html;
-    } catch(e) { reqBox.innerHTML = "<p style='color:#ff0055; margin-top:110px;'>Error loading ❌</p>"; console.log("Fetch Error: ", e); }
+    }, (error) => { console.log("Request Fetch Error: ", error); });
 };
 
 if(window.friendUnsubs) window.friendUnsubs.forEach(u => u());
 window.friendUnsubs = [];
 
 // FRIEND LIST
-window.loadMyFriends = async function() {
-    const friendBox = document.getElementById('contentMyFriends'); friendBox.style.display = 'flex'; friendBox.style.flexDirection = 'column'; friendBox.innerHTML = "<p style='color:#00ffff; margin-top:110px; order: 0;'>Fetching Friends... ⏳</p>";
-    try {
+// 🔥 NAYA: Background Sync wali Friend List (Instant Load)
+window.loadMyFriends = function() {
+    const friendBox = document.getElementById('contentMyFriends'); 
+    friendBox.style.display = 'flex'; friendBox.style.flexDirection = 'column';
+    
+    // onSnapshot apne aap background mein dosto ka data track karega
+    onSnapshot(collection(db, "users", myUID, "friends"), (snapshot) => {
         if(window.friendUnsubs) { window.friendUnsubs.forEach(u => u()); window.friendUnsubs = []; }
-        const snapshot = await getDocs(collection(db, "users", myUID, "friends"));
         if(snapshot.empty) { friendBox.innerHTML = "<p style='color:#aaa; margin-top:110px; order: 0;'>No friends yet 😢<br><span style='font-size:12px;'>Search UID to add!</span></p>"; return; }
         
         let html = ""; const friendIDs = snapshot.docs.map(docSnap => docSnap.id);
@@ -1200,11 +1228,28 @@ window.loadMyFriends = async function() {
         friendBox.innerHTML = html;
 
         friendIDs.forEach(fid => {
-            const q = query(collection(db, "users"), where("gameUID", "==", fid));
-            const unsubFS = onSnapshot(q, (querySnapshot) => {
+
+            const unsubFS = onSnapshot(query(collection(db, "users"), where("gameUID", "==", fid)), (querySnapshot) => {
                 if(!querySnapshot.empty) {
                     const data = querySnapshot.docs[0].data();
+                    
+                    window.globalPlayersCache = window.globalPlayersCache || {};
+                    window.globalPlayersCache[fid] = data; 
+                    
+                    // 🔥 NAYA: Friend ka rank bhi chup-chaap background me nikal kar RAM me daal do!
+                    let fWins = data.matchesWon || 0;
+                    if (fWins >= 10) {
+                        getDocs(query(collection(db, "users"), where("matchesWon", ">", fWins))).then(snapRank => {
+                            data.cachedRank = snapRank.size + 1;
+                            window.globalPlayersCache[fid] = data; // Update cache with rank
+                        }).catch(e=>{});
+                    } else {
+                        data.cachedRank = "-";
+                        window.globalPlayersCache[fid] = data;
+                    }
+                    
                     const nameEl = document.getElementById(`fName_${fid}`); const levelEl = document.getElementById(`fLevel_${fid}`);
+
                     if(nameEl) nameEl.innerText = data.playerName || 'GUEST'; if(levelEl) levelEl.innerText = data.level || 1;
                 }
             });
@@ -1222,43 +1267,37 @@ window.loadMyFriends = async function() {
             });
             window.friendUnsubs.push(() => unsubRTDB()); 
         });
-    } catch(e) { friendBox.innerHTML = "<p style='color:#ff0055; margin-top:110px; order: 0;'>Error loading ❌</p>"; console.log("Friend Fetch Error: ", e); }
+    });
 };
+
 // ⭐ FRIEND LIST SE PLAYER CARD OPEN KARNE KA FUNCTION (FIXED) ⭐
 let isCardOpenedFromFriendList = false; 
 window.viewPlayerCard = async (uid, fromFriendList = false) => {
     menuClickSound();
+    document.getElementById('friendsModal').style.display = 'none'; 
+    
     try {
-        // 🔥 ASLI FIX YAHAN HAI: Firebase mein ab sahi ID se dost ko dhoondhega
-        const q = query(collection(db, "users"), where("gameUID", "==", uid)); 
-        const querySnapshot = await getDocs(q);
+        // 1. RAM SE DATA UTHAO (0 Delay)
+        window.globalPlayersCache = window.globalPlayersCache || {};
+        let pData = window.globalPlayersCache[uid];
         
-        if (!querySnapshot.empty) {
-            const pData = querySnapshot.docs[0].data();
+        if (!pData) {
+            const q = query(collection(db, "users"), where("gameUID", "==", uid)); 
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) pData = querySnapshot.docs[0].data();
+        }
+        
+        if (pData) {
             let pLevel = pData.level || 1;
+            let opponentWins = pData.matchesWon || 0;
             
             document.getElementById('searchNameDisplay').innerText = pData.playerName || "GUEST"; 
             document.getElementById('searchUidDisplay').innerText = pData.gameUID; 
             document.getElementById('searchLevelDisplay').innerText = pLevel; 
-            document.getElementById('searchWinsDisplay').innerText = (pData.matchesWon || 0) + ' 🏆';
+            document.getElementById('searchWinsDisplay').innerText = opponentWins + ' 🏆';
             currentSearchedUID = pData.gameUID; 
-            
-            const reqBtn = document.getElementById('sendRequestBtn'); 
-            const rmvBtn = document.getElementById('removeFriendBtnCard');
-            
-            if (fromFriendList) {
-                reqBtn.style.display = 'none'; 
-                rmvBtn.style.display = 'block'; 
-                rmvBtn.onclick = () => showRemoveConfirm(currentSearchedUID, pData.playerName || "GUEST");
-                isCardOpenedFromFriendList = true;
-            } else {
-                isCardOpenedFromFriendList = false;
-                reqBtn.innerText = "➕ SEND REQUEST"; 
-                reqBtn.style.display = 'block'; 
-                rmvBtn.style.display = 'none'; 
-            }
 
-            // Badge Update Logic
+            // 2. BADGE INSTANT UPDATE KARO (Modal khulne se PEHLE taaki Rookie na dikhe)
             let rName="", rColor="", rSvg="";
             if (pLevel < 10) { rName="NOVICE"; rColor="#a0a0a0"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="${rColor}" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="${rColor}"/></svg>`; }
             else if (pLevel < 20) { rName="FIGHTER"; rColor="#cd7f32"; rSvg=`<svg width="80" height="80" viewBox="0 0 100 100"><polygon points="50,10 90,40 70,90 30,90 10,40" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 70,45 60,75 40,75 30,45" fill="${rColor}"/></svg>`; }
@@ -1272,14 +1311,90 @@ window.viewPlayerCard = async (uid, fromFriendList = false) => {
             else if (pLevel < 100) { rName="SUPREME"; rColor="#ffffff"; rSvg=`<svg width="95" height="95" viewBox="0 0 100 100"><polygon points="50,0 65,30 100,30 75,55 85,95 50,75 15,95 25,55 0,30 35,30" fill="none" stroke="${rColor}" stroke-width="8"/><polygon points="50,20 58,40 80,40 60,55 68,80 50,65 32,80 40,55 20,40 42,40" fill="${rColor}"/><circle cx="50" cy="53" r="8" fill="#000"/></svg>`; }
             else { rName="IMMORTAL"; rColor="#ff2a2a"; rSvg=`<svg width="100" height="100" viewBox="0 0 100 100"><polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#ffd700" stroke-width="8"/><polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="none" stroke="${rColor}" stroke-width="6"/><polygon points="50,30 65,45 60,70 40,70 35,45" fill="${rColor}"/><circle cx="50" cy="50" r="10" fill="#ffd700"/></svg>`; }
 
-            const sBadge = document.getElementById('searchBadgeDisplay'); sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
-            const sIcon = document.getElementById('searchMainIcon'); sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
-            
-            // Sab data set hone ke baad modal khol do
-            document.getElementById('friendsModal').style.display = 'none'; // Background me friend list band karo
+            const sBadge = document.getElementById('searchBadgeDisplay'); 
+            sBadge.innerHTML = rName; sBadge.style.color = rColor; sBadge.style.textShadow = `0 0 15px ${rColor}`;
+            const sIcon = document.getElementById('searchMainIcon'); 
+            sIcon.innerHTML = rSvg; sIcon.style.filter = `drop-shadow(0 0 20px ${rColor})`;
+
+            // 3. AB MODAL KHOLO! (Rank set hone ke baad)
             document.getElementById('searchedProfileModal').style.display = 'flex';
-        } else {
-            console.log("User nahi mila database mein!");
+
+            // 4. INSTANT BUTTON LOGIC (Database await hata diya, DOM Check laga diya)
+            const reqBtn = document.getElementById('sendRequestBtn'); 
+            const rmvBtn = document.getElementById('removeFriendBtnCard');
+            
+            if (fromFriendList) {
+                reqBtn.style.display = 'none'; 
+                rmvBtn.style.display = 'block'; 
+                rmvBtn.onclick = () => showRemoveConfirm(currentSearchedUID, pData.playerName || "GUEST");
+                isCardOpenedFromFriendList = true;
+            } else {
+                isCardOpenedFromFriendList = false;
+                
+                // 🔥 SMART TRICK: RAM/DOM me check kar lo ki woh friend list me already render hai kya
+                let isAlreadyFriend = document.getElementById('friendBox_' + uid) !== null;
+                
+                if (isAlreadyFriend) {
+                    reqBtn.innerText = "🤝 ALREADY FRIENDS"; 
+                    reqBtn.style.background = "#222"; 
+                    reqBtn.style.border = "1px solid #00ffff";
+                    reqBtn.style.color = "#00ffff";
+                    reqBtn.style.boxShadow = "none";
+                    reqBtn.disabled = true;
+                    reqBtn.style.display = 'block';
+                    rmvBtn.style.display = 'none';
+                } else {
+                    // 🔥 INSTANT DIRECT BUTTON (Zero Delay, "CHECKING..." Permanently Removed!)
+                    window.sentRequestsCache = window.sentRequestsCache || {};
+                    let isRequestSent = window.sentRequestsCache[uid] || window.sentRequestsCache[currentSearchedUID];
+                    
+                    if (isRequestSent) {
+                        reqBtn.innerText = "📩 REQUEST SENT"; 
+                        reqBtn.style.background = "rgba(0, 204, 255, 0.15)"; 
+                        reqBtn.style.border = "1px solid #00ccff";
+                        reqBtn.style.color = "#00ccff";
+                        reqBtn.style.boxShadow = "none";
+                        reqBtn.disabled = true;
+                    } else {
+                        reqBtn.innerText = "➕ SEND REQUEST"; 
+                        reqBtn.style.background = "#ff00ff";
+                        reqBtn.style.border = "none";
+                        reqBtn.style.color = "#fff";
+                        reqBtn.style.boxShadow = "0 0 15px #ff00ff";
+                        reqBtn.disabled = false;
+                    }
+                    reqBtn.style.display = 'block';
+                    rmvBtn.style.display = 'none';
+                }
+            }
+
+            // 5. RANK INSTANT RENDER (Cache se)
+            const r1Svg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#ffd700" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 8px #ffd700); vertical-align: middle; margin-left: 5px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+            const r2Svg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#c0c0c0" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 6px #c0c0c0); vertical-align: middle; margin-left: 5px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
+            const r3Svg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#cd7f32" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 6px #cd7f32); vertical-align: middle; margin-left: 5px;"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>`;
+            
+            if (pData.cachedRank) {
+                // 🔥 Agar player Leaderboard se aaya hai, toh bina wait kiye instant rank dikhao!
+                let rankHTML = pData.cachedRank;
+                if (pData.cachedRank === 1) rankHTML = `${pData.cachedRank} ${r1Svg}`;
+                if (pData.cachedRank === 2) rankHTML = `${pData.cachedRank} ${r2Svg}`;
+                if (pData.cachedRank === 3) rankHTML = `${pData.cachedRank} ${r3Svg}`;
+                document.getElementById('searchRankDisplay').innerHTML = rankHTML;
+            } else if (opponentWins < 10) {
+                document.getElementById('searchRankDisplay').innerText = "-";
+            } else {
+                // Agar friend search se random player dhoondha (jo cache me nahi hai), tabhi background me fetch karega
+                document.getElementById('searchRankDisplay').innerText = "Loading...";
+                getDocs(query(collection(db, "users"), where("matchesWon", ">", opponentWins))).then(snapRank => {
+                    let oppRank = snapRank.size + 1;
+                    let rankHTML = oppRank;
+                    if (oppRank === 1) rankHTML = `${oppRank} ${r1Svg}`;
+                    if (oppRank === 2) rankHTML = `${oppRank} ${r2Svg}`;
+                    if (oppRank === 3) rankHTML = `${oppRank} ${r3Svg}`;
+                    document.getElementById('searchRankDisplay').innerHTML = rankHTML;
+                }).catch(e => { document.getElementById('searchRankDisplay').innerText = "?"; });
+            }
+
         }
     } catch(e) { console.log(e); }
 };
@@ -1308,8 +1423,9 @@ window.handleRequest = async (docId, action, friendUID, friendName) => {
 };
 
 document.getElementById('friendsListBtn').onclick = () => { menuClickSound(); document.getElementById('friendsModal').style.display = 'flex'; document.getElementById('tabMyFriends').click(); };
-document.getElementById('tabMyFriends').onclick = () => { menuClickSound(); document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;"; document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;"; document.getElementById('contentMyFriends').style.display = 'block'; document.getElementById('contentRequests').style.display = 'none'; loadMyFriends(); };
-document.getElementById('tabRequests').onclick = () => { menuClickSound(); document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;"; document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;"; document.getElementById('contentRequests').style.display = 'block'; document.getElementById('contentMyFriends').style.display = 'none'; loadFriendRequests(); };
+
+document.getElementById('tabMyFriends').onclick = () => { menuClickSound(); document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;"; document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;"; document.getElementById('contentMyFriends').style.display = 'block'; document.getElementById('contentRequests').style.display = 'none'; };
+document.getElementById('tabRequests').onclick = () => { menuClickSound(); document.getElementById('tabRequests').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #ff00ff !important; color: #fff !important; border: none !important;"; document.getElementById('tabMyFriends').style.cssText = "flex: 1; padding: 8px; font-size: 14px; margin: 0; background: #333 !important; color: #aaa !important; border: 1px solid #555 !important;"; document.getElementById('contentRequests').style.display = 'block'; document.getElementById('contentMyFriends').style.display = 'none'; };
 
 // ⭐ SEND MATCH INVITE (Friend) ⭐
 let isInviting = false; let activeInviteId = "";
@@ -2026,8 +2142,22 @@ async function startLoadingScreen() {
     // 🔥 C. ASLI BACKEND LOADING
     try {
         await initializePlayerAuth();
-        await window.loadMyFriends();
-        await window.loadFriendRequests();
+        window.loadMyFriends();
+        window.loadFriendRequests();
+        
+        // 🔥 NAYA: Sent Requests ko bhi background mein auto-sync kar lo
+                window.sentRequestsCache = window.sentRequestsCache || {};
+                window.listenForSentRequests = function() {
+                    const q = query(collection(db, "friend_requests"), where("fromUID", "==", myUID), where("status", "==", "pending"));
+                    onSnapshot(q, (snapshot) => {
+                        window.sentRequestsCache = {};
+                        snapshot.forEach(docSnap => {
+                            const req = docSnap.data();
+                            window.sentRequestsCache[req.toUID] = true;
+                        });
+                    });
+                };
+                window.listenForSentRequests();
         
         // Sab kuch success ho gaya
         isDataLoaded = true;
@@ -2072,8 +2202,14 @@ function initializePlayerAuth() {
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
                 const userDoc = await getDoc(userDocRef);
+
                 if (userDoc.exists()) {
                     myUID = userDoc.data().gameUID;
+                    
+                    // 👇 NAYA ADDITION: Existing user login ho, tab bhi country update maro
+                    if (myCountry && myCountry !== "EARTH") {
+                        updateDoc(userDocRef, { country: myCountry }).catch(e => console.log(e));
+                    }
                 } else {
                     let newGameUID = Math.floor(10000 + Math.random() * 90000).toString();
                     await setDoc(userDocRef, {
@@ -2082,6 +2218,7 @@ function initializePlayerAuth() {
                         level: playerLevel,
                         matchesWon: totalMatchesWon,
                         exp: currentExp,
+                        country: myCountry || "EARTH", // 👇 NAYA ADDITION: Naye user ko pehli baar me hi desh de do
                         createdAt: serverTimestamp()
                     });
                     myUID = newGameUID;
@@ -2096,7 +2233,70 @@ function initializePlayerAuth() {
                     }
                 });
                 listenForInvites(); 
+                
+                // 🔥 NAYA: Loading Screen ke time hi background mein data fetch aur sync chalu kar do!
+                window.loadMyFriends();
+                window.loadFriendRequests();
+                // 🔥 NAYA: Global RAM Cache Ban gaya
+                window.globalPlayersCache = window.globalPlayersCache || {};
+                
+                window.fetchMyRankBackground = async function() {
+                    window.cachedMyRank = "-";
+                    if (totalMatchesWon < 10) return;
+                    try {
+                        const q = query(collection(db, "users"), where("matchesWon", ">", totalMatchesWon));
+                        const snap = await getDocs(q);
+                        window.cachedMyRank = snap.size + 1;
+                    } catch(e) {}
+                };
+                window.fetchMyRankBackground();
+
+                // 🔥 NAYA: Leaderboard ka saara data Loading Screen mein hi utha lo
+                window.cachedLeaderboardHTML = "<p style='color:#00ffff; margin-top:50px;'>Loading Global Data...</p>";
+                window.cachedMyRankHTML = "";
+                window.loadLeaderboardBackground = function() {
+                    const q = query(collection(db, "users"), where("matchesWon", ">=", 10), orderBy("matchesWon", "desc"), limit(50));
+                    onSnapshot(q, (querySnapshot) => {
+                        let html = ""; let rank = 1; let myActualRank = "-";
+                        const trophySvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 3px #ffd700); margin-bottom:-2px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>`;
+                        const rank1Svg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="#ffd700" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 8px #ffd700);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+                        const rank2Svg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="#c0c0c0" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 6px #c0c0c0);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
+                        const rank3Svg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="#cd7f32" stroke="#000" stroke-width="1" style="filter: drop-shadow(0 0 6px #cd7f32);"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>`;
+
+                        querySnapshot.forEach((docSnap) => {
+                            const data = docSnap.data();
+                            let isMe = (data.gameUID === myUID);
+                            if (isMe) myActualRank = rank;
+
+                            // 🚀 JAISE HI BANDA DIKHE, USKA SARA DATA RAM MEIN SAVE KAR LO!
+                            data.cachedRank = rank; // 🔥 NAYA: Rank bhi data ke sath RAM me save kar li!
+                            window.globalPlayersCache[data.gameUID] = data;
+
+                            let rankIcon = `<span style="font-size: 16px; font-weight: 900; color: #aaa; width: 24px; text-align: center; display: inline-block;">${rank}</span>`;
+                            if (rank === 1) rankIcon = rank1Svg; if (rank === 2) rankIcon = rank2Svg; if (rank === 3) rankIcon = rank3Svg;
+
+                            let bgColor = isMe ? "rgba(0, 255, 255, 0.15)" : "rgba(0,0,0,0.4)"; let borderColor = isMe ? "#00ffff" : "#444"; let glow = isMe ? "box-shadow: 0 0 10px rgba(0,255,255,0.3), inset 0 0 5px rgba(0,255,255,0.2);" : "";
+                            let pCountry = data.country || "EARTH"; let pName = data.playerName || "GUEST"; let pLevel = data.level || 1; let pWins = data.matchesWon || 0;
+                            html += `<div onclick="handleLeaderboardClick('${data.gameUID}')" style="background: ${bgColor}; border: 1px solid ${borderColor}; ${glow} border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.2s;">
+                                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">${rankIcon}<div style="text-align: left; line-height: 1.2;"><div style="font-weight: 900; font-size: 14px; color: ${isMe ? '#00ffff' : '#fff'}; letter-spacing: 0.5px;">${pName}</div><div style="font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px;">[${pCountry}] • LV. ${pLevel}</div></div></div>
+                                <div style="font-weight: 900; font-size: 15px; color: #ffd700; display: flex; align-items: center; gap: 4px;">${pWins} ${trophySvg}</div>
+                            </div>`;
+                            rank++;
+                        });
+                        window.cachedLeaderboardHTML = html;
+                        window.cachedMyRankHTML = `<div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 16px; font-weight: 900; color: #00ffff; width: 24px; text-align: center;">${myActualRank}</span><div style="text-align: left; line-height: 1.2;"><div style="font-weight: 900; font-size: 14px; color: #00ffff;">${playerName}</div><div style="font-size: 10px; color: #aaa; font-weight: bold;">[${myCountry}] • LV. ${playerLevel}</div></div></div><div style="font-weight: 900; font-size: 15px; color: #ffd700; display: flex; align-items: center; gap: 4px;">${totalMatchesWon} ${trophySvg}</div>`;
+                        
+                        // Modal khula ho toh Live Update kar do
+                        if(document.getElementById('leaderboardModal').style.display === 'flex') {
+                            document.getElementById('leaderboardList').innerHTML = window.cachedLeaderboardHTML;
+                            document.getElementById('myLeaderboardRank').innerHTML = window.cachedMyRankHTML;
+                        }
+                    });
+                };
+                window.loadLeaderboardBackground();
+                
                 resolve(); // 👈 Yahan Loading Screen ko signal milega ki Auth pura ho gaya
+                
             } else {
                 signInAnonymously(auth).then(() => {
                     // Sign in hone ke baad state change dobara trigger hoga
@@ -3969,4 +4169,66 @@ document.getElementById('btnTextColor').onclick = () => {
     
     document.getElementById('customColorPickerModal').style.display = 'flex';
     updatePreview(); // Preview update karo
+};
+
+// ⭐=========================================⭐
+// ⭐  GLOBAL LEADERBOARD & COUNTRY SYSTEM    ⭐
+// ⭐=========================================⭐
+
+let myCountry = localStorage.getItem('my_country') || "EARTH";
+
+// 1. IP API se Country Name Nikalna (Bina API key ke free magic)
+async function fetchAndSaveCountry() {
+    let savedCountry = localStorage.getItem('my_country');
+    
+    if (savedCountry && savedCountry !== "EARTH") {
+        myCountry = savedCountry;
+        
+        // 👇 FIX: myUID check karne ke bajaye safely auth.currentUser check karo
+        if (auth && auth.currentUser) {
+            updateDoc(doc(db, "users", auth.currentUser.uid), { country: myCountry }).catch(e => {});
+        }
+        return; 
+    }
+    
+    try {
+        const res = await fetch('https://get.geojs.io/v1/ip/country.json');
+        const data = await res.json();
+        myCountry = data.name.toUpperCase();
+        localStorage.setItem('my_country', myCountry);
+        
+        if (auth && auth.currentUser) {
+            updateDoc(doc(db, "users", auth.currentUser.uid), { country: myCountry }).catch(e => {});
+        }
+    } catch (e) {
+        console.log("Country fetch error", e);
+    }
+}
+fetchAndSaveCountry();
+
+// 🚀 INSTANT LEADERBOARD OPEN LOGIC (0 Delay)
+document.getElementById('leaderboardBtn').onclick = () => {
+    menuClickSound();
+    document.getElementById('leaderboardModal').style.display = 'flex';
+    
+    // Seedha RAM Cache se utha ke chipka diya! No waiting!
+    document.getElementById('leaderboardList').innerHTML = window.cachedLeaderboardHTML || "<p style='color:#00ffff; margin-top:50px;'>Loading... ⏳</p>";
+    
+    const myRankDiv = document.getElementById('myLeaderboardRank');
+    myRankDiv.style.display = "flex";
+    myRankDiv.style.alignItems = "center";
+    myRankDiv.style.justifyContent = "space-between";
+    myRankDiv.innerHTML = window.cachedMyRankHTML || "";
+};
+
+// 3. Glitch-Free Click Interaction (Smart Routing)
+window.handleLeaderboardClick = function(clickedUID) {
+    menuClickSound();
+    if (clickedUID === myUID) {
+        // Apna hi naam touch kiya -> Leaderboard pichhe khula rahega, Profile upar aayegi
+        document.getElementById('profileBtn').click(); 
+    } else {
+        // Dusre ka touch kiya -> Parda uthao (View Profile Card)
+        window.viewPlayerCard(clickedUID, false);
+    }
 };
