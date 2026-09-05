@@ -639,25 +639,39 @@ function makeMove(i, e){
   board[i] = currentPlayer; 
   drawBoard(); // 🧨 Yahan saare puraane cells destroy hoke naye ban gaye!
   
-  // 🪄 NAYA MAGIC: Naye banne hue board par Ghost ko wapas zinda karo!
+  // 🪄 NAYA MAGIC: Naye banne hue board par Ghost ko wapas zinda karo! (BUG FIXED)
   if (ghostIndex !== -1) {
       let newCells = document.querySelectorAll('#board .cell');
       if (newCells[ghostIndex]) {
           let ghost = document.createElement('div');
-          ghost.className = ghostClass + ' pop-out-ghost';
-          ghost.innerHTML = ghostHTML; 
-          
-          ghost.style.position = 'absolute'; 
-          ghost.style.top = '-2px'; 
+          // BUG 2 FIX: 'cell' class hata di taaki win-line ka math kharab na ho
+          ghost.className = ghostClass.replace('cell', '').trim() + ' pop-out-ghost';
+          ghost.innerHTML = ghostHTML;
+
+          // BUG 1 FIX: Parent ko relative banaya taaki ghost apni jagah na chode
+          newCells[ghostIndex].style.position = 'relative';
+
+          ghost.style.position = 'absolute';
+          ghost.style.top = '-2px';
           ghost.style.left = '-2px';
-          ghost.style.width = '100px'; 
+          ghost.style.width = '100px';
           ghost.style.height = '100px';
           ghost.style.margin = '0';
-          ghost.style.border = 'none'; 
-          ghost.style.zIndex = '50'; 
-          
+          ghost.style.border = 'none';
+          ghost.style.zIndex = '50';
+          // 'cell' class hatane ke baad font alignment theek rakhne ke liye:
+          ghost.style.fontSize = '60px';
+          ghost.style.display = 'flex';
+          ghost.style.alignItems = 'center';
+          ghost.style.justifyContent = 'center';
+          ghost.style.color = ghostHTML.includes('O') ? '#00ffff' : '#ff0000';
+
           newCells[ghostIndex].appendChild(ghost);
-          setTimeout(() => ghost.remove(), 350);
+          setTimeout(() => { 
+              ghost.remove(); 
+              // Animation ke baad wapas normal kar do
+              newCells[ghostIndex].style.position = ''; 
+          }, 350);
       }
   }
 
@@ -1984,6 +1998,7 @@ function setTheme(t, bgColor = '', textColor = '', customEmoji = '', isRainEnabl
           URL.revokeObjectURL(window.personalThemeBlobUrl);
           window.personalThemeBlobUrl = null;
       }
+      document.body.style.background = ""; // 🔥 YEH NAYI LINE ADD HUI HAI (Body fix)
       document.body.style.backgroundImage = "none";
       
       // Video chal rahi ho toh band karna
