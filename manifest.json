@@ -42,15 +42,15 @@
       "name": "Play AI (Level Up)",
       "short_name": "AI Mode",
       "description": "Start Level Up Mode directly",
-      "url": "/?mode=levelup",
-      "icons": [{"src": "icon-512.png", "sizes": "192x192", "type": "image/png"}]
+      "url": "index.html?mode=levelup",
+      "icons": [{"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}]
     },
     {
       "name": "Global Leaderboard",
       "short_name": "Leaderboard",
       "description": "Check your global rank",
-      "url": "/?mode=leaderboard",
-      "icons": [{"src": "icon-512.png", "sizes": "192x192", "type": "image/png"}]
+      "url": "index.html?mode=leaderboard",
+      "icons": [{"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}]
     }
-  ]
-}
+    ]
+  
