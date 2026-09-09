@@ -37,7 +37,7 @@
       "type": "image/png"
     }
   ],
-    "shortcuts": [
+  "shortcuts": [
     {
       "name": "Play AI (Level Up)",
       "short_name": "AI Mode",
@@ -66,5 +66,5 @@
         }
       ]
     }
-    ]
-  
+  ]
+}
