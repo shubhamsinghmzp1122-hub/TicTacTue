@@ -5,18 +5,6 @@ import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteDoc, co
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
 
-/*
-// 🤪❤️Chrome me main console open karne ke liye hai❤️🤪
-// 🐛 NAYA FLOATING CONSOLE (Eruda injected via JS)
-let erudaScript = document.createElement('script');
-erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
-document.head.appendChild(erudaScript);
-erudaScript.onload = function () {
-    eruda.init();
-};
-*/
-
-
 const firebaseConfig = {
   apiKey: "AIzaSyDXUTAIDN9oBwFj9N6zRDl4sRVx3tc4STc",
   authDomain: "tic-tac-toe-onlinex.firebaseapp.com",
