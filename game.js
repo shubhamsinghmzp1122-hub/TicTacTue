@@ -4248,25 +4248,16 @@ window.handleLeaderboardClick = function(clickedUID) {
     }
 };
 
-// ⭐ PWA SHORTCUTS RADAR ENGINE ⭐
+// ⭐ PWA SHORTCUTS SMART RADAR ⭐
+window.pendingShortcutMode = null; 
 window.addEventListener('load', () => {
-    // URL ko check karta hai (Jaise: index.html?mode=levelup)
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
-
-    // Agar shortcut se aaya hai, toh thoda delay denge taaki Splash/Loading screen disturb na ho
-    if (mode === 'levelup') {
-        setTimeout(() => {
-            // Background mein chup-chap AI (Level Up) mode start kar dega
-            document.getElementById("levelUpMode").click();
-            window.showToast("🚀 AI Level-Up Mode Started directly!");
-        }, 4500); // 4.5 seconds baad click hoga (Loading khatam hone ke aas-paas)
-    } 
-    else if (mode === 'leaderboard') {
-        setTimeout(() => {
-            // Leaderboard wala modal khol dega
-            document.getElementById("leaderboardBtn").click();
-            window.showToast("🏆 Opening Global Leaderboard!");
-        }, 4500);
+    
+    // Agar shortcut se aaya hai, toh bas yaad rakh lo. Click baad mein karenge!
+    if (mode) {
+        window.pendingShortcutMode = mode;
+        // URL se mode hata do taaki refresh karne par wapas loop na bane
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 });
