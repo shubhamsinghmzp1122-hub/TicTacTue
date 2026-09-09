@@ -2201,10 +2201,23 @@ function finishLoadingSequence() {
         setTimeout(() => { 
             loadingOverlay.style.display = 'none'; 
             lobby.style.display = 'flex'; 
-            if (typeof updatePingUI === 'function') updatePingUI(); // 👈 Pehle SVG UI render hoga!
+            if (typeof updatePingUI === 'function') updatePingUI(); 
             document.getElementById('pingDisplay').style.display = 'flex'; 
             updateLevelSystemInLobby(); 
             setTheme('default'); 
+
+            // ⭐ NAYA: SHORTCUT TRIGGER LOGIC (Loading ke baad chalega) ⭐
+            if (window.pendingShortcutMode === 'levelup') {
+                document.getElementById("levelUpMode").click();
+                window.showToast("🚀 AI Level-Up Mode Started!");
+                window.pendingShortcutMode = null; // Memory clear
+            } 
+            else if (window.pendingShortcutMode === 'leaderboard') {
+                document.getElementById("leaderboardBtn").click();
+                window.showToast("🏆 Opening Global Leaderboard!");
+                window.pendingShortcutMode = null; // Memory clear
+            }
+
         }, 1000); 
     }, 500); 
 }
