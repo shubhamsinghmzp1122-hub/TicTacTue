@@ -37,7 +37,7 @@
       "type": "image/png"
     }
   ],
-  "shortcuts": [
+    "shortcuts": [
     {
       "name": "Play AI (Level Up)",
       "short_name": "AI Mode",
@@ -45,9 +45,10 @@
       "url": "./index.html?mode=levelup",
       "icons": [
         {
-          "src": "aimode.png",
+          "src": "./aimode.png",
           "sizes": "512x512",
-          "type": "image/png"
+          "type": "image/png",
+          "purpose": "any maskable"
         }
       ]
     },
@@ -58,11 +59,12 @@
       "url": "./index.html?mode=leaderboard",
       "icons": [
         {
-          "src": "leaderboard.png",
+          "src": "./leaderboard.png",
           "sizes": "512x512",
-          "type": "image/png"
+          "type": "image/png",
+          "purpose": "any maskable"
         }
       ]
     }
-  ]
-}
+    ]
+  
