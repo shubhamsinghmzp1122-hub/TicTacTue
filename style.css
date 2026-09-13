@@ -283,10 +283,6 @@
 .panic-mode { animation: panicShake 0.2s infinite; background-color: #3a0000 !important; }
 .cell.forced-move { animation: flashCellBlitz 0.5s; background: #ffcc00 !important; color: #000 !important; text-shadow: none !important; }
 @keyframes flashCellBlitz { 0% { transform: scale(1.1); box-shadow: 0 0 20px #ffcc00; } 100% { transform: scale(1); } }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; user-select: none; }
-    
-    body { background-color: #0b0b1a; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; overflow-y: auto; overflow-x: hidden; padding-bottom: 50px; }
     
     .header { width: 100%; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: linear-gradient(180deg, rgba(11,11,26,0.95) 60%, transparent); z-index: 9001; backdrop-filter: blur(5px); }
     .header h1 { color: #00ffcc; text-shadow: 0 0 15px #00ffcc; letter-spacing: 3px; font-size: 22px; text-transform: uppercase; margin: 0; }
