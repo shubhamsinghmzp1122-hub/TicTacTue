@@ -30,6 +30,18 @@
       "sizes": "800x1340",
       "type": "image/png",
       "form_factor": "narrow"
+    },
+    {
+      "src": "main_setting.png",
+      "sizes": "800x1340",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "main_gameplay.png",
+      "sizes": "800x1340",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ],
   "shortcuts": [
