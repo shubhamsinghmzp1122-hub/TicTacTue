@@ -32,7 +32,7 @@
     },
     {
       "src": "main_game_lobby.png",
-      "sizes": "1080x2400",
+      "sizes": "800x1340",
       "type": "image/png",
       "form_factor": "narrow"
     }
