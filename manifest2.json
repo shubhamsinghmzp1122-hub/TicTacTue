@@ -26,15 +26,14 @@
   ],
   "screenshots": [
     {
-      "src": "icon-512.png",
-      "sizes": "512x512",
+      "src": "main_game_lobby.png",
+      "sizes": "800x1340",
       "type": "image/png"
     },
     {
-      "src": "./main_game_lobby.png",
-      "sizes": "800x1340",
-      "type": "image/png",
-      "form_factor": "narrow"
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
   "shortcuts": [
