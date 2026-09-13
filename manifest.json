@@ -2,7 +2,7 @@
   "id": "com.shubhiXarpit.tictactoe",
   "name": "Tic Tac Toe",
   "short_name": "Tic Tac Toe",
-  "description": "Play the ultimate multiplayer Tic Tac Toe with friends. Features 44+ VFX, live weather, voice chat, and Blitz mode!",
+  "description": "The ultimate next-gen Tic-Tac-Toe experience! Play Online Multiplayer with Voice & Video Chat, or challenge the Ultra-Hard AI. Packed with 44+ interactive VFX, Live Weather backgrounds, Global Leaderboards, RPG Level-Up system, and exclusive modes like Blitz, Ultimate & Infinite. Customize your Neon theme and rank up to Immortal!",
   "start_url": "./index.html",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
